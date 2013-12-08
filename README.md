@@ -10,12 +10,15 @@ This is not intended for consumers or any other regular folk.
 Requires Java and Maven.
 
 To build: 
+
 	mvn clean install
 
 To run: 
+
 	java -jar target/trsst-client-1.0-SNAPSHOT-exe.jar
 
 Usage:
+
 	post [<id>] [--status <text>] [--encrypt <pubkey>]
 	 -a,--attach <file>      Attach the file at the specified path to the new
 							 entry
