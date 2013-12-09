@@ -47,6 +47,7 @@ public class Common {
     public static final String SIGN = "sign";
     public static final String ENCRYPT = "encrypt";
     public static final String PREDECESSOR = "predecessor";
+    public static final String PREDECESSOR_ID = "id";
 
     static {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
