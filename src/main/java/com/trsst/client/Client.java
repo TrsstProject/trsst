@@ -415,8 +415,12 @@ public class Client {
                                     "SignatureValue"));
                     if (signatureElement != null) {
                         predecessor = signatureElement.getText();
-                        entry.addSimpleExtension(new QName(Common.NS_URI,
-                                Common.PREDECESSOR), predecessor);
+                        signatureElement = entry.addExtension(new QName(
+                                Common.NS_URI, Common.PREDECESSOR));
+                        signatureElement.setText(predecessor);
+                        signatureElement.setAttributeValue(
+                                Common.PREDECESSOR_ID, mostRecentEntry.getId()
+                                        .toString());
                     } else {
                         log.error("No signature value found for entry: "
                                 + entry.getId());
