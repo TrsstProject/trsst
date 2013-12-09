@@ -289,18 +289,21 @@ public class FileStorage implements Storage {
 		}
 	}
 
-	private File getFeedFileForFeedId(String feedId) {
-		return new File(new File(root, feedId), FEED_XML);
+	public static File getFeedFileForFeedId(String feedId) {
+		return new File(new File(getRoot(), feedId), FEED_XML);
 	}
 
-	private File getEntryFileForFeedEntry(String feedId,
+	public static File getEntryFileForFeedEntry(String feedId,
 			String entryId) {
-		return new File(new File(root, feedId), entryId + ENTRY_SUFFIX);
+	    if ( entryId.startsWith("urn:uuid:" ) ) {
+	        entryId = entryId.substring("urn:uuid".length()+1);
+	    }
+		return new File(new File(getRoot(), feedId), entryId + ENTRY_SUFFIX);
 	}
 
-	private File getResourceFileForFeedEntry(String feedId,
+	public static File getResourceFileForFeedEntry(String feedId,
 			String entryId, String resourceid) {
-		return new File(new File(root, feedId), entryId + '-' + resourceid);
+		return new File(new File(getRoot(), feedId), entryId + '-' + resourceid);
 	}
 
 }

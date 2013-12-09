@@ -72,7 +72,7 @@ public class Common {
         return toBase58(addressBytes);
     }
 
-    public static final byte[] keyHash(byte[] key) {
+    private static final byte[] keyHash(byte[] key) {
         byte[] ph = new byte[20];
         try {
             byte[] sha256 = MessageDigest.getInstance("SHA-256").digest(key);
@@ -85,7 +85,7 @@ public class Common {
         return ph;
     }
 
-    public static final byte[] hash(byte[] data, int offset, int len) {
+    private static final byte[] hash(byte[] data, int offset, int len) {
         try {
             MessageDigest a = MessageDigest.getInstance("SHA-256");
             a.update(data, offset, len);

@@ -54,7 +54,7 @@ public class TrsstTest extends TestCase {
             Feed feed;
             Entry entry;
             List<String> idsToCleanup = new LinkedList<String>();
-            List<String> entriesToCleanup = new LinkedList<String>();
+            List<File> entriesToCleanup = new LinkedList<File>();
 
             Server server = new Server();
             assertNotNull(server.getServiceURL());
@@ -112,8 +112,7 @@ public class TrsstTest extends TestCase {
                     "http://www.w3.org/2000/09/xmldsig#", "Signature"));
             assertNotNull("Feed has signature", signatureElement);
             entry = feed.getEntries().get(0);
-            entriesToCleanup.add(feedId + File.separator
-                    + entry.getId().toString() + FileStorage.ENTRY_SUFFIX);
+            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId, entry.getId().toString()));
             assertEquals("Entry retains title", "First Post!", entry.getTitle());
 
             // encryption roundtrip
@@ -141,8 +140,7 @@ public class TrsstTest extends TestCase {
             assertNotNull("Generating second entry", feed);
             assertEquals("Feed contains one entry", 1, feed.getEntries().size());
             entry = feed.getEntries().get(0);
-            entriesToCleanup.add(feedId + File.separator
-                    + entry.getId().toString() + FileStorage.ENTRY_SUFFIX);
+            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId, entry.getId().toString()));
             assertEquals("Entry retains title", "Second Post!",
                     entry.getTitle());
             assertEquals("Entry contains verb", "post",
@@ -188,8 +186,7 @@ public class TrsstTest extends TestCase {
                     null, null, null);
             assertNotNull("Generating encrypted entry", feed);
             entry = feed.getEntries().get(0);
-            entriesToCleanup.add(feedId + File.separator
-                    + entry.getId().toString() + FileStorage.ENTRY_SUFFIX);
+            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId, entry.getId().toString()));
             assertFalse("Entry does not retain title",
                     "Encrypted Post!".equals(entry.getTitle()));
             assertFalse("Entry does not retain body",
@@ -212,18 +209,19 @@ public class TrsstTest extends TestCase {
                     "This is the body".equals(decoded.getSummary()));
 
             // clean up
+            for (File file : entriesToCleanup) {
+                assertTrue(file.getAbsolutePath(), file.exists());
+                file.delete();
+                assertFalse(file.getAbsolutePath(), file.exists());
+            }
             File file;
-            File root = FileStorage.getRoot();
-            for (String id : entriesToCleanup) {
-                file = new File(root, id);
+            for (String id : idsToCleanup) {
+                file = FileStorage.getFeedFileForFeedId(id);
                 assertTrue(file.toString(), file.exists());
                 file.delete();
                 assertFalse(file.toString(), file.exists());
-            }
-            for (String id : idsToCleanup) {
-                file = new File(root, id);
+                file = file.getParentFile();
                 assertTrue(file.toString(), file.exists());
-                new File(file, FileStorage.FEED_XML).delete();
                 file.delete();
                 assertFalse(file.toString(), file.exists());
             }

@@ -371,7 +371,7 @@ public class Client {
 
             // create the new entry
             entry = Abdera.getInstance().newEntry();
-            entry.setId(UUID.randomUUID().toString());
+            entry.setId("urn:uuid:"+UUID.randomUUID().toString());
             entry.setUpdated(new Date());
             if (publish != null) {
                 entry.setPublished(publish);
