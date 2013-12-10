@@ -162,7 +162,7 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
             String entryId = context.getTarget().getParameter("entry");
             Document<Entry> entry = getEntry(context, entryId);
             if (entry != null) {
-                feed.addEntry(entry.getRoot());
+                result.addEntry(entry.getRoot());
             }
             return ProviderHelper.returnBase(result, 200, result.getUpdated())
                     .setEntityTag(ProviderHelper.calculateEntityTag(result));

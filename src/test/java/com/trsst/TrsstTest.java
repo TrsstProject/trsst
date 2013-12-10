@@ -250,6 +250,17 @@ public class TrsstTest extends TestCase {
             assertTrue("Decoded entry retains body",
                     "This is the body".equals(decoded.getSummary()));
             
+            // test pull of a single entry
+            String existingId = entry.getId().toString();
+            feed = client.pull(feedId, existingId);
+            assertEquals("Single entry feed retains id", feedId, feed.getId().toString());
+            assertEquals("Single entry feed contains one entry", 1, feed.getEntries().size());
+            signatureElement = feed.getFirstChild(new QName(
+                    "http://www.w3.org/2000/09/xmldsig#", "Signature"));
+            assertNotNull("Single entry feed has signature", signatureElement);
+            entry = feed.getEntries().get(0);
+            assertEquals("Single entry retains id", existingId, entry.getId().toString());
+
             // test push to second server
             Server alternateServer = new Server();
             URL alternateUrl = alternateServer.getServiceURL();
