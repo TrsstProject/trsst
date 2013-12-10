@@ -112,7 +112,8 @@ public class TrsstTest extends TestCase {
                     "http://www.w3.org/2000/09/xmldsig#", "Signature"));
             assertNotNull("Feed has signature", signatureElement);
             entry = feed.getEntries().get(0);
-            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId, entry.getId().toString()));
+            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
+                    entry.getId().toString()));
             assertEquals("Entry retains title", "First Post!", entry.getTitle());
 
             // encryption roundtrip
@@ -129,6 +130,9 @@ public class TrsstTest extends TestCase {
             signatureElement = signatureElement.getFirstChild(new QName(
                     "http://www.w3.org/2000/09/xmldsig#", "SignatureValue"));
             assertNotNull("Entry has signature value", signatureElement);
+
+            // save for predecessor verification
+            String predecessorId = entry.getId().toString();
             signatureValue = signatureElement.getText();
 
             // generate entry with full options
@@ -140,7 +144,8 @@ public class TrsstTest extends TestCase {
             assertNotNull("Generating second entry", feed);
             assertEquals("Feed contains one entry", 1, feed.getEntries().size());
             entry = feed.getEntries().get(0);
-            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId, entry.getId().toString()));
+            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
+                    entry.getId().toString()));
             assertEquals("Entry retains title", "Second Post!",
                     entry.getTitle());
             assertEquals("Entry contains verb", "post",
@@ -160,6 +165,8 @@ public class TrsstTest extends TestCase {
             signatureElement = entry.getFirstChild(new QName(Common.NS_URI,
                     Common.PREDECESSOR));
             assertNotNull("Entry has predecessor", signatureElement);
+            assertEquals("Entry predecessor id matches", predecessorId,
+                    signatureElement.getAttributeValue("id"));
             assertEquals("Entry predecessor signature matches", signatureValue,
                     signatureElement.getText());
 
@@ -174,6 +181,39 @@ public class TrsstTest extends TestCase {
             // assertEquals("Feed lists most recent entry first",
             // "Second Post!", entry.getTitle() );
 
+            // make sure we're retaining all entries
+            for (int i = 0; i < 15; i++) {
+                feed = client
+                        .post(signingKeys, encryptionKeys.getPublic(),
+                                "Multipost!", "post", null, null,
+                                new String[] { idsToCleanup.iterator().next(),
+                                        feedId }, new String[] { "fitter",
+                                        "happier", "more productive" }, null,
+                                null, null);
+                entry = feed.getEntries().get(0);
+                entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
+                        feedId, entry.getId().toString()));
+            }
+            feed = client.pull(feed.getId().toString());
+            assertTrue("Feed has all entries", (17 == feed.getEntries().size()));
+
+            // make sure server is paginating (in this case at 25 by default)
+            for (int i = 0; i < 15; i++) {
+                feed = client
+                        .post(signingKeys, encryptionKeys.getPublic(),
+                                "Multipost!", "post", null, null,
+                                new String[] { idsToCleanup.iterator().next(),
+                                        feedId }, new String[] { "fitter",
+                                        "happier", "more productive" }, null,
+                                null, null);
+                entry = feed.getEntries().get(0);
+                entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
+                        feedId, entry.getId().toString()));
+            }
+            feed = client.pull(feed.getId().toString());
+            assertTrue("Feed has only first page of entries", (25 == feed
+                    .getEntries().size()));
+
             // generate recipient keys
             KeyPair recipientKeys = Common.generateEncryptionKeyPair();
 
@@ -186,7 +226,8 @@ public class TrsstTest extends TestCase {
                     null, null, null);
             assertNotNull("Generating encrypted entry", feed);
             entry = feed.getEntries().get(0);
-            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId, entry.getId().toString()));
+            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
+                    entry.getId().toString()));
             assertFalse("Entry does not retain title",
                     "Encrypted Post!".equals(entry.getTitle()));
             assertFalse("Entry does not retain body",
