@@ -39,6 +39,7 @@ import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
 import org.apache.abdera.model.Feed;
+import org.apache.abdera.model.Link;
 import org.apache.abdera.model.Person;
 import org.apache.abdera.protocol.Response.ResponseType;
 import org.apache.abdera.protocol.client.AbderaClient;
@@ -498,6 +499,11 @@ public class Client {
                 "http://www.w3.org/2000/09/xmldsig#", "Signature"));
         if (signatureElement != null) {
             signatureElement.discard();
+        }
+        
+        // remove all links before signing
+        for ( Link link : feed.getLinks() ) {
+            link.discard();
         }
 
         // sign the feed
