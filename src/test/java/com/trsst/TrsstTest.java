@@ -1,6 +1,7 @@
 package com.trsst;
 
 import java.io.File;
+import java.net.URL;
 import java.security.KeyPair;
 import java.security.PublicKey;
 import java.util.LinkedList;
@@ -47,9 +48,9 @@ public class TrsstTest extends TestCase {
      */
     public void testApp() {
         try {
-            // System.setProperty("org.slf4j.simpleLogger.defaultLogLevel",
-            // "debug");
-            //
+//             System.setProperty("org.slf4j.simpleLogger.defaultLogLevel",
+//             "debug");
+            
 
             Feed feed;
             Entry entry;
@@ -213,7 +214,7 @@ public class TrsstTest extends TestCase {
             feed = client.pull(feed.getId().toString());
             assertTrue("Feed has only first page of entries", (25 == feed
                     .getEntries().size()));
-
+            
             // generate recipient keys
             KeyPair recipientKeys = Common.generateEncryptionKeyPair();
 
@@ -248,7 +249,12 @@ public class TrsstTest extends TestCase {
                     "Encrypted Post!".equals(decoded.getTitle()));
             assertTrue("Decoded entry retains body",
                     "This is the body".equals(decoded.getSummary()));
-
+            
+            // test push to second server
+            Server alternateServer = new Server();
+            URL alternateUrl = alternateServer.getServiceURL();
+            assertNotNull(client.push(feedId, alternateUrl));
+            
             // clean up
             for (File file : entriesToCleanup) {
                 assertTrue(file.getAbsolutePath(), file.exists());

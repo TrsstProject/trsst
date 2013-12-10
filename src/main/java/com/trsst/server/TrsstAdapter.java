@@ -32,6 +32,7 @@ import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
 import org.apache.abdera.model.Feed;
+import org.apache.abdera.model.Link;
 import org.apache.abdera.model.Person;
 import org.apache.abdera.protocol.server.ProviderHelper;
 import org.apache.abdera.protocol.server.RequestContext;
@@ -252,6 +253,11 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
                 }
                 // setEditDetail(request, entry, key);
                 // String edit = entry.getEditLinkResolvedHref().toString();
+
+                // remove all links before signing
+                for (Link link : incomingFeed.getLinks()) {
+                    link.discard();
+                }
 
                 // now validate feed signature sans entries
                 if (!signature.verify(incomingFeed, options)) {

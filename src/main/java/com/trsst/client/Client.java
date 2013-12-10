@@ -158,7 +158,7 @@ public class Client {
     private Feed push(Feed feed, URL url) {
         try {
             AbderaClient client = new AbderaClient(Abdera.getInstance());
-            ClientResponse response = client.post(new URL(url, feed.getId()
+            ClientResponse response = client.post(new URL(url.toString() + '/' + feed.getId()
                     .toString()).toString(), feed);
             if (response.getType() == ResponseType.SUCCESS) {
                 Document<Feed> document = response.getDocument();
