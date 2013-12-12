@@ -253,6 +253,8 @@ public class TrsstTest extends TestCase {
             // test pull of a single entry
             String existingId = entry.getId().toString();
             feed = client.pull(feedId, existingId);
+            System.out.println(feedId + " : " + existingId );
+            assertNotNull("Single entry feed result", feed);
             assertEquals("Single entry feed retains id", feedId, feed.getId().toString());
             assertEquals("Single entry feed contains one entry", 1, feed.getEntries().size());
             signatureElement = feed.getFirstChild(new QName(

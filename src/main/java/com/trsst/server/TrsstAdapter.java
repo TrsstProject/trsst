@@ -142,7 +142,14 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
             // make a copy of the current template
             Feed result = (Feed) feed.clone();
             // add requested entries
-            getEntries(request, result);
+            try {
+                getEntries(request, result);
+            } catch (FileNotFoundException e) {
+                // fall through
+            } catch (IOException ioe) {
+                log.error("Unexpected error: " + ioe.getMessage(), ioe);
+                return ProviderHelper.servererror(request, ioe);
+            }
             return ProviderHelper.returnBase(result, 200, result.getUpdated())
                     .setEntityTag(ProviderHelper.calculateEntityTag(result));
         } else {
@@ -338,7 +345,8 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
         }.setStatus(200).setContentType(Constants.CAT_MEDIA_TYPE);
     }
 
-    private void getEntries(RequestContext context, Feed feed) {
+    private void getEntries(RequestContext context, Feed feed)
+            throws FileNotFoundException, IOException {
         int length = ProviderHelper.getPageSize(context, "count", 25);
         int offset = ProviderHelper.getOffset(context, "page", length);
         String _page = context.getParameter("page");

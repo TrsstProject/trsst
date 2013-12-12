@@ -41,7 +41,7 @@ public interface Storage {
 	 * @param length
 	 *            the maximum number of results to return; servers may return
 	 *            fewer results.
-	 * @return the specified feed ids hosted on this server.
+	 * @return the specified feed ids hosted on this server; may be empty but not null.
 	 */
 	String[] getFeedIds(int start, int length);
 
@@ -56,7 +56,7 @@ public interface Storage {
 	 * @param length
 	 *            the maximum number of results to return; servers may return
 	 *            fewer results.
-	 * @return the specified trending categories.
+	 * @return the specified trending categories; may be empty but not null.
 	 */
 	String[] getCategories(int start, int length);
 
@@ -66,7 +66,7 @@ public interface Storage {
 	 * 
 	 * @param feedId
 	 *            the specified feed.
-	 * @return the total number of entries for the specified feed.
+	 * @return the total number of entries for the specified feed, or -1 if not found.
 	 */
 	int getEntryCountForFeedId(String feedId);
 
