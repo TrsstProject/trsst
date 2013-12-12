@@ -158,8 +158,8 @@ public class Client {
     private Feed push(Feed feed, URL url) {
         try {
             AbderaClient client = new AbderaClient(Abdera.getInstance());
-            ClientResponse response = client.post(new URL(url.toString() + '/' + feed.getId()
-                    .toString()).toString(), feed);
+            ClientResponse response = client.post(new URL(url.toString() + '/'
+                    + feed.getId().toString()).toString(), feed);
             if (response.getType() == ResponseType.SUCCESS) {
                 Document<Feed> document = response.getDocument();
                 if (document != null) {
@@ -372,7 +372,7 @@ public class Client {
 
             // create the new entry
             entry = Abdera.getInstance().newEntry();
-            entry.setId("urn:uuid:"+UUID.randomUUID().toString());
+            entry.setId("urn:uuid:" + UUID.randomUUID().toString());
             entry.setUpdated(new Date());
             if (publish != null) {
                 entry.setPublished(publish);
@@ -500,9 +500,9 @@ public class Client {
         if (signatureElement != null) {
             signatureElement.discard();
         }
-        
+
         // remove all links before signing
-        for ( Link link : feed.getLinks() ) {
+        for (Link link : feed.getLinks()) {
             link.discard();
         }
 
@@ -526,15 +526,18 @@ public class Client {
         }
 
         // post to server
-        return push(feed, getURL(feedId, null));
+        return push(feed, serving);
     }
 
     private URL getURL(String feedId, String entryId) {
         URL url;
         try {
-            url = new URL(serving, "/trsst/" + feedId);
+            url = new URL(serving.toString() + "/" + feedId);
             if (entryId != null) {
-                url = new URL(url, "/trsst/" + feedId + "/" + entryId);
+                if (entryId.startsWith("urn:uuid:")) {
+                    entryId = entryId.substring("urn:uuid:".length());
+                }
+                url = new URL(url.toString() + "/" + entryId);
             }
         } catch (MalformedURLException e) {
             throw new IllegalArgumentException("Invalid input: " + feedId

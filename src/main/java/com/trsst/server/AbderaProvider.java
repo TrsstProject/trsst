@@ -16,7 +16,11 @@
 package com.trsst.server;
 
 import java.util.Hashtable;
+import java.util.Map;
 
+import javax.security.auth.Subject;
+
+import org.apache.abdera.Abdera;
 import org.apache.abdera.protocol.server.CollectionAdapter;
 import org.apache.abdera.protocol.server.Filter;
 import org.apache.abdera.protocol.server.FilterChain;
@@ -41,6 +45,12 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
     SimpleWorkspaceInfo workspace = new SimpleWorkspaceInfo();
 
     public AbderaProvider() {
+    }
+
+    @Override
+    public void init(Abdera abdera, Map<String, String> properties) {
+        // can receive servlet init params here
+        super.init(abdera, properties);
 
         // map paths to handlers
         super.setTargetResolver(new RegexTargetResolver()
@@ -56,11 +66,11 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
         setTargetBuilder(new TemplateTargetBuilder()
                 .setTemplate(TargetType.TYPE_SERVICE, "{target_base}")
                 .setTemplate(TargetType.TYPE_COLLECTION,
-                        "{target_base}/trsst/{collection}{-opt|?|q,c,s,p,l,i,o}{-join|&|q,c,s,p,l,i,o}")
+                        "{target_base}/{collection}{-opt|?|q,c,s,p,l,i,o}{-join|&|q,c,s,p,l,i,o}")
                 .setTemplate(TargetType.TYPE_CATEGORIES,
-                        "{target_base}/trsst/{collection};categories")
+                        "{target_base}/{collection};categories")
                 .setTemplate(TargetType.TYPE_ENTRY,
-                        "{target_base}/trsst/{collection}/{entry}"));
+                        "{target_base}/{collection}/{entry}"));
 
         workspace.setTitle("Trsst Feeds");
         addWorkspace(workspace);
@@ -82,7 +92,30 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
                 .mapTargetParameter("o", "outputEncoding"));
 
     }
+    
+    @Override
+    public ResponseContext process(RequestContext request) {
+        return super.process(request);
+    }
 
+    /**
+     * Returns null to function in containers with constrained permissions;
+     * Trsst servers generally don't need http security contexts.
+     */
+    @Override
+    public Subject resolveSubject(RequestContext request) {
+        // return null to work in containers with constrained permissions
+        return null;
+    }
+
+    /**
+     * Override to return a custom storage instance. This implementation
+     * defaults to a single shared FileStorage instance.
+     * 
+     * @param feedId
+     *            a hint for implementors
+     * @return a Storage for the specified feed id
+     */
     protected Storage getStorageForFeedId(String feedId) {
         if (sharedStorage == null) {
             sharedStorage = new FileStorage();
@@ -98,7 +131,8 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
             try {
                 TrsstAdapter result = idsToAdapters.get(feedId);
                 if (result == null) {
-                    result = new TrsstAdapter(feedId, getStorageForFeedId(feedId));
+                    result = new TrsstAdapter(feedId,
+                            getStorageForFeedId(feedId));
                     workspace.addCollection(result);
                     idsToAdapters.put(feedId, result);
                 }
