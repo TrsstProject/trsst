@@ -100,7 +100,7 @@ public class Client {
      */
     public Feed pull(String feedId, String entryId) {
         AbderaClient client = new AbderaClient(Abdera.getInstance());
-        URL url = getURL(feedId, entryId);
+        URL url = getURL(serving, feedId, entryId);
         ClientResponse response = client.get(url.toString());
         if (response.getType() == ResponseType.SUCCESS) {
             Document<Feed> document = response.getDocument();
@@ -529,10 +529,14 @@ public class Client {
         return push(feed, serving);
     }
 
-    private URL getURL(String feedId, String entryId) {
+    private static final URL getURL(URL base, String feedId, String entryId) {
         URL url;
         try {
-            url = new URL(serving.toString() + "/" + feedId);
+            String s = base.toString();
+            if (s.endsWith("/")) {
+                s = s.substring(0, s.length() - 1);
+            }
+            url = new URL(s + "/" + feedId);
             if (entryId != null) {
                 if (entryId.startsWith("urn:uuid:")) {
                     entryId = entryId.substring("urn:uuid:".length());
