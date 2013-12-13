@@ -159,7 +159,7 @@ public class Client {
         try {
             AbderaClient client = new AbderaClient(Abdera.getInstance());
             ClientResponse response = client.post(new URL(url.toString() + '/'
-                    + feed.getId().toString()).toString(), feed);
+                    + Common.fromFeedUrn(feed.getId())).toString(), feed);
             if (response.getType() == ResponseType.SUCCESS) {
                 Document<Feed> document = response.getDocument();
                 if (document != null) {
@@ -329,7 +329,7 @@ public class Client {
         }
         feed.addExtension(new QName(Common.NS_URI, Common.ENCRYPT)).setText(
                 Common.toX509FromPublicKey(encryptionKey));
-        feed.setId(feedId);
+        feed.setId(Common.toFeedUrn(feedId));
         feed.setMustPreserveWhitespace(false);
 
         // update feed properties
@@ -372,7 +372,7 @@ public class Client {
 
             // create the new entry
             entry = Abdera.getInstance().newEntry();
-            entry.setId("urn:uuid:" + UUID.randomUUID().toString());
+            entry.setId(Common.toEntryUrn(UUID.randomUUID().toString()));
             entry.setUpdated(new Date());
             if (publish != null) {
                 entry.setPublished(publish);
@@ -420,14 +420,13 @@ public class Client {
                                 Common.NS_URI, Common.PREDECESSOR));
                         signatureElement.setText(predecessor);
                         signatureElement.setAttributeValue(
-                                Common.PREDECESSOR_ID, mostRecentEntry.getId()
-                                        .toString());
+                                Common.PREDECESSOR_ID, Common.fromEntryUrn(mostRecentEntry.getId()));
                     } else {
                         log.error("No signature value found for entry: "
-                                + entry.getId());
+                                + Common.fromEntryUrn(entry.getId()));
                     }
                 } else {
-                    log.error("No signature found for entry: " + entry.getId());
+                    log.error("No signature found for entry: " + Common.fromEntryUrn(entry.getId()));
                 }
             }
 
@@ -441,7 +440,7 @@ public class Client {
                             .getWriterFactory().newStreamWriter();
                     writer.setWriter(stringWriter);
                     writer.startEntry();
-                    writer.writeId(entry.getId().toString());
+                    writer.writeId(Common.fromEntryUrn(entry.getId()));
                     writer.writeUpdated(entry.getUpdated());
                     writer.writePublished(entry.getPublished());
                     if (predecessor != null) {
@@ -538,7 +537,6 @@ public class Client {
             }
             url = new URL(s + "/" + feedId);
             if (entryId != null) {
-                entryId = stripUrn(entryId);
                 url = new URL(url.toString() + "/" + entryId);
             }
         } catch (MalformedURLException e) {
@@ -548,13 +546,6 @@ public class Client {
         return url;
     }
     
-    private static final String stripUrn(String entryId) {
-        if (entryId.startsWith("urn:uuid:")) {
-            entryId = entryId.substring("urn:uuid:".length());
-        }
-        return entryId;
-    }
-
     private final static SignatureOptions getSignatureOptions(Signature signer,
             KeyPair signingKeys) throws SecurityException {
         SignatureOptions options = signer.getDefaultSignatureOptions();

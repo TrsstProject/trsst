@@ -80,6 +80,38 @@ public class Common {
         return toBase58(addressBytes);
     }
 
+    public static final String fromEntryUrn(Object entryUrn) {
+        String entryId = entryUrn.toString();
+        if (entryId.startsWith("urn:uuid:")) {
+            entryId = entryId.substring(9);
+        }
+        return entryId;
+    }
+
+    public static final String toEntryUrn(String entryId) {
+        if (!entryId.startsWith("urn:uuid:")) {
+            entryId = "urn:uuid:" + entryId;
+        }
+        // return as string to avoid uri try/catch
+        return entryId;
+    }
+
+    public static final String fromFeedUrn(Object feedUrn) {
+        String feedId = feedUrn.toString();
+        if (feedId.startsWith("urn:feed:")) {
+            feedId = feedId.substring(9);
+        }
+        return feedId;
+    }
+
+    public static final String toFeedUrn(String feedId) {
+        if (!feedId.startsWith("urn:feed:")) {
+            feedId = "urn:feed:" + feedId;
+        }
+        // return as string to avoid uri try/catch
+        return feedId;
+    }
+
     private static final byte[] keyHash(byte[] key) {
         byte[] ph = new byte[20];
         try {

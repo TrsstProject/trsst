@@ -217,12 +217,12 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
                 // verify that the key matches the id
                 PublicKey publicKey = Common.toPublicKeyFromX509(signingElement
                         .getText());
-                if (incomingFeed.getId() == null
-                        || !incomingFeed.getId().toString()
+                if (Common.fromFeedUrn(incomingFeed.getId()) == null
+                        || !Common.fromFeedUrn(incomingFeed.getId())
                                 .equals(Common.toFeedId(publicKey))) {
                     return ProviderHelper.forbidden(request,
                             "Signing key does not match feed id: "
-                                    + incomingFeed.getId());
+                                    + Common.fromFeedUrn(incomingFeed.getId()));
                 }
 
                 // prep the verifier
@@ -245,7 +245,7 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
                             // fall back to updated if publish not set
                             date = entry.getUpdated();
                         }
-                        String key = stripUrn(entry.getId().toString()); // createKey(request);
+                        String key = Common.fromEntryUrn(entry.getId()); // createKey(request);
                         persistence.updateEntry(accountId, key, date,
                                 entry.toString());
                     } else {
@@ -253,7 +253,7 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
                                 + accountId);
                         return ProviderHelper.badrequest(request,
                                 "Could not verify signature for entry with id: "
-                                        + stripUrn(entry.getId().toString()) + " : " + accountId);
+                                        + Common.fromEntryUrn(entry.getId()) + " : " + accountId);
                     }
                     // remove from feed parent
                     entry.discard();
@@ -298,13 +298,6 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
         }
     }
     
-    private static final String stripUrn(String entryId) {
-        if (entryId.startsWith("urn:uuid:")) {
-            entryId = entryId.substring("urn:uuid:".length());
-        }
-        return entryId;
-    }
-
     /**
      * PUT operations are treated as POST operations. NOTE: this is a deviation
      * from atompub.
