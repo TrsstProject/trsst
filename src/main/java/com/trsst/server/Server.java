@@ -50,25 +50,26 @@ public class Server {
 
     public Server(int port, String path) throws Exception {
         try {
-            if (path == null) {
-                path = "trsst";
-            }
-            if (path.endsWith("/")) {
-                path = path.substring(0, path.length() - 1);
-            }
-            if (!path.startsWith("/")) {
-                path = "/" + path;
+            if (path != null) {
+                if (path.endsWith("/")) {
+                    path = path.substring(0, path.length() - 1);
+                }
+                if (!path.startsWith("/")) {
+                    path = "/" + path;
+                }
+            } else {
+                path = "";
             }
             if (port == 0) {
                 port = allocatePort();
             }
             server = new org.mortbay.jetty.Server(port);
-            Context context = new Context(server, path, Context.SESSIONS);
+            Context context = new Context(server, "/", Context.SESSIONS);
             ServletHolder servletHolder = new ServletHolder(new AbderaServlet());
             servletHolder.setInitParameter(
                     "org.apache.abdera.protocol.server.Provider",
                     "com.trsst.server.AbderaProvider");
-            context.addServlet(servletHolder, "/*");
+            context.addServlet(servletHolder, path + "/*");
             this.port = port;
             this.path = path;
             server.start();

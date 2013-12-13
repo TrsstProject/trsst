@@ -17,15 +17,19 @@ package com.trsst.server;
 
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.security.auth.Subject;
 
 import org.apache.abdera.Abdera;
+import org.apache.abdera.protocol.Request;
 import org.apache.abdera.protocol.server.CollectionAdapter;
 import org.apache.abdera.protocol.server.Filter;
 import org.apache.abdera.protocol.server.FilterChain;
 import org.apache.abdera.protocol.server.RequestContext;
 import org.apache.abdera.protocol.server.ResponseContext;
+import org.apache.abdera.protocol.server.Target;
 import org.apache.abdera.protocol.server.TargetType;
 import org.apache.abdera.protocol.server.context.RequestContextWrapper;
 import org.apache.abdera.protocol.server.filters.OpenSearchFilter;
@@ -53,14 +57,34 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
         super.init(abdera, properties);
 
         // map paths to handlers
-        super.setTargetResolver(new RegexTargetResolver()
-                .setPattern("/(\\?[^#]*)?", TargetType.TYPE_SERVICE)
+        RegexTargetResolver resolver = new RegexTargetResolver() {
+            // override to exclude BaseTargetPath
+            public Target resolve(Request request) {
+                RequestContext context = (RequestContext) request;
+                String uri = context.getTargetPath();
+                if (uri.startsWith(context.getTargetBasePath())) {
+                    uri = uri.substring(context.getTargetBasePath().length());
+                }
+                for (Pattern pattern : patterns.keySet()) {
+                    Matcher matcher = pattern.matcher(uri);
+                    if (matcher.matches()) {
+                        TargetType type = this.patterns.get(pattern);
+                        String[] fields = this.fields.get(pattern);
+                        return getTarget(type, context, matcher, fields);
+                    }
+                }
+                return null;
+            }
+        };
+        resolver.setPattern("/(\\?[^#]*)?", TargetType.TYPE_SERVICE)
                 .setPattern("/([^/#?]+);categories",
                         TargetType.TYPE_CATEGORIES, "collection")
                 .setPattern("/([^/#?;]+)(\\?[^#]*)?",
                         TargetType.TYPE_COLLECTION, "collection")
                 .setPattern("/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
-                        TargetType.TYPE_ENTRY, "collection", "entry"));
+                        TargetType.TYPE_ENTRY, "collection", "entry");
+
+        super.setTargetResolver(resolver);
 
         // url construction templates
         setTargetBuilder(new TemplateTargetBuilder()
@@ -82,7 +106,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
                 .setTags("test", "example", "opensearch")
                 .setContact("admin@trsst.com")
                 .setTemplate(
-                        "{target_base}/trsst?q={searchTerms}&c={count?}&s={startIndex?}&p={startPage?}&l={language?}&i={indexEncoding?}&o={outputEncoding?}")
+                        "{target_base}/?q={searchTerms}&c={count?}&s={startIndex?}&p={startPage?}&l={language?}&i={indexEncoding?}&o={outputEncoding?}")
                 .mapTargetParameter("q", "searchTerms")
                 .mapTargetParameter("c", "count")
                 .mapTargetParameter("s", "startIndex")
@@ -92,9 +116,10 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
                 .mapTargetParameter("o", "outputEncoding"));
 
     }
-    
+
     @Override
     public ResponseContext process(RequestContext request) {
+        log.info( request.getMethod().toString() + " " + request.getUri().toString() );
         return super.process(request);
     }
 
