@@ -296,7 +296,7 @@ public class Client {
         String feedId = Common.toFeedId(signingKeys.getPublic());
         Feed feed = pull(feedId);
         if (feed == null) {
-            feed = Abdera.getInstance().newFeed();
+            feed = Abdera.getInstance().newFeed(); 
         }
 
         // remove each entry and retain the most recent one (if any)
@@ -321,14 +321,14 @@ public class Client {
             signatureElement.discard();
         }
         feed.addExtension(new QName(Common.NS_URI, Common.SIGN)).setText(
-                Common.fromPublicKey(signingKeys.getPublic()));
+                Common.toX509FromPublicKey(signingKeys.getPublic()));
         signatureElement = feed.getFirstChild(new QName(Common.NS_URI,
                 Common.ENCRYPT));
         if (signatureElement != null) {
             signatureElement.discard();
         }
         feed.addExtension(new QName(Common.NS_URI, Common.ENCRYPT)).setText(
-                Common.fromPublicKey(encryptionKey));
+                Common.toX509FromPublicKey(encryptionKey));
         feed.setId(feedId);
         feed.setMustPreserveWhitespace(false);
 
@@ -538,9 +538,7 @@ public class Client {
             }
             url = new URL(s + "/" + feedId);
             if (entryId != null) {
-                if (entryId.startsWith("urn:uuid:")) {
-                    entryId = entryId.substring("urn:uuid:".length());
-                }
+                entryId = stripUrn(entryId);
                 url = new URL(url.toString() + "/" + entryId);
             }
         } catch (MalformedURLException e) {
@@ -548,6 +546,13 @@ public class Client {
                     + " : " + entryId);
         }
         return url;
+    }
+    
+    private static final String stripUrn(String entryId) {
+        if (entryId.startsWith("urn:uuid:")) {
+            entryId = entryId.substring("urn:uuid:".length());
+        }
+        return entryId;
     }
 
     private final static SignatureOptions getSignatureOptions(Signature signer,

@@ -48,20 +48,27 @@ public class TrsstTest extends TestCase {
      */
     public void testApp() {
         try {
-//             System.setProperty("org.slf4j.simpleLogger.defaultLogLevel",
-//             "debug");
-            
+            // System.setProperty("org.slf4j.simpleLogger.defaultLogLevel",
+            // "debug");
 
             Feed feed;
             Entry entry;
             List<String> idsToCleanup = new LinkedList<String>();
             List<File> entriesToCleanup = new LinkedList<File>();
 
-            Server server = new Server();
-            assertNotNull(server.getServiceURL());
+            URL serviceURL = null;
+            if ( System.getProperty("com.trsst.TrsstTest.server") == null) {
+                // start a local server for testing
+                Server server = new Server();
+                serviceURL = server.getServiceURL();
+            } else {
+                serviceURL = new URL(System.getProperty("com.trsst.TrsstTest.server"));
+            }
+            //serviceURL = new URL("http://localhost:8888/trsst");
+            assertNotNull(serviceURL);
 
             String feedId;
-            Client client = new Client(server.getServiceURL());
+            Client client = new Client(serviceURL);
             KeyPair signingKeys, encryptionKeys;
             PublicKey publicKey;
             Element signatureElement;
@@ -77,11 +84,17 @@ public class TrsstTest extends TestCase {
 
             // public key serialization
             publicKey = signingKeys.getPublic();
-            assertTrue("Signing keys serialize", publicKey.equals(Common
-                    .toPublicKey(Common.fromPublicKey(publicKey))));
+            assertEquals("Signing keys serialize",
+                    Common.toX509FromPublicKey(publicKey),
+                    Common.toX509FromPublicKey(Common
+                            .toPublicKeyFromX509(Common
+                                    .toX509FromPublicKey(publicKey))));
             publicKey = encryptionKeys.getPublic();
-            assertTrue("Encryption keys serialize", publicKey.equals(Common
-                    .toPublicKey(Common.fromPublicKey(publicKey))));
+            assertEquals("Encryption keys serialize",
+                    Common.toX509FromPublicKey(publicKey),
+                    Common.toX509FromPublicKey(Common
+                            .toPublicKeyFromX509(Common
+                                    .toX509FromPublicKey(publicKey))));
 
             // generate feed with no entries
             feed = client.post(signingKeys, encryptionKeys.getPublic(), null,
@@ -214,7 +227,7 @@ public class TrsstTest extends TestCase {
             feed = client.pull(feed.getId().toString());
             assertTrue("Feed has only first page of entries", (25 == feed
                     .getEntries().size()));
-            
+
             // generate recipient keys
             KeyPair recipientKeys = Common.generateEncryptionKeyPair();
 
@@ -249,24 +262,27 @@ public class TrsstTest extends TestCase {
                     "Encrypted Post!".equals(decoded.getTitle()));
             assertTrue("Decoded entry retains body",
                     "This is the body".equals(decoded.getSummary()));
-            
+
             // test pull of a single entry
             String existingId = entry.getId().toString();
             feed = client.pull(feedId, existingId);
             assertNotNull("Single entry feed result", feed);
-            assertEquals("Single entry feed retains id", feedId, feed.getId().toString());
-            assertEquals("Single entry feed contains one entry", 1, feed.getEntries().size());
+            assertEquals("Single entry feed retains id", feedId, feed.getId()
+                    .toString());
+            assertEquals("Single entry feed contains one entry", 1, feed
+                    .getEntries().size());
             signatureElement = feed.getFirstChild(new QName(
                     "http://www.w3.org/2000/09/xmldsig#", "Signature"));
             assertNotNull("Single entry feed has signature", signatureElement);
             entry = feed.getEntries().get(0);
-            assertEquals("Single entry retains id", existingId, entry.getId().toString());
+            assertEquals("Single entry retains id", existingId, entry.getId()
+                    .toString());
 
             // test push to second server
             Server alternateServer = new Server();
             URL alternateUrl = alternateServer.getServiceURL();
             assertNotNull(client.push(feedId, alternateUrl));
-            
+
             // clean up
             for (File file : entriesToCleanup) {
                 assertTrue(file.getAbsolutePath(), file.exists());

@@ -35,8 +35,8 @@ import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 import org.bouncycastle.util.encoders.Hex;
 
 /**
- * Shared utilities and constants used by both clients and servers.
- * Portions borrowed from bitsofproof, abdera, and apache commons.
+ * Shared utilities and constants used by both clients and servers. Portions
+ * borrowed from bitsofproof, abdera, and apache commons.
  * 
  * @author mpowers
  */
@@ -49,8 +49,16 @@ public class Common {
     public static final String PREDECESSOR = "predecessor";
     public static final String PREDECESSOR_ID = "id";
 
+    private final static org.slf4j.Logger log;
     static {
-        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+        log = org.slf4j.LoggerFactory.getLogger(Common.class);
+        try {
+            Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+        } catch (Throwable t) {
+            log.error(
+                    "Could not initialize security provider: " + t.getMessage(),
+                    t);
+        }
     }
 
     /**
@@ -160,9 +168,9 @@ public class Common {
     /**
      * Converts a X509-encoded EC key to a PublicKey.
      */
-    public static PublicKey toPublicKey(String stored)
+    public static PublicKey toPublicKeyFromX509(String stored)
             throws GeneralSecurityException {
-        KeyFactory factory = KeyFactory.getInstance("EC", "BC");
+        KeyFactory factory = KeyFactory.getInstance("EC");
         byte[] data = Base64.decodeBase64(stored);
         X509EncodedKeySpec spec = new X509EncodedKeySpec(data);
         return factory.generatePublic(spec);
@@ -171,9 +179,9 @@ public class Common {
     /**
      * Converts an EC PublicKey to an X509-encoded string.
      */
-    public static String fromPublicKey(PublicKey publicKey)
+    public static String toX509FromPublicKey(PublicKey publicKey)
             throws GeneralSecurityException {
-        KeyFactory factory = KeyFactory.getInstance("EC", "BC");
+        KeyFactory factory = KeyFactory.getInstance("EC");
         X509EncodedKeySpec spec = factory.getKeySpec(publicKey,
                 X509EncodedKeySpec.class);
         return new Base64(0, null, true).encodeToString(spec.getEncoded());
@@ -337,6 +345,4 @@ public class Common {
         return (n1 < n2) ^ ((n1 < 0) != (n2 < 0));
     }
 
-    private final static org.slf4j.Logger log = org.slf4j.LoggerFactory
-            .getLogger(Common.class);
 }

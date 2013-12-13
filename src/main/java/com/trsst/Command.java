@@ -539,7 +539,7 @@ public class Command {
         PublicKey recipientKey = null;
         if (recipient != null) {
             try {
-                recipientKey = Common.toPublicKey(recipient);
+                recipientKey = Common.toPublicKeyFromX509(recipient);
             } catch (GeneralSecurityException e) {
                 log.error("Could not parse recipient key: " + recipient);
                 return 73; // "can't create output error"

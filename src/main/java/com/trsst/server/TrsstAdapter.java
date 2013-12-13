@@ -215,7 +215,7 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
                 }
 
                 // verify that the key matches the id
-                PublicKey publicKey = Common.toPublicKey(signingElement
+                PublicKey publicKey = Common.toPublicKeyFromX509(signingElement
                         .getText());
                 if (incomingFeed.getId() == null
                         || !incomingFeed.getId().toString()
@@ -245,7 +245,7 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
                             // fall back to updated if publish not set
                             date = entry.getUpdated();
                         }
-                        String key = entry.getId().toString(); // createKey(request);
+                        String key = stripUrn(entry.getId().toString()); // createKey(request);
                         persistence.updateEntry(accountId, key, date,
                                 entry.toString());
                     } else {
@@ -253,7 +253,7 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
                                 + accountId);
                         return ProviderHelper.badrequest(request,
                                 "Could not verify signature for entry with id: "
-                                        + entry.getId() + " : " + accountId);
+                                        + stripUrn(entry.getId().toString()) + " : " + accountId);
                     }
                     // remove from feed parent
                     entry.discard();
@@ -296,6 +296,13 @@ public class TrsstAdapter extends AbstractCollectionAdapter {
         } else {
             return ProviderHelper.notsupported(request);
         }
+    }
+    
+    private static final String stripUrn(String entryId) {
+        if (entryId.startsWith("urn:uuid:")) {
+            entryId = entryId.substring("urn:uuid:".length());
+        }
+        return entryId;
     }
 
     /**
