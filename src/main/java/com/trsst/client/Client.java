@@ -208,12 +208,12 @@ public class Client {
      */
     public Feed post(KeyPair signingKeys, PublicKey encryptionKey,
             String subject, String verb, Date publish, String body,
-            String[] mentions, String[] tags, String mimetype,
-            byte[] content, PublicKey recipientKey) throws IOException,
-            SecurityException, GeneralSecurityException {
+            String[] mentions, String[] tags, String mimetype, byte[] content,
+            PublicKey recipientKey) throws IOException, SecurityException,
+            GeneralSecurityException {
         return this.post(signingKeys, encryptionKey, subject, verb, publish,
-                body, mentions, tags, mimetype, content, recipientKey,
-                null, null, null, null, null, null);
+                body, mentions, tags, mimetype, content, recipientKey, null,
+                null, null, null, null, null);
     }
 
     /**
@@ -278,11 +278,10 @@ public class Client {
      */
     public Feed post(KeyPair signingKeys, PublicKey encryptionKey,
             String status, String verb, Date publish, String body,
-            String[] mentions, String[] tags, String mimetype,
-            byte[] content, PublicKey recipientKey, String name,
-            String email, String title, String subtitle, String icon,
-            String logo) throws IOException, SecurityException,
-            GeneralSecurityException {
+            String[] mentions, String[] tags, String mimetype, byte[] content,
+            PublicKey recipientKey, String name, String email, String title,
+            String subtitle, String icon, String logo) throws IOException,
+            SecurityException, GeneralSecurityException {
         // inlining all the steps to help implementors and porters (and
         // debuggers)
 
@@ -294,7 +293,7 @@ public class Client {
         String feedId = Common.toFeedId(signingKeys.getPublic());
         Feed feed = pull(feedId);
         if (feed == null) {
-            feed = Abdera.getInstance().newFeed(); 
+            feed = Abdera.getInstance().newFeed();
         }
 
         // remove each entry and retain the most recent one (if any)
@@ -418,13 +417,15 @@ public class Client {
                                 Common.NS_URI, Common.PREDECESSOR));
                         signatureElement.setText(predecessor);
                         signatureElement.setAttributeValue(
-                                Common.PREDECESSOR_ID, Common.fromEntryUrn(mostRecentEntry.getId()));
+                                Common.PREDECESSOR_ID,
+                                Common.fromEntryUrn(mostRecentEntry.getId()));
                     } else {
                         log.error("No signature value found for entry: "
                                 + Common.fromEntryUrn(entry.getId()));
                     }
                 } else {
-                    log.error("No signature found for entry: " + Common.fromEntryUrn(entry.getId()));
+                    log.error("No signature found for entry: "
+                            + Common.fromEntryUrn(entry.getId()));
                 }
             }
 
@@ -447,7 +448,7 @@ public class Client {
                         writer.endElement();
                     }
                     writer.writeTitle("Encrypted post"); // arbitrary
-                    // TODO: encrypted content start include recipient key 
+                    // TODO: encrypted content start include recipient key
                     // bytes as a header to quickly identify if decrypted info
                     // is garbage.
                     // TODO: client should specify if mentions should
@@ -546,7 +547,7 @@ public class Client {
         }
         return url;
     }
-    
+
     private final static SignatureOptions getSignatureOptions(Signature signer,
             KeyPair signingKeys) throws SecurityException {
         SignatureOptions options = signer.getDefaultSignatureOptions();
