@@ -208,11 +208,11 @@ public class Client {
      */
     public Feed post(KeyPair signingKeys, PublicKey encryptionKey,
             String subject, String verb, Date publish, String body,
-            String[] mentions, String[] tags, String[] mimetypes,
-            byte[][] attachments, PublicKey recipientKey) throws IOException,
+            String[] mentions, String[] tags, String mimetype,
+            byte[] content, PublicKey recipientKey) throws IOException,
             SecurityException, GeneralSecurityException {
         return this.post(signingKeys, encryptionKey, subject, verb, publish,
-                body, mentions, tags, mimetypes, attachments, recipientKey,
+                body, mentions, tags, mimetype, content, recipientKey,
                 null, null, null, null, null, null);
     }
 
@@ -247,12 +247,10 @@ public class Client {
      * @param tags
      *            Zero or more tags (aka hashtags but without the hash); these
      *            are equivalent to atom categories.
-     * @param mimetypes
-     *            Zero or more mimetypes, each associated with the corresponding
-     *            attachment in a parallel array.
-     * @param attachments
-     *            Zero or more binary attachments, each associated with the
-     *            corresponding attachment in a parallel array.
+     * @param content
+     *            Optional binary content to be uploaded and hosted.
+     * @param mimetype
+     *            Mimetype of the optional binary content, or null.
      * @param recipientKey
      *            encrypts this entry using the specified public key so that
      *            only that key's owner can read it.
@@ -280,8 +278,8 @@ public class Client {
      */
     public Feed post(KeyPair signingKeys, PublicKey encryptionKey,
             String status, String verb, Date publish, String body,
-            String[] mentions, String[] tags, String[] mimetypes,
-            byte[][] attachments, PublicKey recipientKey, String name,
+            String[] mentions, String[] tags, String mimetype,
+            byte[] content, PublicKey recipientKey, String name,
             String email, String title, String subtitle, String icon,
             String logo) throws IOException, SecurityException,
             GeneralSecurityException {
@@ -400,8 +398,8 @@ public class Client {
                     entry.addCategory(s);
                 }
             }
-            if (attachments != null) {
-                // TODO: implement binary support
+            if (content != null) {
+                entry.setContent(new ByteArrayInputStream(content), mimetype);
             }
 
             // add the previous entry's signature value
@@ -449,6 +447,9 @@ public class Client {
                         writer.endElement();
                     }
                     writer.writeTitle("Encrypted post"); // arbitrary
+                    // TODO: encrypted content start include recipient key 
+                    // bytes as a header to quickly identify if decrypted info
+                    // is garbage.
                     // TODO: client should specify if mentions should
                     // be repeated outside the encryption envelope
                     // TODO: client could specify fake title/body/etc
