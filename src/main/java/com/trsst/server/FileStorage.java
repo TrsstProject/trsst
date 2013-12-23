@@ -186,6 +186,7 @@ public class FileStorage implements Storage {
 				output.write(buf, 0, c);
 			}
 			output.flush();
+            System.err.println("wrote: " + file.getAbsolutePath());
 		} finally {
 			try {
 				input.close();
