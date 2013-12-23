@@ -15,6 +15,9 @@
  */
 package com.trsst;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
@@ -47,6 +50,7 @@ public class Common {
     public static final String SIGN = "sign";
     public static final String ENCRYPT = "encrypt";
     public static final String PREDECESSOR = "predecessor";
+    public static final String ATTACHMENT_DIGEST = "digest";
     public static final String PREDECESSOR_ID = "id";
 
     private final static org.slf4j.Logger log;
@@ -112,20 +116,24 @@ public class Common {
         return feedId;
     }
 
-    private static final byte[] keyHash(byte[] key) {
-        byte[] ph = new byte[20];
+    public static final byte[] keyHash(byte[] key) {
         try {
             byte[] sha256 = MessageDigest.getInstance("SHA-256").digest(key);
-            RIPEMD160Digest digest = new RIPEMD160Digest();
-            digest.update(sha256, 0, sha256.length);
-            digest.doFinal(ph, 0);
+            return ripemd160(sha256);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static final byte[] ripemd160(byte[] data) {
+        byte[] ph = new byte[20];
+        RIPEMD160Digest digest = new RIPEMD160Digest();
+        digest.update(data, 0, data.length);
+        digest.doFinal(ph, 0);
         return ph;
     }
 
-    private static final byte[] hash(byte[] data, int offset, int len) {
+    public static final byte[] hash(byte[] data, int offset, int len) {
         try {
             MessageDigest a = MessageDigest.getInstance("SHA-256");
             a.update(data, offset, len);
@@ -375,6 +383,16 @@ public class Common {
 
     public static boolean isLessThanUnsigned(long n1, long n2) {
         return (n1 < n2) ^ ((n1 < 0) != (n2 < 0));
+    }
+
+    public static byte[] readFully(InputStream data) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        int c;
+        byte[] buf = new byte[1024];
+        while ((c = data.read(buf)) != -1) {
+            output.write(buf, 0, c);
+        }
+        return output.toByteArray();
     }
 
 }
