@@ -15,13 +15,17 @@
  */
 package com.trsst;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.Console;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -422,6 +426,8 @@ public class Command {
         String icon = commands.getOptionValue("i");
         String logo = commands.getOptionValue("l");
         String recipient = commands.getOptionValue("e");
+        String attach = commands.getOptionValue("a");
+        String url = commands.getOptionValue("u");
 
         // obtain password
         char[] password = null;
@@ -546,12 +552,46 @@ public class Command {
             }
         }
 
+        // handle binary attachment
+        String mimetype = null;
+        byte[] attachment = null;
+        if (attach != null) {
+            InputStream input = null;
+            ByteArrayOutputStream output = null;
+            File file = new File(attach);
+            try {
+                input = new BufferedInputStream(new FileInputStream(file));
+                output = new ByteArrayOutputStream();
+                int c;
+                byte[] buf = new byte[256];
+                while ((c = input.read(buf)) > 0) {
+                    output.write(buf, 0, c);
+                }
+                output.flush();
+                attachment = output.toByteArray();
+                System.err.println("Attaching: " + file.getCanonicalPath());
+                mimetype = URLConnection.guessContentTypeFromName(file
+                        .getName());
+                System.err.println("Detected type: " + mimetype);
+            } catch (Throwable t) {
+                log.error("Could not read file: " + file.getAbsolutePath());
+                return 73; // "can't create output error"
+            } finally {
+                try {
+                    input.close();
+                    output.close();
+                } catch (IOException ioe) {
+                    // suppress any futher error on closing
+                }
+            }
+        }
+
         Object result;
         try {
             result = client.post(signingKeys, encryptionKeys.getPublic(),
-                    subject, verb, null, body, null, null, null, null,
-                    recipientKey, name, email, title, subtitle, icon, logo);
-            // TODO: handle binary attachments
+                    subject, verb, null, body, null, null, mimetype,
+                    attachment, recipientKey, name, email, title, subtitle,
+                    icon, logo);
         } catch (IOException e) {
             log.error("Error connecting to service for id: " + id, e);
             return 76; // "remote error"

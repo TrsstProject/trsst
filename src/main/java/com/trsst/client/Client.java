@@ -35,6 +35,7 @@ import javax.crypto.Cipher;
 import javax.xml.namespace.QName;
 
 import org.apache.abdera.Abdera;
+import org.apache.abdera.i18n.iri.IRI;
 import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
@@ -155,11 +156,22 @@ public class Client {
         return push(pull(feedId, entryId), url);
     }
 
-    private Feed push(Feed feed, URL url) {
+    private Feed push(Feed feed, String contentId, String contentType,
+            byte[] content, URL url) {
         try {
             AbderaClient client = new AbderaClient(Abdera.getInstance());
-            ClientResponse response = client.post(new URL(url.toString() + '/'
-                    + Common.fromFeedUrn(feed.getId())).toString(), feed);
+            url = new URL(url.toString() + '/'
+                    + Common.fromFeedUrn(feed.getId()));
+            ClientResponse response;
+            if (contentId != null) {
+                response = client.post(url.toString(),
+                        new MultiPartRequestEntity(feed,
+                                new byte[][] { content },
+                                new String[] { contentId },
+                                new String[] { contentType }));
+            } else {
+                response = client.post(url.toString(), feed);
+            }
             if (response.getType() == ResponseType.SUCCESS) {
                 Document<Feed> document = response.getDocument();
                 if (document != null) {
@@ -179,6 +191,10 @@ public class Client {
             log.error("push: bad url: " + url, e);
         }
         return null;
+    }
+
+    private Feed push(Feed feed, URL url) {
+        return push(feed, null, null, null, url);
     }
 
     /**
@@ -294,7 +310,10 @@ public class Client {
         Feed feed = pull(feedId);
         if (feed == null) {
             feed = Abdera.getInstance().newFeed();
+            feed.declareNS(Common.NS_URI, Common.NS_ABBR);
+            feed.setBaseUri(new IRI(serving + "/" + feedId + "/"));
         }
+        String contentId = null;
 
         // remove each entry and retain the most recent one (if any)
         List<Entry> entries = feed.getEntries();
@@ -309,7 +328,6 @@ public class Client {
 
         // update and sign feed (without any entries)
         feed.setUpdated(new Date());
-        feed.declareNS(Common.NS_URI, Common.NS_ABBR);
 
         // ensure the correct keys are in place
         signatureElement = feed.getFirstChild(new QName(Common.NS_URI,
@@ -369,8 +387,8 @@ public class Client {
 
             // create the new entry
             entry = Abdera.getInstance().newEntry();
-            entry.setId(Common.toEntryUrn(UUID.randomUUID().toString()));
-            entry.setUpdated(new Date());
+            entry.setId(Common.toEntryUrn(generateEntryIdForFeed(feed)));
+            entry.setUpdated(feed.getUpdated());
             if (publish != null) {
                 entry.setPublished(publish);
             } else {
@@ -397,8 +415,28 @@ public class Client {
                     entry.addCategory(s);
                 }
             }
+
             if (content != null) {
-                entry.setContent(new ByteArrayInputStream(content), mimetype);
+                
+                // encrypt before hashing if necessary
+                if ( recipientKey != null ) {
+                    content = encryptBytes(content, recipientKey);
+                }
+
+                // calculate digest
+                byte[] digest = Common.ripemd160(content); // Common.keyhash(content);
+                contentId = new Base64(0, null, true).encodeToString(digest);
+                entry.setContent(new IRI(contentId), mimetype);
+
+                // use a base uri so src attribute is simpler to process
+                entry.getContentElement().setBaseUri(
+                        Common.fromEntryUrn(entry.getId()) + "/");
+
+                // TODO: if we use the hash as the id, do we even need this
+                // attribute?
+                entry.getContentElement().setAttributeValue(
+                        new QName(Common.NS_URI, "ripemd160", "trsst"), contentId);
+
             }
 
             // add the previous entry's signature value
@@ -527,7 +565,19 @@ public class Client {
         }
 
         // post to server
+        if (contentId != null) {
+            return push(feed, contentId, mimetype, content, serving);
+        }
         return push(feed, serving);
+    }
+
+    /**
+     * Generates a new entry id for the specified feed. Entry ids must be a
+     * url-safe string of 36 or fewer characters that is unique for the given
+     * feed. This implementation returns a random UUID.
+     */
+    public String generateEntryIdForFeed(Feed feed) {
+        return UUID.randomUUID().toString();
     }
 
     private static final URL getURL(URL base, String feedId, String entryId) {
@@ -565,7 +615,18 @@ public class Client {
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             element.writeTo(output);
             byte[] before = output.toByteArray();
+            after = encryptBytes(before, publicKey);
+        } catch (Exception e) {
+            log.error("Error while encrypting element", e);
+            throw new SecurityException(e);
+        }
+        return after;
+    }
 
+    private static byte[] encryptBytes(byte[] before, PublicKey publicKey)
+            throws SecurityException {
+        byte[] after = null;
+        try {
             IESCipher cipher = new IESCipher(new IESEngine(
                     new ECDHBasicAgreement(), new KDF2BytesGenerator(
                             new SHA1Digest()), new HMac(new SHA1Digest()),
@@ -585,21 +646,30 @@ public class Client {
         Element result;
 
         try {
+            byte[] after = decryptBytes(data, privateKey);
+            ByteArrayInputStream input = new ByteArrayInputStream(after);
+            result = Abdera.getInstance().getParser().parse(input).getRoot();
+        } catch (Exception e) {
+            log.error("Error while decrypting: ", e);
+            throw new SecurityException(e);
+        }
+        return result;
+    }
+
+    private static byte[] decryptBytes(byte[] data, PrivateKey privateKey)
+            throws SecurityException {
+        try {
             IESCipher cipher = new IESCipher(new IESEngine(
                     new ECDHBasicAgreement(), new KDF2BytesGenerator(
                             new SHA1Digest()), new HMac(new SHA1Digest()),
                     new PaddedBufferedBlockCipher(new DESEngine())));
             cipher.engineInit(Cipher.DECRYPT_MODE, privateKey,
                     new SecureRandom());
-            byte[] after = cipher.engineDoFinal(data, 0, data.length);
-
-            ByteArrayInputStream input = new ByteArrayInputStream(after);
-            result = Abdera.getInstance().getParser().parse(input).getRoot();
+            return cipher.engineDoFinal(data, 0, data.length);
         } catch (Exception e) {
-            log.error("Error while decrypting element", e);
+            log.error("Error while decrypting: ");
             throw new SecurityException(e);
         }
-        return result;
     }
 
     private final static org.slf4j.Logger log = org.slf4j.LoggerFactory
