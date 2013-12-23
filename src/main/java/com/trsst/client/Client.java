@@ -53,7 +53,8 @@ import org.apache.abdera.writer.StreamWriter;
 import org.apache.commons.codec.binary.Base64;
 import org.bouncycastle.crypto.agreement.ECDHBasicAgreement;
 import org.bouncycastle.crypto.digests.SHA1Digest;
-import org.bouncycastle.crypto.engines.DESEngine;
+import org.bouncycastle.crypto.digests.SHA256Digest;
+import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.engines.IESEngine;
 import org.bouncycastle.crypto.generators.KDF2BytesGenerator;
 import org.bouncycastle.crypto.macs.HMac;
@@ -417,9 +418,9 @@ public class Client {
             }
 
             if (content != null) {
-                
+
                 // encrypt before hashing if necessary
-                if ( recipientKey != null ) {
+                if (recipientKey != null) {
                     content = encryptBytes(content, recipientKey);
                 }
 
@@ -435,7 +436,8 @@ public class Client {
                 // TODO: if we use the hash as the id, do we even need this
                 // attribute?
                 entry.getContentElement().setAttributeValue(
-                        new QName(Common.NS_URI, "ripemd160", "trsst"), contentId);
+                        new QName(Common.NS_URI, "ripemd160", "trsst"),
+                        contentId);
 
             }
 
@@ -629,8 +631,8 @@ public class Client {
         try {
             IESCipher cipher = new IESCipher(new IESEngine(
                     new ECDHBasicAgreement(), new KDF2BytesGenerator(
-                            new SHA1Digest()), new HMac(new SHA1Digest()),
-                    new PaddedBufferedBlockCipher(new DESEngine())));
+                            new SHA1Digest()), new HMac(new SHA256Digest()),
+                    new PaddedBufferedBlockCipher(new AESEngine())));
             cipher.engineInit(Cipher.ENCRYPT_MODE, publicKey,
                     new SecureRandom());
             after = cipher.engineDoFinal(before, 0, before.length);
@@ -661,8 +663,8 @@ public class Client {
         try {
             IESCipher cipher = new IESCipher(new IESEngine(
                     new ECDHBasicAgreement(), new KDF2BytesGenerator(
-                            new SHA1Digest()), new HMac(new SHA1Digest()),
-                    new PaddedBufferedBlockCipher(new DESEngine())));
+                            new SHA1Digest()), new HMac(new SHA256Digest()),
+                    new PaddedBufferedBlockCipher(new AESEngine())));
             cipher.engineInit(Cipher.DECRYPT_MODE, privateKey,
                     new SecureRandom());
             return cipher.engineDoFinal(data, 0, data.length);
