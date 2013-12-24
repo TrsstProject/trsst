@@ -36,6 +36,7 @@ import javax.xml.namespace.QName;
 
 import org.apache.abdera.Abdera;
 import org.apache.abdera.i18n.iri.IRI;
+import org.apache.abdera.model.AtomDate;
 import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
@@ -388,8 +389,8 @@ public class Client {
 
             // create the new entry
             entry = Abdera.getInstance().newEntry();
-            entry.setId(Common.toEntryUrn(generateEntryIdForFeed(feed)));
             entry.setUpdated(feed.getUpdated());
+            entry.setId(Common.toEntryUrn(new AtomDate(entry.getUpdated()).toString()));
             if (publish != null) {
                 entry.setPublished(publish);
             } else {
@@ -571,15 +572,6 @@ public class Client {
             return push(feed, contentId, mimetype, content, serving);
         }
         return push(feed, serving);
-    }
-
-    /**
-     * Generates a new entry id for the specified feed. Entry ids must be a
-     * url-safe string of 36 or fewer characters that is unique for the given
-     * feed. This implementation returns a random UUID.
-     */
-    public String generateEntryIdForFeed(Feed feed) {
-        return UUID.randomUUID().toString();
     }
 
     private static final URL getURL(URL base, String feedId, String entryId) {
