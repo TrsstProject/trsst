@@ -48,6 +48,8 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 
 import com.trsst.client.Client;
+import com.trsst.client.EntryOptions;
+import com.trsst.client.FeedOptions;
 import com.trsst.server.Server;
 
 /**
@@ -588,10 +590,28 @@ public class Command {
 
         Object result;
         try {
+            EntryOptions options = new EntryOptions();
+            options.setStatus(subject);
+            options.setVerb(verb);
+            options.setBody(body);
+            if (attachment != null) {
+                options.setContentData(attachment, mimetype);
+            } else if (url != null) {
+                options.setContentUrl(url);
+            }
+            FeedOptions feedOptions = new FeedOptions();
+            feedOptions.setAuthorEmail(email);
+            feedOptions.setAuthorName(name);
+            feedOptions.setTitle(title);
+            feedOptions.setSubtitle(subtitle);
+            feedOptions.setIcon(icon);
+            feedOptions.setLogo(logo);
+            if (recipientKey != null) {
+                options.encryptWith(recipientKey,
+                        new EntryOptions().setStatus("Encrypted content"));
+            }
             result = client.post(signingKeys, encryptionKeys.getPublic(),
-                    subject, verb, null, body, null, null, mimetype,
-                    attachment, recipientKey, name, email, title, subtitle,
-                    icon, logo);
+                    options, feedOptions);
         } catch (IOException e) {
             log.error("Error connecting to service for id: " + id, e);
             return 76; // "remote error"

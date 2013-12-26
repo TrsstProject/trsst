@@ -15,6 +15,8 @@ import org.apache.abdera.model.Feed;
 import org.apache.commons.codec.binary.Base64;
 
 import com.trsst.client.Client;
+import com.trsst.client.EntryOptions;
+import com.trsst.client.FeedOptions;
 import com.trsst.server.FileStorage;
 import com.trsst.server.Server;
 
@@ -57,14 +59,15 @@ public class TrsstTest extends TestCase {
             List<File> entriesToCleanup = new LinkedList<File>();
 
             URL serviceURL = null;
-            if ( System.getProperty("com.trsst.TrsstTest.server") == null) {
+            if (System.getProperty("com.trsst.TrsstTest.server") == null) {
                 // start a local server for testing
                 Server server = new Server();
                 serviceURL = server.getServiceURL();
             } else {
-                serviceURL = new URL(System.getProperty("com.trsst.TrsstTest.server"));
+                serviceURL = new URL(
+                        System.getProperty("com.trsst.TrsstTest.server"));
             }
-            //serviceURL = new URL("http://localhost:8888/trsst");
+            // serviceURL = new URL("http://localhost:8888/trsst");
             assertNotNull(serviceURL);
 
             String feedId;
@@ -97,11 +100,11 @@ public class TrsstTest extends TestCase {
                                     .toX509FromPublicKey(publicKey))));
 
             // generate feed with no entries
-            feed = client.post(signingKeys, encryptionKeys.getPublic(), null,
-                    null, null, null, null, null, null, null, null);
+            feed = client.post(signingKeys, encryptionKeys.getPublic(),
+                    new EntryOptions(), new FeedOptions());
             assertNotNull("Generating empty feed", feed);
-            assertEquals("Empty feed retains id", Common.fromFeedUrn(feed.getId()),
-                    feedId);
+            assertEquals("Empty feed retains id",
+                    Common.fromFeedUrn(feed.getId()), feedId);
             assertEquals("Empty feed contains no entries", feed.getEntries()
                     .size(), 0);
             signatureElement = feed.getFirstChild(new QName(
@@ -118,9 +121,11 @@ public class TrsstTest extends TestCase {
 
             // generate feed with entry
             feed = client.post(signingKeys, encryptionKeys.getPublic(),
-                    "First Post!");
+                    new EntryOptions().setStatus("First Post!"),
+                    new FeedOptions());
             assertNotNull("Generating feed with entry", feed);
-            assertEquals("Feed retains id", feedId, Common.fromFeedUrn(feed.getId()));
+            assertEquals("Feed retains id", feedId,
+                    Common.fromFeedUrn(feed.getId()));
             assertEquals("Feed contains one entry", 1, feed.getEntries().size());
             signatureElement = feed.getFirstChild(new QName(
                     "http://www.w3.org/2000/09/xmldsig#", "Signature"));
@@ -150,11 +155,21 @@ public class TrsstTest extends TestCase {
             signatureValue = signatureElement.getText();
 
             // generate entry with full options
-            feed = client.post(signingKeys, encryptionKeys.getPublic(),
-                    "Second Post!", "post", null, "This is the body",
-                    new String[] { idsToCleanup.iterator().next(), feedId },
-                    new String[] { "fitter", "happier", "more productive" },
-                    null, null, null);
+            feed = client.post(
+                    signingKeys,
+                    encryptionKeys.getPublic(),
+                    new EntryOptions()
+                            .setStatus("Second Post!")
+                            .setVerb("post")
+                            .setBody("This is the body")
+                            .setMentions(
+                                    new String[] {
+                                            idsToCleanup.iterator().next(),
+                                            feedId })
+                            .setTags(
+                                    new String[] { "fitter", "happier",
+                                            "more productive" }),
+                    new FeedOptions());
             assertNotNull("Generating second entry", feed);
             assertEquals("Feed contains one entry", 1, feed.getEntries().size());
             entry = feed.getEntries().get(0);
@@ -197,13 +212,21 @@ public class TrsstTest extends TestCase {
 
             // make sure we're retaining all entries
             for (int i = 0; i < 15; i++) {
-                feed = client
-                        .post(signingKeys, encryptionKeys.getPublic(),
-                                "Multipost!", "post", null, null,
-                                new String[] { idsToCleanup.iterator().next(),
-                                        feedId }, new String[] { "fitter",
-                                        "happier", "more productive" }, null,
-                                null, null);
+                feed = client.post(
+                        signingKeys,
+                        encryptionKeys.getPublic(),
+                        new EntryOptions()
+                                .setStatus("Multipost!")
+                                .setVerb("post")
+                                .setBody("This is the body")
+                                .setMentions(
+                                        new String[] {
+                                                idsToCleanup.iterator().next(),
+                                                feedId })
+                                .setTags(
+                                        new String[] { "fitter", "happier",
+                                                "more productive" }),
+                        new FeedOptions());
                 entry = feed.getEntries().get(0);
                 entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
                         feedId, Common.fromEntryUrn(entry.getId())));
@@ -213,13 +236,21 @@ public class TrsstTest extends TestCase {
 
             // make sure server is paginating (in this case at 25 by default)
             for (int i = 0; i < 15; i++) {
-                feed = client
-                        .post(signingKeys, encryptionKeys.getPublic(),
-                                "Multipost!", "post", null, null,
-                                new String[] { idsToCleanup.iterator().next(),
-                                        feedId }, new String[] { "fitter",
-                                        "happier", "more productive" }, null,
-                                null, null);
+                feed = client.post(
+                        signingKeys,
+                        encryptionKeys.getPublic(),
+                        new EntryOptions()
+                                .setStatus("Multipost!")
+                                .setVerb("post")
+                                .setBody("This is the body")
+                                .setMentions(
+                                        new String[] {
+                                                idsToCleanup.iterator().next(),
+                                                feedId })
+                                .setTags(
+                                        new String[] { "fitter", "happier",
+                                                "more productive" }),
+                        new FeedOptions());
                 entry = feed.getEntries().get(0);
                 entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
                         feedId, Common.fromEntryUrn(entry.getId())));
@@ -232,12 +263,17 @@ public class TrsstTest extends TestCase {
             KeyPair recipientKeys = Common.generateEncryptionKeyPair();
 
             // generate encrypted entry
-            feed = client.post(signingKeys, encryptionKeys.getPublic(),
-                    "Encrypted Post!", "post", null, "This is the body",
-                    new String[] { idsToCleanup.iterator().next(), feedId },
-                    new String[] { "fitter", "happier", "more productive" },
-                    null, null, recipientKeys.getPublic(), null, null, null,
-                    null, null, null);
+            feed = client
+                    .post(signingKeys,
+                            encryptionKeys.getPublic(),
+                            new EntryOptions()
+                                    .setStatus("This is the encrypted entry")
+                                    .setBody("This is the encrypted body")
+                                    .encryptWith(
+                                            recipientKeys.getPublic(),
+                                            new EntryOptions()
+                                                    .setStatus("Unencrypted title with encrypted entry")),
+                            new FeedOptions());
             assertNotNull("Generating encrypted entry", feed);
             entry = feed.getEntries().get(0);
             entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
@@ -258,24 +294,26 @@ public class TrsstTest extends TestCase {
             String encoded = signatureElement.getText();
             Entry decoded = (Entry) Client.decryptElement(
                     new Base64().decode(encoded), recipientKeys.getPrivate());
-            assertTrue("Decoded entry retains title",
-                    "Encrypted Post!".equals(decoded.getTitle()));
+            System.out.println(decoded.getTitle());
+            assertTrue("Decoded entry retains status",
+                    "This is the encrypted entry".equals(decoded.getTitle()));
             assertTrue("Decoded entry retains body",
-                    "This is the body".equals(decoded.getSummary()));
+                    "This is the encrypted body".equals(decoded.getSummary()));
 
             // test pull of a single entry
             String existingId = Common.fromEntryUrn(entry.getId());
             feed = client.pull(feedId, existingId);
             assertNotNull("Single entry feed result", feed);
-            assertEquals("Single entry feed retains id", feedId, Common.fromFeedUrn(feed.getId()));
+            assertEquals("Single entry feed retains id", feedId,
+                    Common.fromFeedUrn(feed.getId()));
             assertEquals("Single entry feed contains one entry", 1, feed
                     .getEntries().size());
             signatureElement = feed.getFirstChild(new QName(
                     "http://www.w3.org/2000/09/xmldsig#", "Signature"));
             assertNotNull("Single entry feed has signature", signatureElement);
             entry = feed.getEntries().get(0);
-            assertEquals("Single entry retains id", existingId, Common.fromEntryUrn(entry.getId())
-                    .toString());
+            assertEquals("Single entry retains id", existingId, Common
+                    .fromEntryUrn(entry.getId()).toString());
 
             // test push to second server
             Server alternateServer = new Server();

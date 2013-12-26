@@ -29,7 +29,6 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
 import javax.crypto.Cipher;
 import javax.xml.namespace.QName;
@@ -200,46 +199,8 @@ public class Client {
     }
 
     /**
-     * Convenience to call post() without posting an entry. If the feed does not
-     * exist on this server, a new feed is created.
-     */
-    public Feed post(KeyPair signingKeys, PublicKey encryptionKey)
-            throws IOException, SecurityException, GeneralSecurityException {
-        return this.post(signingKeys, encryptionKey, null, null, null, null,
-                null, null, null, null, null);
-    }
-
-    /**
-     * Convenience to call post() with a single status update. This is the
-     * common case.
-     */
-    public Feed post(KeyPair signingKeys, PublicKey encryptionKey,
-            String subject) throws IOException, SecurityException,
-            GeneralSecurityException {
-        return this.post(signingKeys, encryptionKey, subject, null, null, null,
-                null, null, null, null, null);
-    }
-
-    /**
-     * Convenience to call post() with a single entry but without updating the
-     * feed attributes. This is the next most common case.
-     */
-    public Feed post(KeyPair signingKeys, PublicKey encryptionKey,
-            String subject, String verb, Date publish, String body,
-            String[] mentions, String[] tags, String mimetype, byte[] content,
-            PublicKey recipientKey) throws IOException, SecurityException,
-            GeneralSecurityException {
-        return this.post(signingKeys, encryptionKey, subject, verb, publish,
-                body, mentions, tags, mimetype, content, recipientKey, null,
-                null, null, null, null, null);
-    }
-
-    /**
      * Posts a new entry to the feed associated with the specified public
-     * signing key to the home server. The signing keys and the encryption key
-     * are required; all other options can be left null. At minimum, a status
-     * must be specified, or no entries will be posted to the feed; in the case
-     * of a new feed, an empty feed is generated.
+     * signing key to the home server, creating a new feed if needed.
      * 
      * @param signingKeys
      *            Required: the signing keys associated with public feed id of
@@ -248,57 +209,15 @@ public class Client {
      *            Required: the public encryption key associated with this
      *            account; this public key will be used by others to encrypt
      *            private message for this account.
-     * @param status
-     *            A short text string no longer than 250 characters with no
-     *            markup.
-     * @param verb
-     *            An activity streams verb; if unspecified, "post" is implicit.
-     * @param publish
-     *            The date on which this entry is publicly available, which may
-     *            be in the future.
-     * @param body
-     *            An arbitrarily long text string that may be formatted in
-     *            markdown; no HTML is allowed.
-     * @param mentions
-     *            Zero or more feed ids, or aliases to feed ids in the form of
-     *            alias@homeserver
-     * @param tags
-     *            Zero or more tags (aka hashtags but without the hash); these
-     *            are equivalent to atom categories.
-     * @param content
-     *            Optional binary content to be uploaded and hosted.
-     * @param mimetype
-     *            Mimetype of the optional binary content, or null.
-     * @param recipientKey
-     *            encrypts this entry using the specified public key so that
-     *            only that key's owner can read it.
-     * @param name
-     *            Updates the author name associated with the feed.
-     * @param email
-     *            Updates the author email associated with the feed.
-     * @param title
-     *            Updates the title of the feed, or empty string to remove.
-     * @param subtitle
-     *            Updates the subtitle of the feed, or empty string to remove.
-     * @param icon
-     *            Updates the icon of the feed, or empty string to remove; this
-     *            is the equivalent to a user profile pic.
-     * @param logo
-     *            Updates the subtitle of the feed, or empty string to remove;
-     *            this is the equivalent to a user background image.
-     * @param recipientKey
-     *            encrypts this entry using the specified public key so that
-     *            only that key's owner can read it.
+     * @param options
+     *            The data to be posted.
      * @return The feed as posted to the home server.
      * @throws IOException
      * @throws SecurityException
      * @throws GeneralSecurityException
      */
     public Feed post(KeyPair signingKeys, PublicKey encryptionKey,
-            String status, String verb, Date publish, String body,
-            String[] mentions, String[] tags, String mimetype, byte[] content,
-            PublicKey recipientKey, String name, String email, String title,
-            String subtitle, String icon, String logo) throws IOException,
+            EntryOptions options, FeedOptions feedOptions) throws IOException,
             SecurityException, GeneralSecurityException {
         // inlining all the steps to help implementors and porters (and
         // debuggers)
@@ -350,39 +269,39 @@ public class Client {
         feed.setMustPreserveWhitespace(false);
 
         // update feed properties
-        if (name != null || email != null) {
+        if (feedOptions.name != null || feedOptions.email != null) {
             Person author = feed.getAuthor();
             if (author == null) {
                 author = Abdera.getInstance().getFactory().newAuthor();
                 feed.addAuthor(author);
             }
-            if (name != null) {
-                author.setName(name);
+            if (feedOptions.name != null) {
+                author.setName(feedOptions.name);
             }
-            if (email != null) {
-                author.setEmail(email);
+            if (feedOptions.email != null) {
+                author.setEmail(feedOptions.email);
             }
         }
-        if (title != null) {
-            feed.setTitle(title);
+        if (feedOptions.title != null) {
+            feed.setTitle(feedOptions.title);
         }
-        if (subtitle != null) {
-            feed.setSubtitle(subtitle);
+        if (feedOptions.subtitle != null) {
+            feed.setSubtitle(feedOptions.subtitle);
         }
-        if (icon != null) {
-            feed.setIcon(icon);
+        if (feedOptions.icon != null) {
+            feed.setIcon(feedOptions.icon);
         }
-        if (logo != null) {
-            feed.setLogo(logo);
+        if (feedOptions.logo != null) {
+            feed.setLogo(feedOptions.logo);
         }
 
         // subject is required to create an entry
         Entry entry = null;
-        if (status != null) {
+        if (options.status != null) {
 
             // the arbitrary length limit
             // (mainly to benefit database implementors)
-            if (status.length() > 250) {
+            if (options.status.length() > 250) {
                 throw new IllegalArgumentException(
                         "Status cannot exceed 250 characters");
             }
@@ -390,56 +309,55 @@ public class Client {
             // create the new entry
             entry = Abdera.getInstance().newEntry();
             entry.setUpdated(feed.getUpdated());
-            entry.setId(Common.toEntryUrn(new AtomDate(entry.getUpdated()).toString()));
-            if (publish != null) {
-                entry.setPublished(publish);
+            entry.setId(Common.toEntryUrn(new AtomDate(entry.getUpdated())
+                    .toString()));
+            if (options.publish != null) {
+                entry.setPublished(options.publish);
             } else {
                 entry.setPublished(entry.getUpdated());
             }
-            entry.setTitle(status);
-            if (verb != null) {
+            entry.setTitle(options.status);
+            if (options.verb != null) {
                 feed.declareNS("http://activitystrea.ms/spec/1.0/", "activity");
                 entry.addSimpleExtension(
                         new QName("http://activitystrea.ms/spec/1.0/", "verb",
-                                "activity"), verb);
+                                "activity"), options.verb);
             }
-            if (body != null) {
-                entry.setSummary(body);
+            if (options.body != null) {
+                entry.setSummary(options.body);
             }
-            if (mentions != null) {
-                for (String s : mentions) {
+            if (options.mentions != null) {
+                for (String s : options.mentions) {
                     entry.addSimpleExtension(new QName(Common.NS_URI,
                             "mention", "trsst"), s);
                 }
             }
-            if (tags != null) {
-                for (String s : tags) {
+            if (options.tags != null) {
+                for (String s : options.tags) {
                     entry.addCategory(s);
                 }
             }
 
-            if (content != null) {
+            if (options.content != null) {
 
                 // encrypt before hashing if necessary
-                if (recipientKey != null) {
-                    content = encryptBytes(content, recipientKey);
+                if (options.recipientKey != null) {
+                    options.content = encryptBytes(options.content,
+                            options.recipientKey);
                 }
 
                 // calculate digest
-                byte[] digest = Common.ripemd160(content); // Common.keyhash(content);
+                byte[] digest = Common.ripemd160(options.content); // Common.keyhash(content);
                 contentId = new Base64(0, null, true).encodeToString(digest);
-                entry.setContent(new IRI(contentId), mimetype);
+                entry.setContent(new IRI(contentId), options.mimetype);
 
                 // use a base uri so src attribute is simpler to process
                 entry.getContentElement().setBaseUri(
                         Common.fromEntryUrn(entry.getId()) + "/");
-
-                // TODO: if we use the hash as the id, do we even need this
-                // attribute?
                 entry.getContentElement().setAttributeValue(
-                        new QName(Common.NS_URI, "ripemd160", "trsst"),
-                        contentId);
-
+                        new QName(Common.NS_URI, "hash", "trsst"), "ripemd160");
+            } else if (options.url != null) {
+                entry.setContent(new IRI(options.url), null);
             }
 
             // add the previous entry's signature value
@@ -470,9 +388,9 @@ public class Client {
                 }
             }
 
-            if (recipientKey != null) {
+            if (options.recipientKey != null) {
                 try {
-                    byte[] bytes = encryptElement(entry, recipientKey);
+                    byte[] bytes = encryptElement(entry, options.recipientKey);
                     String encoded = new Base64(0, null, true)
                             .encodeToString(bytes);
                     StringWriter stringWriter = new StringWriter();
@@ -488,14 +406,27 @@ public class Client {
                         writer.writeElementText(predecessor);
                         writer.endElement();
                     }
-                    writer.writeTitle("Encrypted post"); // arbitrary
-                    // TODO: encrypted content start include recipient key
-                    // bytes as a header to quickly identify if decrypted info
-                    // is garbage.
-                    // TODO: client should specify if mentions should
-                    // be repeated outside the encryption envelope
-                    // TODO: client could specify fake title/body/etc
-                    // that would be overwritten during decryption.
+                    if (options.publicOptions != null) {
+                        // these are options that will be publicly visible
+                        if (options.publicOptions.status != null) {
+                            writer.writeTitle(options.publicOptions.status);
+                        } else {
+                            writer.writeTitle("Encrypted message"); // arbitrary
+                        }
+                        if (options.publicOptions.body != null) {
+                            writer.writeSummary(options.publicOptions.body);
+                        }
+                        if (options.publicOptions.verb != null) {
+                            writer.startElement("verb",
+                                    "http://activitystrea.ms/spec/1.0/");
+                            writer.writeElementText(options.publicOptions.verb);
+                            writer.endElement();
+                        }
+                        // TODO: write mentions
+                        // TODO: write tags
+                    } else {
+                        writer.writeTitle("Encrypted message"); // arbitrary
+                    }
                     writer.startElement("EncryptedData",
                             "http://www.w3.org/2001/04/xmlenc#");
                     writer.startElement("CipherData",
@@ -516,7 +447,7 @@ public class Client {
                     // System.out.println(stringWriter.toString());
                 } catch (Throwable t) {
                     log.error("Unexpected error while encrypting, exiting: "
-                            + recipientKey, t);
+                            + options.recipientKey, t);
                     t.printStackTrace();
                     throw new IllegalArgumentException("Unexpected error: " + t);
                 }
@@ -569,7 +500,8 @@ public class Client {
 
         // post to server
         if (contentId != null) {
-            return push(feed, contentId, mimetype, content, serving);
+            return push(feed, contentId, options.mimetype, options.content,
+                    serving);
         }
         return push(feed, serving);
     }
