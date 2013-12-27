@@ -309,8 +309,7 @@ public class Client {
             // create the new entry
             entry = Abdera.getInstance().newEntry();
             entry.setUpdated(feed.getUpdated());
-            entry.setId(Common.toEntryUrn(new AtomDate(entry.getUpdated())
-                    .toString()));
+            entry.setId(Common.toEntryUrn(Common.toEntryId(feed.getUpdated())));
             if (options.publish != null) {
                 entry.setPublished(options.publish);
             } else {

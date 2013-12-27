@@ -32,6 +32,7 @@ import java.security.Security;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
+import java.util.Date;
 
 import org.apache.commons.codec.binary.Base64;
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
@@ -90,6 +91,27 @@ public class Common {
             entryId = entryId.substring(9);
         }
         return entryId;
+    }
+
+    public static final String generateEntryId() {
+        try {
+            // sleep to ensure a unique id
+            // if creating multiple entries
+            Thread.sleep(3);
+        } catch (InterruptedException e) {
+            // should never ever happen
+            log.warn("generateEntryId: interrupted", e);
+        }
+        return toEntryId(System.currentTimeMillis());
+    }
+
+    public static final String toEntryId(Date timestamp) {
+        return toEntryId(timestamp.getTime());
+    }
+
+    public static final String toEntryId(long timestamp) {
+        // no real benefit from base64 or base58 for small data
+        return Long.toHexString(timestamp);
     }
 
     public static final String toEntryUrn(String entryId) {
