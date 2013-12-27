@@ -35,6 +35,7 @@ import javax.xml.namespace.QName;
 
 import org.apache.abdera.Abdera;
 import org.apache.abdera.i18n.iri.IRI;
+import org.apache.abdera.model.Content;
 import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
@@ -355,7 +356,10 @@ public class Client {
                 entry.getContentElement().setAttributeValue(
                         new QName(Common.NS_URI, "hash", "trsst"), "ripemd160");
             } else if (options.url != null) {
-                entry.setContent(new IRI(options.url), null);
+                Content content = Abdera.getInstance().getFactory().newContent();
+                content.setSrc(options.url);
+                entry.setContentElement(content);
+                //content.setAttributeValue("src", options.url);
             }
 
             // add the previous entry's signature value
