@@ -43,12 +43,14 @@ import org.apache.abdera.protocol.server.RequestContext;
 import org.apache.abdera.protocol.server.ResponseContext;
 import org.apache.abdera.protocol.server.Target;
 import org.apache.abdera.protocol.server.TargetType;
+import org.apache.abdera.protocol.server.context.MediaResponseContext;
 import org.apache.abdera.protocol.server.context.ResponseContextException;
 import org.apache.abdera.protocol.server.context.StreamWriterResponseContext;
 import org.apache.abdera.security.AbderaSecurity;
 import org.apache.abdera.security.Signature;
 import org.apache.abdera.security.SignatureOptions;
 import org.apache.abdera.util.Constants;
+import org.apache.abdera.util.EntityTag;
 import org.apache.abdera.util.MimeTypeHelper;
 import org.apache.abdera.writer.StreamWriter;
 
@@ -537,6 +539,37 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                     Constants.LN_ALTERNATE_MULTIPART_RELATED);
         }
         return accepts;
+    }
+
+    /**
+     * Get a media resource
+     */
+    @Override
+    public ResponseContext getMedia(RequestContext request) {
+        String feedId = request.getTarget().getParameter("collection");
+        String entryId = request.getTarget().getParameter("entry");
+        String resourceId = request.getTarget().getParameter("resource");
+        InputStream input;
+        try {
+            input = persistence.readFeedEntryResource(feedId, entryId,
+                    resourceId);
+            return new MediaResponseContext(input, new EntityTag(resourceId),
+                    200);
+        } catch (FileNotFoundException e) {
+            return ProviderHelper.notfound(request);
+        } catch (IOException e) {
+            return ProviderHelper.badrequest(request,
+                    "Could not parse resource request");
+        }
+    }
+
+    /**
+     * Get metdata for a media resource
+     */
+    @Override
+    public ResponseContext headMedia(RequestContext request) {
+        // TODO: implement HEAD support
+        return getMedia(request);
     }
 
 }

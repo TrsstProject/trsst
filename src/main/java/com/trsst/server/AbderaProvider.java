@@ -82,7 +82,9 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
                 .setPattern("/([^/#?;]+)(\\?[^#]*)?",
                         TargetType.TYPE_COLLECTION, "collection")
                 .setPattern("/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
-                        TargetType.TYPE_ENTRY, "collection", "entry");
+                        TargetType.TYPE_ENTRY, "collection", "entry")
+                .setPattern("/([^/#?]+)/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
+                        TargetType.TYPE_MEDIA, "collection", "entry", "resource");
 
         super.setTargetResolver(resolver);
 
@@ -119,7 +121,8 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
 
     @Override
     public ResponseContext process(RequestContext request) {
-        log.info( request.getMethod().toString() + " " + request.getUri().toString() );
+        log.info(request.getMethod().toString() + " "
+                + request.getUri().toString());
         return super.process(request);
     }
 
