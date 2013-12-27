@@ -87,8 +87,8 @@ public class Common {
 
     public static final String fromEntryUrn(Object entryUrn) {
         String entryId = entryUrn.toString();
-        if (entryId.startsWith("urn:uuid:")) {
-            entryId = entryId.substring(9);
+        if (entryId.startsWith("urn:entry:")) {
+            entryId = entryId.substring("urn:entry:".length());
         }
         return entryId;
     }
@@ -115,8 +115,8 @@ public class Common {
     }
 
     public static final String toEntryUrn(String entryId) {
-        if (!entryId.startsWith("urn:uuid:")) {
-            entryId = "urn:uuid:" + entryId;
+        if (!entryId.startsWith("urn:entry:")) {
+            entryId = "urn:entry:" + entryId;
         }
         // return as string to avoid uri try/catch
         return entryId;
