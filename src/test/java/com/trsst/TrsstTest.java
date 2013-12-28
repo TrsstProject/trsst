@@ -284,7 +284,8 @@ public class TrsstTest extends TestCase {
                     "This is the body".equals(entry.getSummary()));
 
             // decrypt the entry
-            signatureElement = entry.getFirstChild(new QName(
+            Element contentElement = entry.getContentElement();
+            signatureElement = contentElement.getFirstChild(new QName(
                     "http://www.w3.org/2001/04/xmlenc#", "EncryptedData"));
             assertNotNull("Entry is encrypted", signatureElement);
             signatureElement = signatureElement.getFirstChild(new QName(

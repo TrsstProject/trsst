@@ -429,6 +429,7 @@ public class Client {
                     } else {
                         writer.writeTitle("Encrypted message"); // arbitrary
                     }
+                    writer.startContent("text/xml");
                     writer.startElement("EncryptedData",
                             "http://www.w3.org/2001/04/xmlenc#");
                     writer.startElement("CipherData",
@@ -439,6 +440,7 @@ public class Client {
                     writer.endElement();
                     writer.endElement();
                     writer.endElement();
+                    writer.endContent();
                     writer.endEntry();
                     writer.flush();
                     // this constructed entry now replaces the encrypted entry
