@@ -422,7 +422,7 @@ public class Command {
         String verb = commands.getOptionValue("v");
         String body = commands.getOptionValue("b");
         String name = commands.getOptionValue("n");
-        String email = commands.getOptionValue("e");
+        String email = commands.getOptionValue("m");
         String title = commands.getOptionValue("t");
         String subtitle = commands.getOptionValue("subtitle");
         String icon = commands.getOptionValue("i");

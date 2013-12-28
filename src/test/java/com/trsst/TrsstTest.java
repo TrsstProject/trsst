@@ -320,7 +320,8 @@ public class TrsstTest extends TestCase {
             assertTrue("Decoded entry retains body",
                     "This is the encrypted body".equals(decoded.getSummary()));
             assertTrue("Decoded entry retains content",
-                    "http://www.trsst.com".equals(decoded.getContentSrc().toString()));
+                    "http://www.trsst.com".equals(decoded.getContentSrc()
+                            .toString()));
 
             // test pull of a single entry
             String existingId = Common.fromEntryUrn(entry.getId());
