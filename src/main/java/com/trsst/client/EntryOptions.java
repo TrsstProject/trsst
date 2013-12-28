@@ -148,10 +148,40 @@ public class EntryOptions {
     /**
      * @param content
      *            Optional binary content to be uploaded and hosted.
+     * @throws IllegalArgumentException
+     *             if contentUrl is already set.
      */
     public EntryOptions setContentData(byte[] content, String mimetype) {
+        if (this.url != null) {
+            throw new IllegalArgumentException(
+                    "Cannot have set both url and data");
+        }
         this.content = content;
         this.mimetype = mimetype;
+        return this;
+    }
+
+    /**
+     * @return the url
+     */
+    public String getContentUrl() {
+        return url;
+    }
+
+    /**
+     * Sets the optional url to share.
+     * 
+     * @param content
+     *            Optional url to share.
+     * @throws IllegalArgumentException
+     *             if contentData is already set.
+     */
+    public EntryOptions setContentUrl(String url) {
+        if (this.content != null) {
+            throw new IllegalArgumentException(
+                    "Cannot have set both url and data");
+        }
+        this.url = url;
         return this;
     }
 
@@ -175,20 +205,6 @@ public class EntryOptions {
         this.publicOptions = publicOptions;
         this.recipientKey = recipientKey;
         return this;
-    }
-
-    /**
-     * @return the url
-     */
-    public String getContentUrl() {
-        return url;
-    }
-
-    /**
-     * @param url the url to set
-     */
-    public void setContentUrl(String url) {
-        this.url = url;
     }
 
 }

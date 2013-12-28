@@ -356,10 +356,11 @@ public class Client {
                 entry.getContentElement().setAttributeValue(
                         new QName(Common.NS_URI, "hash", "trsst"), "ripemd160");
             } else if (options.url != null) {
-                Content content = Abdera.getInstance().getFactory().newContent();
+                Content content = Abdera.getInstance().getFactory()
+                        .newContent();
                 content.setSrc(options.url);
                 entry.setContentElement(content);
-                //content.setAttributeValue("src", options.url);
+                // content.setAttributeValue("src", options.url);
             }
 
             // add the previous entry's signature value
@@ -424,8 +425,19 @@ public class Client {
                             writer.writeElementText(options.publicOptions.verb);
                             writer.endElement();
                         }
-                        // TODO: write mentions
-                        // TODO: write tags
+                        if (options.publicOptions.tags != null) {
+                            for (String s : options.publicOptions.tags) {
+                                writer.writeCategory(s);
+                            }
+                        }
+                        if (options.publicOptions.mentions != null) {
+                            for (String s : options.publicOptions.mentions) {
+                                writer.startElement("mention", Common.NS_URI,
+                                        "trsst");
+                                writer.writeElementText(s);
+                                writer.endElement();
+                            }
+                        }
                     } else {
                         writer.writeTitle("Encrypted message"); // arbitrary
                     }

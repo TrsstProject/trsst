@@ -269,20 +269,39 @@ public class TrsstTest extends TestCase {
                             new EntryOptions()
                                     .setStatus("This is the encrypted entry")
                                     .setBody("This is the encrypted body")
+                                    .setContentUrl("http://www.trsst.com")
                                     .encryptWith(
                                             recipientKeys.getPublic(),
                                             new EntryOptions()
-                                                    .setStatus("Unencrypted title with encrypted entry")),
+                                                    .setMentions(
+                                                            new String[] {
+                                                                    "182pdh1P6be28uHCUpfZnrQ5M7AJcuXLX2",
+                                                                    "1JMcxLznMbyDYerWo3WUpTPhbwjFq97MeZ" })
+                                                    .setTags(
+                                                            new String[] {
+                                                                    "public",
+                                                                    "unencrypted",
+                                                                    "in the clear" })
+                                                    .setStatus(
+                                                            "Unencrypted title with encrypted entry")),
                             new FeedOptions());
+            entry = feed.getEntries().get(0);
+            feed = client.pull(feedId, Common.fromEntryUrn(entry.getId()));
             assertNotNull("Generating encrypted entry", feed);
             entry = feed.getEntries().get(0);
             entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
                     Common.fromEntryUrn(entry.getId())));
-            assertFalse("Entry does not retain title",
-                    "Encrypted Post!".equals(entry.getTitle()));
+            assertFalse("Entry does not retain status",
+                    "This is the encrypted entry".equals(entry.getTitle()));
             assertFalse("Entry does not retain body",
-                    "This is the body".equals(entry.getSummary()));
-
+                    "This is the encrypted body".equals(entry.getSummary()));
+            assertEquals("Entry retains tags", 3, entry.getCategories().size());
+            assertEquals(
+                    "Entry retains mentions",
+                    2,
+                    entry.getExtensions(
+                            new QName(Common.NS_URI, "mention", "trsst"))
+                            .size());
             // decrypt the entry
             Element contentElement = entry.getContentElement();
             signatureElement = contentElement.getFirstChild(new QName(
@@ -300,6 +319,8 @@ public class TrsstTest extends TestCase {
                     "This is the encrypted entry".equals(decoded.getTitle()));
             assertTrue("Decoded entry retains body",
                     "This is the encrypted body".equals(decoded.getSummary()));
+            assertTrue("Decoded entry retains content",
+                    "http://www.trsst.com".equals(decoded.getContentSrc().toString()));
 
             // test pull of a single entry
             String existingId = Common.fromEntryUrn(entry.getId());
