@@ -132,7 +132,7 @@ public class TrsstTest extends TestCase {
             assertNotNull("Feed has signature", signatureElement);
             entry = feed.getEntries().get(0);
             entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
-                    Common.fromEntryUrn(entry.getId())));
+                    Common.toEntryId(entry.getId())));
             assertEquals("Entry retains title", "First Post!", entry.getTitle());
 
             // encryption roundtrip
@@ -151,7 +151,7 @@ public class TrsstTest extends TestCase {
             assertNotNull("Entry has signature value", signatureElement);
 
             // save for predecessor verification
-            String predecessorId = Common.fromEntryUrn(entry.getId());
+            String predecessorId = entry.getId().toString();
             signatureValue = signatureElement.getText();
 
             // generate entry with full options
@@ -174,7 +174,7 @@ public class TrsstTest extends TestCase {
             assertEquals("Feed contains one entry", 1, feed.getEntries().size());
             entry = feed.getEntries().get(0);
             entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
-                    Common.fromEntryUrn(entry.getId())));
+                    Common.toEntryId(entry.getId())));
             assertEquals("Entry retains title", "Second Post!",
                     entry.getTitle());
             assertEquals("Entry contains verb", "post",
@@ -229,7 +229,7 @@ public class TrsstTest extends TestCase {
                         new FeedOptions());
                 entry = feed.getEntries().get(0);
                 entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
-                        feedId, Common.fromEntryUrn(entry.getId())));
+                        feedId, Common.toEntryId(entry.getId())));
             }
             feed = client.pull(Common.fromFeedUrn(feed.getId()));
             assertTrue("Feed has all entries", (17 == feed.getEntries().size()));
@@ -253,7 +253,7 @@ public class TrsstTest extends TestCase {
                         new FeedOptions());
                 entry = feed.getEntries().get(0);
                 entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
-                        feedId, Common.fromEntryUrn(entry.getId())));
+                        feedId, Common.toEntryId(entry.getId())));
             }
             feed = client.pull(Common.fromFeedUrn(feed.getId()));
             assertTrue("Feed has only first page of entries", (25 == feed
@@ -286,11 +286,11 @@ public class TrsstTest extends TestCase {
                                                             "Unencrypted title with encrypted entry")),
                             new FeedOptions());
             entry = feed.getEntries().get(0);
-            feed = client.pull(feedId, Common.fromEntryUrn(entry.getId()));
+            feed = client.pull(feedId, Common.toEntryId(entry.getId()));
             assertNotNull("Generating encrypted entry", feed);
             entry = feed.getEntries().get(0);
             entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
-                    Common.fromEntryUrn(entry.getId())));
+                    Common.toEntryId(entry.getId())));
             assertFalse("Entry does not retain status",
                     "This is the encrypted entry".equals(entry.getTitle()));
             assertFalse("Entry does not retain body",
@@ -324,7 +324,7 @@ public class TrsstTest extends TestCase {
                             .toString()));
 
             // test pull of a single entry
-            String existingId = Common.fromEntryUrn(entry.getId());
+            long existingId = Common.toEntryId(entry.getId());
             feed = client.pull(feedId, existingId);
             assertNotNull("Single entry feed result", feed);
             assertEquals("Single entry feed retains id", feedId,
@@ -335,8 +335,8 @@ public class TrsstTest extends TestCase {
                     "http://www.w3.org/2000/09/xmldsig#", "Signature"));
             assertNotNull("Single entry feed has signature", signatureElement);
             entry = feed.getEntries().get(0);
-            assertEquals("Single entry retains id", existingId, Common
-                    .fromEntryUrn(entry.getId()).toString());
+            assertEquals("Single entry retains id", existingId,
+                    Common.toEntryId(entry.getId()));
 
             // test push to second server
             Server alternateServer = new Server();

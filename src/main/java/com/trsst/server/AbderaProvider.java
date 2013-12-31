@@ -104,18 +104,22 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
         addFilter(new PaginationFilter());
         addFilter(new OpenSearchFilter()
                 .setShortName("Trsst Search")
-                .setDescription("Search on entry subjects.")
+                .setDescription("Search on entry metadata.")
                 .setTags("test", "example", "opensearch")
                 .setContact("admin@trsst.com")
                 .setTemplate(
-                        "{target_base}/?q={searchTerms}&c={count?}&s={startIndex?}&p={startPage?}&l={language?}&i={indexEncoding?}&o={outputEncoding?}")
+                        "{target_base}/?q={searchTerms}&count={count?}&page={startPage?}&offset={startIndex?}&before={beforeDate?}&after={afterDate?}")
+//                .setTemplate(
+//                        "{target_base}/?q={searchTerms}&c={count?}&s={startIndex?}&p={startPage?}&l={language?}&i={indexEncoding?}&o={outputEncoding?}")
                 .mapTargetParameter("q", "searchTerms")
-                .mapTargetParameter("c", "count")
-                .mapTargetParameter("s", "startIndex")
-                .mapTargetParameter("p", "startPage")
-                .mapTargetParameter("l", "language")
-                .mapTargetParameter("i", "inputEncoding")
-                .mapTargetParameter("o", "outputEncoding"));
+                .mapTargetParameter("count", "count")
+                .mapTargetParameter("before", "beforeDate")
+                .mapTargetParameter("after", "afterDates")
+                .mapTargetParameter("page", "startPage")
+                .mapTargetParameter("offset", "startIndex"));
+//                .mapTargetParameter("l", "language")
+//                .mapTargetParameter("i", "inputEncoding")
+//                .mapTargetParameter("o", "outputEncoding"));
 
     }
 

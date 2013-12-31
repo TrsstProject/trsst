@@ -87,7 +87,7 @@ public class Client {
      * @return a Feed containing the latest entries for this feed id.
      */
     public Feed pull(String feedId) {
-        return pull(feedId, null);
+        return pull(feedId, 0);
     }
 
     /**
@@ -100,7 +100,7 @@ public class Client {
      *            an entry id.
      * @return a Feed containing only the specified entry.
      */
-    public Feed pull(String feedId, String entryId) {
+    public Feed pull(String feedId, long entryId) {
         AbderaClient client = new AbderaClient(Abdera.getInstance());
         URL url = getURL(serving, feedId, entryId);
         ClientResponse response = client.get(url.toString());
@@ -134,7 +134,7 @@ public class Client {
      *         null if unsuccessful.
      */
     public Feed push(String feedId, URL url) {
-        return push(feedId, null, url);
+        return push(feedId, 0, url);
     }
 
     /**
@@ -153,7 +153,7 @@ public class Client {
      * @return a Feed returned by the server successfully accepting the feed, or
      *         null if unsuccessful.
      */
-    public Feed push(String feedId, String entryId, URL url) {
+    public Feed push(String feedId, long entryId, URL url) {
         return push(pull(feedId, entryId), url);
     }
 
@@ -309,7 +309,7 @@ public class Client {
             // create the new entry
             entry = Abdera.getInstance().newEntry();
             entry.setUpdated(feed.getUpdated());
-            entry.setId(Common.toEntryUrn(Common.toEntryId(feed.getUpdated())));
+            entry.setId(Common.toEntryUrn(feedId, feed.getUpdated().getTime()));
             if (options.publish != null) {
                 entry.setPublished(options.publish);
             } else {
@@ -352,7 +352,7 @@ public class Client {
 
                 // use a base uri so src attribute is simpler to process
                 entry.getContentElement().setBaseUri(
-                        Common.fromEntryUrn(entry.getId()) + "/");
+                        Common.toEntryIdString(entry.getId()) + "/");
                 entry.getContentElement().setAttributeValue(
                         new QName(Common.NS_URI, "hash", "trsst"), "ripemd160");
             } else if (options.url != null) {
@@ -379,15 +379,14 @@ public class Client {
                                 Common.NS_URI, Common.PREDECESSOR));
                         signatureElement.setText(predecessor);
                         signatureElement.setAttributeValue(
-                                Common.PREDECESSOR_ID,
-                                Common.fromEntryUrn(mostRecentEntry.getId()));
+                                Common.PREDECESSOR_ID, mostRecentEntry.getId()
+                                        .toString());
                     } else {
                         log.error("No signature value found for entry: "
-                                + Common.fromEntryUrn(entry.getId()));
+                                + entry.getId());
                     }
                 } else {
-                    log.error("No signature found for entry: "
-                            + Common.fromEntryUrn(entry.getId()));
+                    log.error("No signature found for entry: " + entry.getId());
                 }
             }
 
@@ -401,7 +400,7 @@ public class Client {
                             .getWriterFactory().newStreamWriter();
                     writer.setWriter(stringWriter);
                     writer.startEntry();
-                    writer.writeId(Common.fromEntryUrn(entry.getId()));
+                    writer.writeId(entry.getId());
                     writer.writeUpdated(entry.getUpdated());
                     writer.writePublished(entry.getPublished());
                     if (predecessor != null) {
@@ -494,6 +493,11 @@ public class Client {
         for (Link link : feed.getLinks()) {
             link.discard();
         }
+        // remove all opensearch elements before signing
+        for (Element e : feed
+                .getExtensions("http://a9.com/-/spec/opensearch/1.1/")) {
+            e.discard();
+        }
 
         // sign the feed
         signedNode = signer
@@ -522,7 +526,7 @@ public class Client {
         return push(feed, serving);
     }
 
-    private static final URL getURL(URL base, String feedId, String entryId) {
+    private static final URL getURL(URL base, String feedId, long entryId) {
         URL url;
         try {
             String s = base.toString();
@@ -530,8 +534,8 @@ public class Client {
                 s = s.substring(0, s.length() - 1);
             }
             url = new URL(s + "/" + feedId);
-            if (entryId != null) {
-                url = new URL(url.toString() + "/" + entryId);
+            if (entryId != 0) {
+                url = new URL(url.toString() + "/" + Long.toHexString(entryId));
             }
         } catch (MalformedURLException e) {
             throw new IllegalArgumentException("Invalid input: " + feedId

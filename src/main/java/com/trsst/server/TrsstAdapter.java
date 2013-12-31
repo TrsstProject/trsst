@@ -31,6 +31,7 @@ import javax.xml.namespace.QName;
 
 import org.apache.abdera.Abdera;
 import org.apache.abdera.i18n.templates.Template;
+import org.apache.abdera.model.AtomDate;
 import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
@@ -43,6 +44,7 @@ import org.apache.abdera.protocol.server.RequestContext;
 import org.apache.abdera.protocol.server.ResponseContext;
 import org.apache.abdera.protocol.server.Target;
 import org.apache.abdera.protocol.server.TargetType;
+import org.apache.abdera.protocol.server.RequestContext.Scope;
 import org.apache.abdera.protocol.server.context.MediaResponseContext;
 import org.apache.abdera.protocol.server.context.ResponseContextException;
 import org.apache.abdera.protocol.server.context.StreamWriterResponseContext;
@@ -75,7 +77,7 @@ import com.trsst.Common;
 public class TrsstAdapter extends AbstractMultipartAdapter {
 
     private final static Template paging_template = new Template(
-            "{collection}?{-join|&|count,page}");
+            "{collection}?{-join|&|q,verb,mention,tag,before,after,count,page}");
 
     String accountId;
     Storage persistence;
@@ -176,6 +178,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             getEntries(request, result);
             return ProviderHelper.returnBase(result, 200, result.getUpdated())
                     .setEntityTag(ProviderHelper.calculateEntityTag(result));
+        } catch (IllegalArgumentException e) {
+            log.debug("Bad request: " + accountId, e);
+            return ProviderHelper.badrequest(request, e.getMessage());
         } catch (FileNotFoundException e) {
             log.debug("Could not find feed: " + accountId, e);
             return ProviderHelper.notfound(request);
@@ -199,7 +204,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             result = getFeed();
             // add requested entry
             String entryId = request.getTarget().getParameter("entry");
-            Document<Entry> entry = getEntry(request, entryId);
+            Document<Entry> entry = getEntry(request, Common.toEntryId(entryId));
             if (entry != null) {
                 result.addEntry(entry.getRoot());
             }
@@ -217,7 +222,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
     }
 
-    private Document<Entry> getEntry(RequestContext context, String entryId) {
+    private Document<Entry> getEntry(RequestContext context, long entryId) {
         try {
             return context
                     .getAbdera()
@@ -293,7 +298,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                             String cid = i.getKey();
                             Entry entry = i.getValue();
                             persistence.updateFeedEntryResource(accountId,
-                                    Common.fromEntryUrn(entry.getId()), cid,
+                                    Common.toEntryId(entry.getId()), cid,
                                     contentIdToType.get(cid),
                                     entry.getPublished(),
                                     contentIdToData.get(cid));
@@ -377,8 +382,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                         + accountId);
                 throw new XMLSignatureException(
                         "Could not verify signature for entry with id: "
-                                + Common.fromEntryUrn(entry.getId()) + " : "
-                                + accountId);
+                                + entry.getId() + " : " + accountId);
             }
             // remove from feed parent
             entry.discard();
@@ -386,9 +390,14 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // setEditDetail(request, entry, key);
         // String edit = entry.getEditLinkResolvedHref().toString();
 
-        // remove all links before signing
+        // remove all links before verifying
         for (Link link : feed.getLinks()) {
             link.discard();
+        }
+        // remove all opensearch elements before verifying
+        for (Element e : feed
+                .getExtensions("http://a9.com/-/spec/opensearch/1.1/")) {
+            e.discard();
         }
 
         // now validate feed signature sans entries
@@ -408,8 +417,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 // fall back to updated if publish not set
                 date = entry.getUpdated();
             }
-            persistence.updateEntry(accountId,
-                    Common.fromEntryUrn(entry.getId()), date, entry.toString());
+            persistence.updateEntry(accountId, Common.toEntryId(entry.getId()),
+                    date, entry.toString());
         }
     }
 
@@ -460,7 +469,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         Target target = request.getTarget();
         String entryId = target.getParameter("entry");
         try {
-            persistence.deleteEntry(accountId, entryId);
+            persistence.deleteEntry(accountId, Common.toEntryId(entryId));
         } catch (IOException ioe) {
             return ProviderHelper.servererror(request, ioe);
         }
@@ -491,38 +500,138 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
     private void getEntries(RequestContext context, Feed feed)
             throws FileNotFoundException, IOException {
+        String searchTerms = (String) context.getAttribute(Scope.REQUEST,
+                "OpenSearch__searchTerms");
+        Date beginDate = null;
+
+        String verb = context.getParameter("verb");
+
+        String[] mentions = null;
+        List<String> mentionList = context.getParameters("mention");
+        if (mentionList != null) {
+            mentions = mentionList.toArray(new String[0]);
+        }
+
+        String[] tags = null;
+        List<String> tagList = context.getParameters("tag");
+        if (tagList != null) {
+            tags = tagList.toArray(new String[0]);
+        }
+
+        String after = context.getParameter("after");
+        if (after != null) {
+            String begin = after;
+            String beginTemplate = "0000-01-01T00:00:00.000Z";
+            if (begin.length() < beginTemplate.length()) {
+                begin = begin + beginTemplate.substring(begin.length());
+            }
+            try {
+                beginDate = new AtomDate(begin).getDate();
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(
+                        "Could not parse begin date: " + begin);
+            }
+        }
+        Date endDate = null;
+        String before = context.getParameter("before");
+        if (before != null) {
+            String end = before;
+            String endTemplate = "9999-12-31T23:59:59.999Z";
+            if (end.length() < endTemplate.length()) {
+                end = end + endTemplate.substring(end.length() + 1);
+            }
+            try {
+                endDate = new AtomDate(end).getDate();
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Could not parse end date: "
+                        + end);
+            }
+        }
+
         int length = ProviderHelper.getPageSize(context, "count", 25);
-        int offset = ProviderHelper.getOffset(context, "page", length);
+        // int offset = ProviderHelper.getOffset(context, "page", length);
+        int maxresults = 999; // arbitrary: clients that need larger should page
+                              // themselves by date
         String _page = context.getParameter("page");
         int page = (_page != null) ? Integer.parseInt(_page) : 0;
-        addPagingLinks(context, feed, page, length);
-        String[] entryIds = persistence.getEntryIdsForFeedId(accountId, offset
-                * length, length, null, null, null);
-        for (String id : entryIds) {
-            Entry entry = getEntry(context, id).getRoot();
+        long[] entryIds = persistence.getEntryIdsForFeedId(accountId, 0,
+                maxresults, beginDate, endDate, searchTerms, mentions, tags,
+                verb);
+        addPagingLinks(context, feed, page, length, entryIds.length,
+                searchTerms, before, after, mentions, tags, verb);
+        int start = page * length;
+        int end = Math.min(entryIds.length, start + length);
+        for (int i = start; i < end; i++) {
+            Entry entry = getEntry(context, entryIds[i]).getRoot();
             feed.addEntry((Entry) entry.clone());
         }
     }
 
     private void addPagingLinks(RequestContext request, Feed feed,
-            int currentpage, int count) {
+            int currentPage, int itemsPerPage, int totalCount,
+            String searchTerms, String before, String after, String[] mentions,
+            String[] tags, String verb) {
         Map<String, Object> params = new HashMap<String, Object>();
+        if (searchTerms != null) {
+            params.put("q", searchTerms);
+        }
+        if (before != null) {
+            params.put("before", before);
+        }
+        if (after != null) {
+            params.put("after", after);
+        }
+        if (mentions != null) {
+            // hack: template doesn't support duplicate keys with different
+            // values
+            String value = mentions[0];
+            for (int i = 1; i < mentions.length; i++) {
+                value = value + "&mention=" + mentions[i];
+            }
+            params.put("mention", value);
+            // FIXME: this doesn't even work because string gets escaped
+        }
+        if (tags != null) {
+            // hack: template doesn't support duplicate keys with different
+            // values
+            String value = tags[0];
+            for (int i = 1; i < tags.length; i++) {
+                value = value + "&tag=" + tags[i];
+            }
+            params.put("tag", value);
+            // FIXME: this doesn't even work because string gets escaped
+        }
         params.put("collection", request.getTarget().getParameter("collection"));
-        params.put("count", count);
-        params.put("page", currentpage + 1);
-        String next = paging_template.expand(params);
-        next = request.getResolvedUri().resolve(next).toString();
-        feed.addLink(next, "next");
-        if (currentpage > 0) {
-            params.put("page", currentpage - 1);
+        params.put("count", itemsPerPage);
+        params.put("page", currentPage);
+
+        String current = paging_template.expand(params);
+        current = request.getResolvedUri().resolve(current).toString();
+        feed.addLink(current, "current");
+        if (totalCount > (currentPage + 1) * itemsPerPage) {
+            params.put("page", currentPage + 1);
+            String next = paging_template.expand(params);
+            next = request.getResolvedUri().resolve(next).toString();
+            feed.addLink(next, "next");
+        }
+        if (currentPage > 0) {
+            params.put("page", currentPage - 1);
             String prev = paging_template.expand(params);
             prev = request.getResolvedUri().resolve(prev).toString();
             feed.addLink(prev, "previous");
         }
-        params.put("page", 0);
-        String current = paging_template.expand(params);
-        current = request.getResolvedUri().resolve(current).toString();
-        feed.addLink(current, "current");
+
+        // add opensearch tags
+        feed.addSimpleExtension(new QName(
+                "http://a9.com/-/spec/opensearch/1.1/", "totalResults",
+                "opensearch"), Integer.toString(totalCount));
+        feed.addSimpleExtension(new QName(
+                "http://a9.com/-/spec/opensearch/1.1/", "startIndex",
+                "opensearch"), Integer.toString(currentPage * itemsPerPage + 1));
+        feed.addSimpleExtension(new QName(
+                "http://a9.com/-/spec/opensearch/1.1/", "itemsPerPage",
+                "opensearch"), Integer.toString(itemsPerPage));
+
     }
 
     private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(this
@@ -551,8 +660,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         String resourceId = request.getTarget().getParameter("resource");
         InputStream input;
         try {
-            input = persistence.readFeedEntryResource(feedId, entryId,
-                    resourceId);
+            input = persistence.readFeedEntryResource(feedId,
+                    Common.toEntryId(entryId), resourceId);
             return new MediaResponseContext(input, new EntityTag(resourceId),
                     200);
         } catch (FileNotFoundException e) {

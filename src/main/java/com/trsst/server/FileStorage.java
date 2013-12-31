@@ -102,21 +102,22 @@ public class FileStorage implements Storage {
         return new String[0];
     }
 
-    public String[] getEntryIdsForFeedId(String feedId, int start, int length,
-            String query, Date after, Date before) {
+    public long[] getEntryIdsForFeedId(String feedId, int start, int length,
+            Date after, Date before, String query, String[] mentions,
+            String[] tags, String verb) {
         if (start < 0 || length < 1) {
             throw new IllegalArgumentException("Invalid range: start: " + start
                     + " : length: " + length);
         }
-        String[] all = getEntryIdsForFeedId(feedId, after, before);
+        long[] all = getEntryIdsForFeedId(feedId, after, before);
         if (start >= all.length) {
-            return new String[0];
+            return new long[0];
         }
 
-        // TODO: implement query
+        // TODO: implement query/tag/mention/verb filter
 
         int end = Math.min(start + length, all.length);
-        String[] result = new String[end - start];
+        long[] result = new long[end - start];
         System.arraycopy(all, start, result, 0, result.length);
         return result;
     }
@@ -135,12 +136,12 @@ public class FileStorage implements Storage {
         }
     }
 
-    public String readEntry(String feedId, String entryId)
+    public String readEntry(String feedId, long entryId)
             throws FileNotFoundException, IOException {
         return readStringFromFile(getEntryFileForFeedEntry(feedId, entryId));
     }
 
-    public void updateEntry(String feedId, String entryId, Date publishDate,
+    public void updateEntry(String feedId, long entryId, Date publishDate,
             String entry) throws IOException {
         File file = getEntryFileForFeedEntry(feedId, entryId);
         writeStringToFile(entry, file);
@@ -149,26 +150,26 @@ public class FileStorage implements Storage {
         }
     }
 
-    public void deleteEntry(String feedId, String entryId) throws IOException {
+    public void deleteEntry(String feedId, long entryId) throws IOException {
         File file = getEntryFileForFeedEntry(feedId, entryId);
         if (file.exists()) {
             file.delete();
         }
     }
 
-    public String readFeedEntryResourceType(String feedId, String entryId,
+    public String readFeedEntryResourceType(String feedId, long entryId,
             String resourceId) throws IOException {
         return getMimeTypeForFile(getResourceFileForFeedEntry(feedId, entryId,
                 resourceId));
     }
 
-    public InputStream readFeedEntryResource(String feedId, String entryId,
+    public InputStream readFeedEntryResource(String feedId, long entryId,
             String resourceId) throws IOException {
         return new BufferedInputStream(new FileInputStream(
                 getResourceFileForFeedEntry(feedId, entryId, resourceId)));
     }
 
-    public void updateFeedEntryResource(String feedId, String entryId,
+    public void updateFeedEntryResource(String feedId, long entryId,
             String resourceId, String mimetype, Date publishDate,
             InputStream data) throws IOException {
         File file = getResourceFileForFeedEntry(feedId, entryId, resourceId);
@@ -196,7 +197,7 @@ public class FileStorage implements Storage {
         }
     }
 
-    public void deleteFeedEntryResource(String feedId, String entryId,
+    public void deleteFeedEntryResource(String feedId, long entryId,
             String resourceId) {
         File file = getResourceFileForFeedEntry(feedId, entryId, resourceId);
         if (file.exists()) {
@@ -208,7 +209,7 @@ public class FileStorage implements Storage {
         return URLConnection.getFileNameMap().getContentTypeFor(file.getName());
     }
 
-    private String[] getEntryIdsForFeedId(String feedId, Date after, Date before) {
+    private long[] getEntryIdsForFeedId(String feedId, Date after, Date before) {
         final long afterTime = after != null ? after.getTime() : 0;
         final long beforeTime = before != null ? before.getTime() : 0;
         File[] files = new File(root, feedId).listFiles(new FileFilter() {
@@ -231,10 +232,10 @@ public class FileStorage implements Storage {
         });
         String name;
         int suffix = ENTRY_SUFFIX.length();
-        String[] result = new String[files.length];
+        long[] result = new long[files.length];
         for (int i = 0; i < files.length; i++) {
             name = files[i].getName();
-            result[i] = name.substring(0, name.length() - suffix);
+            result[i] = Long.parseLong(name.substring(0, name.length() - suffix), 16);
         }
         return result;
     }
@@ -290,16 +291,13 @@ public class FileStorage implements Storage {
         return new File(new File(getRoot(), feedId), FEED_XML);
     }
 
-    public static File getEntryFileForFeedEntry(String feedId, String entryId) {
-        if (entryId.startsWith("urn:uuid:")) {
-            entryId = entryId.substring("urn:uuid".length() + 1);
-        }
-        return new File(new File(getRoot(), feedId), entryId + ENTRY_SUFFIX);
+    public static File getEntryFileForFeedEntry(String feedId, long entryId) {
+        return new File(new File(getRoot(), feedId), Long.toHexString(entryId) + ENTRY_SUFFIX);
     }
 
     public static File getResourceFileForFeedEntry(String feedId,
-            String entryId, String resourceid) {
-        return new File(new File(getRoot(), feedId), entryId + '-' + resourceid);
+            long entryId, String resourceid) {
+        return new File(new File(getRoot(), feedId), Long.toHexString(entryId) + '-' + resourceid);
     }
 
 }

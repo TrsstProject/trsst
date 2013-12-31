@@ -32,7 +32,6 @@ import java.security.Security;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
-import java.util.Date;
 
 import org.apache.commons.codec.binary.Base64;
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
@@ -85,15 +84,23 @@ public class Common {
         return toBase58(addressBytes);
     }
 
-    public static final String fromEntryUrn(Object entryUrn) {
+    public static final String toEntryIdString(Object entryUrn) {
         String entryId = entryUrn.toString();
+        int i = entryId.lastIndexOf('/');
+        if (i != -1) {
+            entryId = entryId.substring(i + 1);
+        }
         if (entryId.startsWith("urn:entry:")) {
             entryId = entryId.substring("urn:entry:".length());
         }
         return entryId;
     }
 
-    public static final String generateEntryId() {
+    public static final long toEntryId(Object entryUrn) {
+        return Long.parseLong(toEntryIdString(entryUrn), 16);
+    }
+
+    public static final long generateEntryId() {
         try {
             // sleep to ensure a unique id
             // if creating multiple entries
@@ -102,24 +109,11 @@ public class Common {
             // should never ever happen
             log.warn("generateEntryId: interrupted", e);
         }
-        return toEntryId(System.currentTimeMillis());
+        return System.currentTimeMillis();
     }
 
-    public static final String toEntryId(Date timestamp) {
-        return toEntryId(timestamp.getTime());
-    }
-
-    public static final String toEntryId(long timestamp) {
-        // no real benefit from base64 or base58 for small data
-        return Long.toHexString(timestamp);
-    }
-
-    public static final String toEntryUrn(String entryId) {
-        if (!entryId.startsWith("urn:entry:")) {
-            entryId = "urn:entry:" + entryId;
-        }
-        // return as string to avoid uri try/catch
-        return entryId;
+    public static final String toEntryUrn(String feedId, long entryId) {
+        return "urn:entry:" + feedId + '/' + Long.toHexString(entryId);
     }
 
     public static final String fromFeedUrn(Object feedUrn) {
