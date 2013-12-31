@@ -6,3 +6,4 @@
 *.prefs
 
 dependency-reduced-pom.xml
+/target
