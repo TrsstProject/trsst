@@ -122,7 +122,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         try {
             author = getFeed().getAuthor();
         } catch (FileNotFoundException e) {
-            log.debug("Could not find feed: " + accountId, e);
+            log.trace("Could not find feed: " + accountId, e);
         } catch (ParseException e) {
             log.error("Could not parse stored feed: " + accountId, e);
         } catch (IOException e) {
@@ -362,7 +362,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                         Common.toFeedId(publicKey))) {
             throw new XMLSignatureException(
                     "Signing key does not match feed id: "
-                            + Common.fromFeedUrn(feed.getId()));
+                            + Common.fromFeedUrn(feed.getId()) + " : "
+                            + Common.toFeedId(publicKey));
         }
 
         // prep the verifier
