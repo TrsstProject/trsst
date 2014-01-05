@@ -23,9 +23,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HBaseStorage implements Storage {
-
+	
+	private static final Logger log = LoggerFactory.getLogger(HBaseStorage.class);
+	
 	/** HBase configuration object */
 	private static final Configuration configuration = HBaseConfiguration.create();
 
@@ -57,6 +61,7 @@ public class HBaseStorage implements Storage {
 	 *             If there is trouble connecting to HBase
 	 */
 	public static void connect() throws IOException {
+		log.info("Initiating connection to HBase cluster");
 		connection = HConnectionManager.createConnection(configuration);
 	}
 
@@ -69,6 +74,7 @@ public class HBaseStorage implements Storage {
 	 *             connection
 	 */
 	public static void close() throws IOException {
+		log.info("Closing connection to HBase cluster");
 		connection.close();
 	}
 

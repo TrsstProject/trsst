@@ -117,13 +117,15 @@ public class Server {
 		hostName = hostName == null ? "" : hostName.trim().toLowerCase();
 		if (hostName.length() > 0) {
 			HBaseStorage.setZookeeperHostName(hostName);
+			log.info("Using HBase Zookeeper hostname: " + hostName);
 		}
 
 		String port = System.getProperty("com.trsst.hbase.port");
 		port = port == null ? "" : port.trim().toLowerCase();
 		if (port.length() > 0) {
 			HBaseStorage.setZookeeperPort(port);
-		}
+			log.info("Using HBase Zookeeper port: " + port);
+		} 
 
 		try {
 			HBaseStorage.connect();	

@@ -24,7 +24,7 @@ public class HBaseAbderaProvider extends AbderaProvider {
 	private final Logger log = LoggerFactory.getLogger(HBaseAbderaProvider.class);
 
 	/** Important to be 'volatile' for thread safety */
-	private volatile HBaseStorage storage;
+	private volatile Storage storage;
 
 	public HBaseAbderaProvider() {
 	}
@@ -40,7 +40,7 @@ public class HBaseAbderaProvider extends AbderaProvider {
 	protected Storage getStorageForFeedId(String feedId) {
 		// Double locking singleton, which makes this threadsafe and without
 		// penalty due to 'synchronized' block thanks to the 'helper' variable
-		HBaseStorage helper = storage;
+		Storage helper = storage;
 		if (helper == null) {
 			synchronized (this) {
 				helper = storage;
