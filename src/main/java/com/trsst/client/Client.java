@@ -27,6 +27,7 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.interfaces.ECPublicKey;
 import java.util.Date;
 import java.util.List;
 
@@ -59,6 +60,7 @@ import org.bouncycastle.crypto.engines.IESEngine;
 import org.bouncycastle.crypto.generators.KDF2BytesGenerator;
 import org.bouncycastle.crypto.macs.HMac;
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.IESCipher;
 
 import com.trsst.Common;
@@ -577,6 +579,11 @@ public class Client {
                     new ECDHBasicAgreement(), new KDF2BytesGenerator(
                             new SHA1Digest()), new HMac(new SHA256Digest()),
                     new PaddedBufferedBlockCipher(new AESEngine())));
+
+            // BC appears to be happier with BCECPublicKeys:
+            // see BC's IESCipher.engineInit's check for ECPublicKey
+            publicKey = new BCECPublicKey((ECPublicKey) publicKey, null);
+
             cipher.engineInit(Cipher.ENCRYPT_MODE, publicKey,
                     new SecureRandom());
             after = cipher.engineDoFinal(before, 0, before.length);

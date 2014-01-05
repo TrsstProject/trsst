@@ -226,10 +226,11 @@ public class Common {
      */
     public static PublicKey toPublicKeyFromX509(String stored)
             throws GeneralSecurityException {
-        KeyFactory factory = KeyFactory.getInstance("EC", "BC");
+        KeyFactory factory = KeyFactory.getInstance("EC");
         byte[] data = Base64.decodeBase64(stored);
         X509EncodedKeySpec spec = new X509EncodedKeySpec(data);
         return factory.generatePublic(spec);
+
     }
 
     /**
@@ -237,7 +238,7 @@ public class Common {
      */
     public static String toX509FromPublicKey(PublicKey publicKey)
             throws GeneralSecurityException {
-        KeyFactory factory = KeyFactory.getInstance("EC", "BC");
+        KeyFactory factory = KeyFactory.getInstance("EC");
         X509EncodedKeySpec spec = factory.getKeySpec(publicKey,
                 X509EncodedKeySpec.class);
         return new Base64(0, null, true).encodeToString(spec.getEncoded());
