@@ -59,7 +59,8 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
         // map paths to handlers
         RegexTargetResolver resolver = new RegexTargetResolver() {
             // override to exclude BaseTargetPath
-            public Target resolve(Request request) {
+            @Override
+			public Target resolve(Request request) {
                 RequestContext context = (RequestContext) request;
                 String uri = context.getTargetPath();
                 if (uri.startsWith(context.getTargetBasePath())) {
