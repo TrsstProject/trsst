@@ -112,6 +112,7 @@ public class Server {
 	 * </pre>
 	 */
 	private void initHBaseConnectionFromEnvironment() {
+		log.info("Configuring HBase connection from environment");
 		String hostName = System.getProperty("com.trsst.hbase.hostname");
 		hostName = hostName == null ? "" : hostName.trim().toLowerCase();
 		if (hostName.length() > 0) {

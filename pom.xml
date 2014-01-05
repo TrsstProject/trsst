@@ -125,7 +125,13 @@
 		<dependency>
 			<groupId>org.apache.hbase</groupId>
 			<artifactId>hbase-client</artifactId>
-			<version>0.96.1.1-hadoop2</version>
+            <version>0.96.1.1-hadoop2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
 		</dependency>
 		<!-- End Hbase Dependencies -->
 	</dependencies>
