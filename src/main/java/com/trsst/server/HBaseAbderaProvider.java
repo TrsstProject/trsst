@@ -13,13 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.trsst.server.hbase;
+package com.trsst.server;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.trsst.server.AbderaProvider;
-import com.trsst.server.Storage;
 
 /** Same as {@link AbderaProvider} but uses HBase as the {@link Storage} */
 public class HBaseAbderaProvider extends AbderaProvider {

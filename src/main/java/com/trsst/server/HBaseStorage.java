@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.trsst.server.hbase;
+package com.trsst.server;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,8 +23,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-
-import com.trsst.server.Storage;
 
 public class HBaseStorage implements Storage {
 

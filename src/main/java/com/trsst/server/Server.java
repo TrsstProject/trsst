@@ -26,8 +26,6 @@ import org.apache.abdera.protocol.server.servlet.AbderaServlet;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 
-import com.trsst.server.hbase.HBaseStorage;
-
 /**
  * Jetty-specific configuration to host an Abdera servlet that is configured to
  * serve the Trsst protocol.
@@ -88,7 +86,7 @@ public class Server {
 			if (storageProvider.equals("hbase")) {
 				isUsingHBase = true;
 				initHBaseConnectionFromEnvironment();
-				return "com.trsst.server.hbase.HBaseAbderaProvider";
+				return "com.trsst.server.HBaseAbderaProvider";
 			}
 		}
 
