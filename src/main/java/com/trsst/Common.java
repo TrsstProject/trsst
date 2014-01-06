@@ -44,6 +44,8 @@ import org.bouncycastle.util.encoders.Hex;
  * @author mpowers
  */
 public class Common {
+    public static final String FEED_URN_PREFIX = "urn:feed:";
+    public static final String ENTRY_URN_PREFIX = "urn:entry:";
     public static final String CURVE_NAME = "secp256k1";
     public static final String NS_URI = "http://trsst.com/spec/0.1";
     public static final String NS_ABBR = "trsst";
@@ -90,8 +92,8 @@ public class Common {
         if (i != -1) {
             entryId = entryId.substring(i + 1);
         }
-        if (entryId.startsWith("urn:entry:")) {
-            entryId = entryId.substring("urn:entry:".length());
+        if (entryId.startsWith(ENTRY_URN_PREFIX)) {
+            entryId = entryId.substring(ENTRY_URN_PREFIX.length());
         }
         return entryId;
     }
@@ -113,20 +115,20 @@ public class Common {
     }
 
     public static final String toEntryUrn(String feedId, long entryId) {
-        return "urn:entry:" + feedId + '/' + Long.toHexString(entryId);
+        return ENTRY_URN_PREFIX + feedId + '/' + Long.toHexString(entryId);
     }
 
     public static final String fromFeedUrn(Object feedUrn) {
         String feedId = feedUrn.toString();
-        if (feedId.startsWith("urn:feed:")) {
+        if (feedId.startsWith(FEED_URN_PREFIX)) {
             feedId = feedId.substring(9);
         }
         return feedId;
     }
 
     public static final String toFeedUrn(String feedId) {
-        if (!feedId.startsWith("urn:feed:")) {
-            feedId = "urn:feed:" + feedId;
+        if (!feedId.startsWith(FEED_URN_PREFIX)) {
+            feedId = FEED_URN_PREFIX + feedId;
         }
         // return as string to avoid uri try/catch
         return feedId;
