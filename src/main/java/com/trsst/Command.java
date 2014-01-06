@@ -524,6 +524,7 @@ public class Command {
                     System.err.println("This may take several years.");
                     break;
                 }
+                System.err.println("Started: " + new Date());
                 System.err.println("^C to exit");
                 vanity = "1" + vanity;
             }
@@ -531,6 +532,9 @@ public class Command {
                 signingKeys = Common.generateSigningKeyPair();
                 id = Common.toFeedId(signingKeys.getPublic());
             } while (vanity != null && !id.startsWith(vanity));
+            if ( vanity != null ) {
+                System.err.println("Finished: " + new Date());
+            }
 
             encryptionKeys = Common.generateEncryptionKeyPair();
             System.err.println("New feed id created: " + id);
