@@ -28,8 +28,8 @@ import org.apache.commons.httpclient.methods.RequestEntity;
 
 /**
  * A RequestEntity that handles an Entry or a Feed and supports multiple
- * attachments. Per convention, each content id should match an id referenced
- * in an entry with a corresponding digest or the server must reject.
+ * attachments. Per convention, each content id should match an id referenced in
+ * an entry with a corresponding digest or the server must reject.
  * 
  * @author mpowers
  */
@@ -39,6 +39,7 @@ public class MultiPartRequestEntity implements RequestEntity {
     private final byte[][] content;
     private final String[] contentId;
     private final String[] contentType;
+    private long contentLength;
     private String boundary;
 
     public MultiPartRequestEntity(Base base, byte[][] content,
@@ -49,6 +50,25 @@ public class MultiPartRequestEntity implements RequestEntity {
         this.contentType = contentType;
         this.boundary = boundary != null ? boundary : String.valueOf(System
                 .currentTimeMillis());
+        try {
+            // dummy output stream to count the content length
+            contentLength = 0;
+            writeRequest(new OutputStream() {
+                @Override
+                public void write(int b) {
+                    contentLength++;
+                }
+
+                @Override
+                public void write(byte[] b, int off, int len) {
+                    contentLength += len;
+                }
+            });
+        } catch (IOException e) {
+            this.contentLength = -1;
+            log.error("Unexpected error while determining content length");
+        }
+        log.debug("MultiPartRequestEntity: contentLength: " + contentLength);
     }
 
     public void writeRequest(OutputStream arg0) throws IOException {
@@ -62,6 +82,7 @@ public class MultiPartRequestEntity implements RequestEntity {
                 out.writeBytes("\r\n" + "--" + boundary + "--");
             }
         }
+        out.flush();
     }
 
     private static void writeEntry(Base base, DataOutputStream out)
@@ -82,7 +103,7 @@ public class MultiPartRequestEntity implements RequestEntity {
     }
 
     public long getContentLength() {
-        return -1;
+        return contentLength;
     }
 
     public String getContentType() {
@@ -93,4 +114,7 @@ public class MultiPartRequestEntity implements RequestEntity {
     public boolean isRepeatable() {
         return true;
     }
+
+    private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(this
+            .getClass());
 }
