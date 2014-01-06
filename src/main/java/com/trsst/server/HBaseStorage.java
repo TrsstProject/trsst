@@ -21,20 +21,42 @@ import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HBaseStorage implements Storage {
+
+	/** Table to store all our feed data */
+	private static final String FEED_TABLE = "feed";
 	
-	private static final Logger log = LoggerFactory.getLogger(HBaseStorage.class);
-	
+	/** Table to store all our entry data */
+	private static final String ENTRY_TABLE = "entry";
+
+	/**
+	 * Best to only use one column family and to keep column family names as
+	 * small as possible, preferably one character.
+	 * 
+	 * See sections 6.2 and 6.3 of <a
+	 * href="http://hbase.apache.org/book.html#schema"
+	 * >http://hbase.apache.org/book.html#schema</a>
+	 */
+	private static final String COLUMN_FAMILY = "d";
+
 	/** HBase configuration object */
 	private static final Configuration configuration = HBaseConfiguration.create();
 
 	/** HBase connection object */
 	private static HConnection connection;
+
+	/** Logger */
+	private static final Logger log = LoggerFactory.getLogger(HBaseStorage.class);
 
 	/**
 	 * Sets the hostname of the HBase server (zookeeper cluster) for connecting
@@ -63,6 +85,7 @@ public class HBaseStorage implements Storage {
 	public static void connect() throws IOException {
 		log.info("Initiating connection to HBase cluster");
 		connection = HConnectionManager.createConnection(configuration);
+		initSchema();
 	}
 
 	/**
@@ -76,6 +99,59 @@ public class HBaseStorage implements Storage {
 	public static void close() throws IOException {
 		log.info("Closing connection to HBase cluster");
 		connection.close();
+	}
+
+	/**
+	 * Initializes the database schema if necessary.
+	 * 
+	 * @throws IOException
+	 */
+	private static void initSchema() throws IOException {
+		HBaseAdmin admin = null;
+		try {
+			admin = new HBaseAdmin(configuration);
+			HTableDescriptor[] existingFeedTables = admin.listTables(FEED_TABLE);
+			if (existingFeedTables.length == 0) {
+				createTable(admin, FEED_TABLE);
+				createTable(admin, ENTRY_TABLE);
+				// Later can add more tables (Categories, SearchIndex...)
+			}
+		} catch (IOException e) {
+			log.error("Trouble creating feed schema.", e);
+			throw e;
+		} finally {
+			if (admin != null) {
+				admin.close();
+			}
+		}
+	}
+	
+	private static void createTable(HBaseAdmin admin, String nameOfTable) throws IOException {
+		HTableInterface iTable = null;
+		try {
+			iTable = connection.getTable(nameOfTable);
+			TableName qualifiedTableName = iTable.getName();
+			HTableDescriptor table = new HTableDescriptor(qualifiedTableName);
+			admin.createTable(table);
+
+			// Cannot edit a structure on an active table.
+			admin.disableTable(qualifiedTableName);
+
+			// Best to only use one ColumnFamily. See Section 6.2 of
+			// http://hbase.apache.org/book.html#schema
+			HColumnDescriptor baseColumnFamily = new HColumnDescriptor(COLUMN_FAMILY);
+			admin.addColumn(qualifiedTableName, baseColumnFamily);
+
+			// Done updating, re-enable the table
+			admin.enableTable(qualifiedTableName);
+		} catch (IOException e) {
+			log.error("Trouble creating table with name: " + nameOfTable, e);
+			throw e;
+		} finally {
+			if (iTable != null) {
+				iTable.close();
+			}
+		}
 	}
 
 	public String[] getFeedIds(int start, int length) {
