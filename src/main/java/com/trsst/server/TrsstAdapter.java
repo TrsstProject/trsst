@@ -207,6 +207,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             Document<Entry> entry = getEntry(request, Common.toEntryId(entryId));
             if (entry != null) {
                 result.addEntry(entry.getRoot());
+            } else {
+                return ProviderHelper.notfound(request);
             }
             return ProviderHelper.returnBase(result, 200, result.getUpdated())
                     .setEntityTag(ProviderHelper.calculateEntityTag(result));
@@ -312,7 +314,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             log.error("postMedia: ", pe);
         }
         return ProviderHelper.badrequest(request,
-                "Content ids did not match entry content ids");
+                "Could not process multipart request");
     }
 
     /**
@@ -340,7 +342,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             throw new IllegalArgumentException(
                     "Feed update timestamp is required: " + accountId);
         }
-        if (lastUpdated.after(new Date())) {
+        if (lastUpdated.after(new Date(
+                System.currentTimeMillis() + 1000 * 60 * 5))) {
+            // allows five minutes of variance
             throw new IllegalArgumentException(
                     "Feed update timestamp cannot be in the future: "
                             + accountId);
@@ -391,9 +395,15 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // setEditDetail(request, entry, key);
         // String edit = entry.getEditLinkResolvedHref().toString();
 
-        // remove all links before verifying
+        // remove all navigation links before signing
         for (Link link : feed.getLinks()) {
-            link.discard();
+            if (Link.REL_FIRST.equals(link.getRel())
+                    || Link.REL_LAST.equals(link.getRel())
+                    || Link.REL_CURRENT.equals(link.getRel())
+                    || Link.REL_NEXT.equals(link.getRel())
+                    || Link.REL_PREVIOUS.equals(link.getRel())) {
+                link.discard();
+            }
         }
         // remove all opensearch elements before verifying
         for (Element e : feed
@@ -539,7 +549,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             String end = before;
             String endTemplate = "9999-12-31T23:59:59.999Z";
             if (end.length() < endTemplate.length()) {
-                end = end + endTemplate.substring(end.length() + 1);
+                end = end + endTemplate.substring(end.length());
             }
             try {
                 endDate = new AtomDate(end).getDate();
@@ -562,9 +572,15 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 searchTerms, before, after, mentions, tags, verb);
         int start = page * length;
         int end = Math.min(entryIds.length, start + length);
+        Document<Entry> document;
         for (int i = start; i < end; i++) {
-            Entry entry = getEntry(context, entryIds[i]).getRoot();
-            feed.addEntry((Entry) entry.clone());
+            document = getEntry(context, entryIds[i]);
+            if (document != null) {
+                feed.addEntry((Entry) document.getRoot().clone());
+            } else {
+                log.error("Could not find entry for id: " + accountId + " : "
+                        + Long.toHexString(entryIds[i]));
+            }
         }
     }
 
