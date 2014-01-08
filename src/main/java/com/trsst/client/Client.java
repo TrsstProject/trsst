@@ -325,7 +325,10 @@ public class Client {
                                 "activity"), options.verb);
             }
             if (options.body != null) {
-                entry.setSummary(options.body);
+                // was: entry.setSummary(options.body);
+                entry.setSummary(options.body,
+                        org.apache.abdera.model.Text.Type.HTML);
+                // FIXME: some readers only show type=html
             }
             if (options.mentions != null) {
                 for (String s : options.mentions) {
@@ -354,9 +357,18 @@ public class Client {
 
                 // use a base uri so src attribute is simpler to process
                 entry.getContentElement().setBaseUri(
-                        Common.toEntryIdString(entry.getId()) + "/");
+                        Common.toEntryIdString(entry.getId()) + '/');
                 entry.getContentElement().setAttributeValue(
                         new QName(Common.NS_URI, "hash", "trsst"), "ripemd160");
+
+                // if not encrypted
+                if (options.recipientKey == null) {
+                    // add an enclosure link
+                    entry.addLink(Common.toEntryIdString(entry.getId()) + '/'
+                            + contentId, Link.REL_ENCLOSURE, options.mimetype,
+                            null, null, options.content.length);
+                }
+
             } else if (options.url != null) {
                 Content content = Abdera.getInstance().getFactory()
                         .newContent();
@@ -491,9 +503,15 @@ public class Client {
             signatureElement.discard();
         }
 
-        // remove all links before signing
+        // remove all navigation links before signing
         for (Link link : feed.getLinks()) {
-            link.discard();
+            if (Link.REL_FIRST.equals(link.getRel())
+                    || Link.REL_LAST.equals(link.getRel())
+                    || Link.REL_CURRENT.equals(link.getRel())
+                    || Link.REL_NEXT.equals(link.getRel())
+                    || Link.REL_PREVIOUS.equals(link.getRel())) {
+                link.discard();
+            }
         }
         // remove all opensearch elements before signing
         for (Element e : feed
