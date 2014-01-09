@@ -548,7 +548,7 @@ public class Command {
 
             // persist to keystore
             writeSigningKeyPair(signingKeys, id, keyFile, password);
-            writeEncryptionKeyPair(signingKeys, id, keyFile, password);
+            writeEncryptionKeyPair(encryptionKeys, id, keyFile, password);
 
         } else {
 
