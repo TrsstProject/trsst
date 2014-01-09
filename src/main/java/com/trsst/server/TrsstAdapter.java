@@ -55,6 +55,7 @@ import org.apache.abdera.util.Constants;
 import org.apache.abdera.util.EntityTag;
 import org.apache.abdera.util.MimeTypeHelper;
 import org.apache.abdera.writer.StreamWriter;
+import org.apache.commons.codec.binary.Base64;
 
 import com.trsst.Common;
 
@@ -299,11 +300,34 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                                 .entrySet()) {
                             String cid = i.getKey();
                             Entry entry = i.getValue();
-                            persistence.updateFeedEntryResource(accountId,
-                                    Common.toEntryId(entry.getId()), cid,
-                                    contentIdToType.get(cid),
-                                    entry.getPublished(),
-                                    contentIdToData.get(cid));
+
+                            // TODO: grab from attribute instead
+                            // String algorithm = "ripemd160";
+                            String hash = cid;
+                            int dot = hash.indexOf('.');
+                            if (dot != -1) {
+                                // remove any mimetype hint
+                                // (some feed readers like to see
+                                // a file extension on enclosures)
+                                hash = hash.substring(0, dot);
+                            }
+                            byte[] data = Common.readFully(contentIdToData
+                                    .get(cid));
+                            String digest = new Base64(0, null, true)
+                                    .encodeToString(Common.ripemd160(data));
+                            if (digest.equals(hash)) {
+                                // only store if hash matches content id
+                                persistence.updateFeedEntryResource(accountId,
+                                        Common.toEntryId(entry.getId()), cid,
+                                        contentIdToType.get(cid),
+                                        entry.getPublished(), data);
+                            } else {
+                                log.error("Content digests did not match: "
+                                        + hash + " : " + digest);
+                                return ProviderHelper.badrequest(request,
+                                        "Could not verify content digest for: "
+                                                + hash);
+                            }
                         }
                         return ProviderHelper.returnBase(incomingFeed, 201,
                                 null);
@@ -677,10 +701,17 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         String resourceId = request.getTarget().getParameter("resource");
         InputStream input;
         try {
+            // FIXME: this requires a double-fetch of content;
+            // storage should return a struct with mimetype and content length
+            // and data
+            String mimetype = persistence.readFeedEntryResourceType(feedId,
+                    Common.toEntryId(entryId), resourceId);
             input = persistence.readFeedEntryResource(feedId,
                     Common.toEntryId(entryId), resourceId);
-            return new MediaResponseContext(input, new EntityTag(resourceId),
-                    200);
+            MediaResponseContext response = new MediaResponseContext(input,
+                    new EntityTag(resourceId), 200);
+            response.setContentType(mimetype);
+            return response;
         } catch (FileNotFoundException e) {
             return ProviderHelper.notfound(request);
         } catch (IOException e) {

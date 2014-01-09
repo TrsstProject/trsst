@@ -15,6 +15,7 @@
  */
 package com.trsst.server;
 
+import java.io.IOException;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -143,15 +144,17 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
 
         WorkspaceManager wm = getWorkspaceManager(request);
         CollectionAdapter adapter = wm.getCollectionAdapter(request);
-        Transactional transaction = adapter instanceof Transactional ? (Transactional)adapter : null;
+        Transactional transaction = adapter instanceof Transactional ? (Transactional) adapter
+                : null;
         ResponseContext response = null;
         try {
             transactionStart(transaction, request);
             response = processor.process(request, wm, adapter);
-            response = response != null ? response : processExtensionRequest(request, adapter);
+            response = response != null ? response : processExtensionRequest(
+                    request, adapter);
         } catch (Throwable e) {
             if (e instanceof ResponseContextException) {
-                ResponseContextException rce = (ResponseContextException)e;
+                ResponseContextException rce = (ResponseContextException) e;
                 if (rce.getStatusCode() >= 400 && rce.getStatusCode() < 500) {
                     // don't report routine 4xx HTTP errors
                     log.info("info: ", e);
@@ -170,21 +173,20 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
         return response != null ? response : ProviderHelper.badrequest(request);
     }
 
-    
-//    @Override
-//    public ResponseContext process(RequestContext request) {
-//        try {
-//            log.info(request.getMethod().toString() + " "
-//                    + request.getUri().toString());
-//            return super.process(request);
-//        } catch (Throwable t) {
-//            log.info(request.getMethod().toString() + " "
-//                    + request.getUri().toString());
-//            log.error("Unexpected error: " + t);
-//        }
-//        return null;
-//    }
-//
+    // @Override
+    // public ResponseContext process(RequestContext request) {
+    // try {
+    // log.info(request.getMethod().toString() + " "
+    // + request.getUri().toString());
+    // return super.process(request);
+    // } catch (Throwable t) {
+    // log.info(request.getMethod().toString() + " "
+    // + request.getUri().toString());
+    // log.error("Unexpected error: " + t);
+    // }
+    // return null;
+    // }
+    //
     /**
      * Returns null to function in containers with constrained permissions;
      * Trsst servers generally don't need http security contexts.
@@ -210,6 +212,20 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
         return sharedStorage;
     }
 
+    /**
+     * Override to return a custom adapter instance. This implementation
+     * defaults to TrsstAdapter configured to use the result of
+     * getStorageFromFeedId.
+     * 
+     * @param feedId
+     *            a hint for implementors
+     * @return a TrsstAdapter for the specified feed id
+     */
+    protected TrsstAdapter getAdapterForFeedId(String feedId)
+            throws IOException {
+        return new TrsstAdapter(feedId, getStorageForFeedId(feedId));
+    }
+
     private static Storage sharedStorage;
 
     public CollectionAdapter getCollectionAdapter(RequestContext request) {
@@ -218,8 +234,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
             try {
                 TrsstAdapter result = idsToAdapters.get(feedId);
                 if (result == null) {
-                    result = new TrsstAdapter(feedId,
-                            getStorageForFeedId(feedId));
+                    result = getAdapterForFeedId(feedId);
                     workspace.addCollection(result);
                     idsToAdapters.put(feedId, result);
                 }

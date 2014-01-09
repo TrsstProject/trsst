@@ -350,9 +350,22 @@ public class Client {
                             options.recipientKey);
                 }
 
-                // calculate digest
+                // calculate digest to determine content id
                 byte[] digest = Common.ripemd160(options.content); // Common.keyhash(content);
                 contentId = new Base64(0, null, true).encodeToString(digest);
+
+                // add mime-type hint to content id (if not encrypted):
+                // (some readers like to see a file extension on enclosures)
+                if (options.mimetype != null && options.recipientKey == null) {
+                    String extension = "";
+                    int i = options.mimetype.lastIndexOf('/');
+                    if (i != -1) {
+                        extension = '.' + options.mimetype.substring(i + 1);
+                    }
+                    contentId = contentId + extension;
+                }
+
+                // set the content element
                 entry.setContent(new IRI(contentId), options.mimetype);
 
                 // use a base uri so src attribute is simpler to process

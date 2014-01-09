@@ -268,10 +268,8 @@ public interface Storage {
             String resourceId) throws FileNotFoundException, IOException;
 
     /**
-     * Stores a binary resource for the specified feed and entry by reading the
-     * specified input stream and persisting the contents for later retrieval by
-     * readFeedEntryResource(). Implementors must close the input stream when
-     * finished.
+     * Stores a binary resource for the specified feed and entry for later retrieval by
+     * readFeedEntryResource(). 
      * 
      * @param feedId
      *            the specified feed.
@@ -291,7 +289,7 @@ public interface Storage {
      */
     void updateFeedEntryResource(String feedId, long entryId,
             String resourceId, String mimeType, Date publishDate,
-            InputStream data) throws IOException;
+            byte[] data) throws IOException;
 
     /**
      * Delete an existing resource for the specified feed and entry.

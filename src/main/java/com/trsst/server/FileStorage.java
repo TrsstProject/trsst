@@ -171,27 +171,21 @@ public class FileStorage implements Storage {
     }
 
     public void updateFeedEntryResource(String feedId, long entryId,
-            String resourceId, String mimetype, Date publishDate,
-            InputStream data) throws IOException {
+            String resourceId, String mimetype, Date publishDate, byte[] data)
+            throws IOException {
         File file = getResourceFileForFeedEntry(feedId, entryId, resourceId);
-        InputStream input = new BufferedInputStream(data);
         OutputStream output = new BufferedOutputStream(new FileOutputStream(
                 file));
         try {
-            int c;
-            byte[] buf = new byte[256];
-            while ((c = input.read(buf)) > 0) {
-                output.write(buf, 0, c);
-            }
+            output.write(data, 0, data.length);
             output.flush();
             System.err.println("wrote: " + file.getAbsolutePath());
         } finally {
             try {
-                input.close();
+                output.close();
             } catch (IOException ioe) {
                 // suppress any futher error on closing
             }
-            output.close();
         }
         if (publishDate != null) {
             file.setLastModified(publishDate.getTime());
