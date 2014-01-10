@@ -19,6 +19,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
@@ -46,6 +48,7 @@ import org.apache.abdera.protocol.server.Target;
 import org.apache.abdera.protocol.server.TargetType;
 import org.apache.abdera.protocol.server.RequestContext.Scope;
 import org.apache.abdera.protocol.server.context.MediaResponseContext;
+import org.apache.abdera.protocol.server.context.RequestContextWrapper;
 import org.apache.abdera.protocol.server.context.ResponseContextException;
 import org.apache.abdera.protocol.server.context.StreamWriterResponseContext;
 import org.apache.abdera.security.AbderaSecurity;
@@ -80,7 +83,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     private final static Template paging_template = new Template(
             "{collection}?{-join|&|q,verb,mention,tag,before,after,count,page}");
 
-    String accountId;
+    String feedId;
     Storage persistence;
     Map<String, String> accepts;
 
@@ -98,22 +101,119 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @throws IOException
      *             for other kinds of persistence issues
      */
-    public TrsstAdapter(String id, Storage storage)
+    public TrsstAdapter(RequestContext request, Storage storage)
             throws FileNotFoundException, IOException {
-        this.accountId = id;
         persistence = storage;
+        feedId = Common.decodeURL(request.getTarget()
+                .getParameter("collection"));
     }
 
-    protected Feed getFeed() throws ParseException, FileNotFoundException,
-            IOException {
-        return (Feed) Abdera.getInstance().getParser()
-                .parse(new StringReader(persistence.readFeed(accountId)))
-                .getRoot();
+    /**
+     * Returns the current feed to service this request, fetching from the
+     * current request, from local storage, or from remote peers as needed.
+     */
+    protected Feed currentFeed(RequestContext request) throws ParseException,
+            FileNotFoundException, IOException {
+        Feed feed = null;
+        RequestContextWrapper wrapper = new RequestContextWrapper(request);
+        // fetch from request context
+        feed = (Feed) wrapper.getAttribute(Scope.REQUEST, "com.trsst.Feed");
+        if (feed == null) {
+            // fetch from storage
+            try {
+                feed = (Feed) Abdera.getInstance().getParser()
+                        .parse(new StringReader(persistence.readFeed(feedId)))
+                        .getRoot();
+            } catch (FileNotFoundException fnfe) {
+                log.debug("Not found in local storage: " + feedId);
+            }
+        }
+        if (feed == null && !Common.isAccountId(feedId)) {
+            try {
+                feed = fetchDirectly(feedId);
+            } catch (FileNotFoundException fnfe) {
+                log.warn("Could not fetch directly: " + feedId);
+            } catch (Exception e) {
+                log.warn("Unexpected error while fetching directly: " + feedId,
+                        e);
+            }
+        }
+        if (feed == null) {
+            feed = fetchFromRelay(request, feedId);
+        }
+        if (feed != null) {
+            wrapper.setAttribute(Scope.REQUEST, "com.trsst.Feed", feed);
+            return feed;
+        }
+        throw new FileNotFoundException("Not found: " + feedId);
+    }
+
+    /**
+     * For external feed ids: fetch directly from external source, convert to a
+     * trsst feed, (optionally validate it), (optionally persist it), and return
+     * the feed.
+     */
+    private Feed fetchDirectly(String feedId) throws FileNotFoundException,
+            Exception {
+        Feed result = null;
+        try {
+            feedId = Common.decodeURL(feedId);
+            URL url = new URL(feedId);
+            InputStream input = url.openStream();
+            result = (Feed) Abdera.getInstance().getParser().parse(input)
+                    .getRoot();
+            // convert from atom or rss and persist
+            processExternalFeed(feedId, result);
+        } catch (MalformedURLException urle) {
+            log.warn("Not a valid external feed id: " + feedId, urle);
+            throw new FileNotFoundException("Invalid external feed id: "
+                    + feedId);
+        } catch (IOException ioe) {
+            log.warn("Error while fetching: " + feedId, ioe);
+        } catch (ClassCastException cce) {
+            log.warn("Not a valid feed: " + feedId, cce);
+        }
+        return result;
+    }
+
+    private Feed fetchFromRelay(RequestContext request, String feedId) {
+        Feed result = null;
+        RequestContextWrapper wrapper = new RequestContextWrapper(request);
+        int limit = 5; // arbitrary
+        try {
+            if (wrapper.getParameter("relayLimit") != null) {
+                limit = Integer.parseInt(wrapper.getParameter("relayLimit"));
+                if (limit > 10) {
+                    log.warn("Arbitrarily capping specified limit to 10: "
+                            + limit);
+                    limit = 10; // arbitrary
+                }
+            }
+        } catch (Throwable t) {
+            log.warn("Could not parse relayLimit");
+        }
+        List<String> relays = wrapper.getParameters("relay");
+        if (relays == null) {
+            relays = new LinkedList<String>();
+        }
+        // if relay peer count is less than search limit
+        if (relays.size() <= limit) {
+            // if we're not in the list of relay peers
+            String host = wrapper.getUri().getHost();
+            if (!relays.contains(host)) {
+                // add self to list of relay peers
+                relays.add(host);
+                // fetch from another relay peer
+                // TODO: implement
+            }
+
+        }
+        return result;
     }
 
     @Override
     public String getId(RequestContext request) {
-        return accountId;
+        return feedId;
     }
 
     @Override
@@ -121,13 +221,13 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             throws ResponseContextException {
         Person author = null;
         try {
-            author = getFeed().getAuthor();
+            author = currentFeed(request).getAuthor();
         } catch (FileNotFoundException e) {
-            log.trace("Could not find feed: " + accountId, e);
+            log.trace("Could not find feed: " + feedId, e);
         } catch (ParseException e) {
-            log.error("Could not parse stored feed: " + accountId, e);
+            log.error("Could not parse stored feed: " + feedId, e);
         } catch (IOException e) {
-            log.error("Unexpected error reading feed: " + accountId, e);
+            log.error("Unexpected error reading feed: " + feedId, e);
         }
         if (author != null) {
             return author.getName();
@@ -139,26 +239,26 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     protected Feed createFeedBase(RequestContext request)
             throws ResponseContextException {
         try {
-            return (Feed) getFeed().clone();
+            return (Feed) currentFeed(request).clone();
         } catch (FileNotFoundException e) {
-            log.debug("Could not find feed: " + accountId, e);
+            log.debug("Could not find feed: " + feedId, e);
         } catch (ParseException e) {
-            log.error("Could not parse stored feed: " + accountId, e);
+            log.error("Could not parse stored feed: " + feedId, e);
         } catch (IOException e) {
-            log.error("Unexpected error reading feed: " + accountId, e);
+            log.error("Unexpected error reading feed: " + feedId, e);
         }
         return null;
     }
 
     public String getTitle(RequestContext request) {
         try {
-            return getFeed().getTitle();
+            return currentFeed(request).getTitle();
         } catch (FileNotFoundException e) {
-            log.debug("Could not find feed: " + accountId, e);
+            log.debug("Could not find feed: " + feedId, e);
         } catch (ParseException e) {
-            log.error("Could not parse stored feed: " + accountId, e);
+            log.error("Could not parse stored feed: " + feedId, e);
         } catch (IOException e) {
-            log.error("Unexpected error reading feed: " + accountId, e);
+            log.error("Unexpected error reading feed: " + feedId, e);
         }
         return null;
     }
@@ -175,21 +275,21 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      */
     public ResponseContext getFeed(RequestContext request) {
         try {
-            Feed result = getFeed();
+            Feed result = currentFeed(request);
             getEntries(request, result);
             return ProviderHelper.returnBase(result, 200, result.getUpdated())
                     .setEntityTag(ProviderHelper.calculateEntityTag(result));
         } catch (IllegalArgumentException e) {
-            log.debug("Bad request: " + accountId, e);
+            log.debug("Bad request: " + feedId, e);
             return ProviderHelper.badrequest(request, e.getMessage());
         } catch (FileNotFoundException e) {
-            log.debug("Could not find feed: " + accountId, e);
+            log.debug("Could not find feed: " + feedId, e);
             return ProviderHelper.notfound(request);
         } catch (ParseException e) {
-            log.error("Could not parse stored feed: " + accountId, e);
+            log.error("Could not parse stored feed: " + feedId, e);
             return ProviderHelper.servererror(request, e);
         } catch (IOException e) {
-            log.error("Unexpected error reading feed: " + accountId, e);
+            log.error("Unexpected error reading feed: " + feedId, e);
             return ProviderHelper.servererror(request, e);
         }
     }
@@ -202,7 +302,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // make a copy of the current template
         Feed result;
         try {
-            result = getFeed();
+            result = currentFeed(request);
             // add requested entry
             String entryId = request.getTarget().getParameter("entry");
             Document<Entry> entry = getEntry(request, Common.toEntryId(entryId));
@@ -214,13 +314,13 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             return ProviderHelper.returnBase(result, 200, result.getUpdated())
                     .setEntityTag(ProviderHelper.calculateEntityTag(result));
         } catch (FileNotFoundException e) {
-            log.debug("Could not find feed: " + accountId, e);
+            log.debug("Could not find feed: " + feedId, e);
             return ProviderHelper.notfound(request);
         } catch (ParseException e) {
-            log.error("Could not parse stored feed: " + accountId, e);
+            log.error("Could not parse stored feed: " + feedId, e);
             return ProviderHelper.servererror(request, e);
         } catch (IOException e) {
-            log.error("Unexpected error reading feed: " + accountId, e);
+            log.error("Unexpected error reading feed: " + feedId, e);
             return ProviderHelper.servererror(request, e);
         }
     }
@@ -230,12 +330,12 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             return context
                     .getAbdera()
                     .getParser()
-                    .parse(new StringReader(persistence.readEntry(accountId,
+                    .parse(new StringReader(persistence.readEntry(feedId,
                             entryId)));
         } catch (FileNotFoundException fnfe) {
             // fall through
         } catch (Exception e) {
-            log.error("Unexpected error: " + accountId + " : " + entryId, e);
+            log.error("Unexpected error: " + feedId + " : " + entryId, e);
         }
         return null;
     }
@@ -317,7 +417,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                                     .encodeToString(Common.ripemd160(data));
                             if (digest.equals(hash)) {
                                 // only store if hash matches content id
-                                persistence.updateFeedEntryResource(accountId,
+                                persistence.updateFeedEntryResource(feedId,
                                         Common.toEntryId(entry.getId()), cid,
                                         contentIdToType.get(cid),
                                         entry.getPublished(), data);
@@ -364,14 +464,13 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         Date lastUpdated = feed.getUpdated();
         if (lastUpdated == null) {
             throw new IllegalArgumentException(
-                    "Feed update timestamp is required: " + accountId);
+                    "Feed update timestamp is required: " + feedId);
         }
         if (lastUpdated.after(new Date(
                 System.currentTimeMillis() + 1000 * 60 * 5))) {
             // allows five minutes of variance
             throw new IllegalArgumentException(
-                    "Feed update timestamp cannot be in the future: "
-                            + accountId);
+                    "Feed update timestamp cannot be in the future: " + feedId);
         }
 
         // grab the signing key
@@ -379,7 +478,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 Common.SIGN));
         if (signingElement == null) {
             throw new XMLSignatureException(
-                    "Could not find signing key for feed: " + accountId);
+                    "Could not find signing key for feed: " + feedId);
         }
 
         // verify that the key matches the id
@@ -408,10 +507,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         for (Entry entry : entries) {
             if (!signature.verify(entry, options)) {
                 log.warn("Could not verify signature for entry with id: "
-                        + accountId);
+                        + feedId);
                 throw new XMLSignatureException(
                         "Could not verify signature for entry with id: "
-                                + entry.getId() + " : " + accountId);
+                                + entry.getId() + " : " + feedId);
             }
             // remove from feed parent
             entry.discard();
@@ -437,14 +536,13 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // now validate feed signature sans entries
         if (!signature.verify(feed, options)) {
-            log.warn("Could not verify signature for feed with id: "
-                    + accountId);
+            log.warn("Could not verify signature for feed with id: " + feedId);
             throw new XMLSignatureException(
-                    "Could not verify signature for feed with id: " + accountId);
+                    "Could not verify signature for feed with id: " + feedId);
         }
 
         // persist feed
-        persistence.updateFeed(accountId, feed.getUpdated(), feed.toString());
+        persistence.updateFeed(feedId, feed.getUpdated(), feed.toString());
         // only now persist each entry
         for (Entry entry : entries) {
             Date date = entry.getPublished();
@@ -452,7 +550,86 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 // fall back to updated if publish not set
                 date = entry.getUpdated();
             }
-            persistence.updateEntry(accountId, Common.toEntryId(entry.getId()),
+            persistence.updateEntry(feedId, Common.toEntryId(entry.getId()),
+                    date, entry.toString());
+        }
+    }
+
+    /**
+     * Convert external feed and entries and persist. Any exception thrown means
+     * no feed or entries are persisted.
+     * 
+     * External feeds are existing RSS and Atom feeds that are ingested by a
+     * trsst server on behalf of a user request and converted into unsigned
+     * trsst feeds and entries.
+     * 
+     * Note that unsigned or external feeds are never pushed to a trsst server:
+     * they are only ever fetched on behalf of a request from a client. Trsst
+     * servers never accept a push of unsigned feeds or entries.
+     * 
+     * @param feed
+     *            with zero or more entries to be validated and persisted.
+     * @throws XMLSignatureException
+     *             if signature verification fails
+     * @throws IllegalArgumentException
+     *             if data validation fails
+     * @throws Exception
+     *             any other problem
+     */
+    protected void processExternalFeed(String feedId, Feed feed)
+            throws XMLSignatureException, IllegalArgumentException, Exception {
+
+        // clone a copy so we can manipulate
+        feed = (Feed) feed.clone();
+
+        // for our purposes: replace the existing feed id with the URL
+        feed.setId(Common.toFeedUrn(feedId));
+
+        // validate, persist, and remove each entry
+        List<Entry> entries = new LinkedList<Entry>();
+        entries.addAll(feed.getEntries()); // make a copy
+        for (Entry entry : entries) {
+            // convert existing entry id to a trsst timestamp-based id
+            String existing = entry.getId().toString();
+            long timestamp = entry.getUpdated().getTime();
+
+            // RSS feeds don't have millisecond precision
+            // so we need to add it to avoid duplicate ids
+            if (timestamp % 1000 == 0) {
+                timestamp = timestamp + existing.hashCode() % 1000;
+            }
+            entry.setId(Common.toEntryUrn(feedId, timestamp));
+
+            // remove from feed parent
+            entry.discard();
+        }
+
+        // remove all navigation links before signing
+        for (Link link : feed.getLinks()) {
+            if (Link.REL_FIRST.equals(link.getRel())
+                    || Link.REL_LAST.equals(link.getRel())
+                    || Link.REL_CURRENT.equals(link.getRel())
+                    || Link.REL_NEXT.equals(link.getRel())
+                    || Link.REL_PREVIOUS.equals(link.getRel())) {
+                link.discard();
+            }
+        }
+        // remove all opensearch elements before verifying
+        for (Element e : feed
+                .getExtensions("http://a9.com/-/spec/opensearch/1.1/")) {
+            e.discard();
+        }
+
+        // persist feed
+        persistence.updateFeed(feedId, feed.getUpdated(), feed.toString());
+        // only now persist each entry
+        for (Entry entry : entries) {
+            Date date = entry.getPublished();
+            if (date == null) {
+                // fall back to updated if publish not set
+                date = entry.getUpdated();
+            }
+            persistence.updateEntry(feedId, Common.toEntryId(entry.getId()),
                     date, entry.toString());
         }
     }
@@ -474,10 +651,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 return ProviderHelper.badrequest(request,
                         "Could not verify signature: " + xmle.getMessage());
             } catch (FileNotFoundException fnfe) {
-                return ProviderHelper.notfound(request, "Not found: "
-                        + accountId);
+                return ProviderHelper.notfound(request, "Not found: " + feedId);
             } catch (Exception e) {
-                log.warn("Bad request: " + accountId, e);
+                log.warn("Bad request: " + feedId, e);
                 return ProviderHelper.badrequest(request, e.toString());
             }
         } else {
@@ -504,7 +680,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         Target target = request.getTarget();
         String entryId = target.getParameter("entry");
         try {
-            persistence.deleteEntry(accountId, Common.toEntryId(entryId));
+            persistence.deleteEntry(feedId, Common.toEntryId(entryId));
         } catch (IOException ioe) {
             return ProviderHelper.servererror(request, ioe);
         }
@@ -589,7 +765,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                               // themselves by date
         String _page = context.getParameter("page");
         int page = (_page != null) ? Integer.parseInt(_page) : 0;
-        long[] entryIds = persistence.getEntryIdsForFeedId(accountId, 0,
+        long[] entryIds = persistence.getEntryIdsForFeedId(feedId, 0,
                 maxresults, beginDate, endDate, searchTerms, mentions, tags,
                 verb);
         addPagingLinks(context, feed, page, length, entryIds.length,
@@ -602,7 +778,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             if (document != null) {
                 feed.addEntry((Entry) document.getRoot().clone());
             } else {
-                log.error("Could not find entry for id: " + accountId + " : "
+                log.error("Could not find entry for id: " + feedId + " : "
                         + Long.toHexString(entryIds[i]));
             }
         }

@@ -36,6 +36,8 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.trsst.Common;
+
 /**
  * Dumb file persistence for small nodes and test cases. This will get you up
  * and running quickly, but you'll want to replace it with an implementation
@@ -205,6 +207,7 @@ public class FileStorage implements Storage {
     }
 
     private long[] getEntryIdsForFeedId(String feedId, Date after, Date before) {
+        feedId = Common.encodeURL(feedId);
         final long afterTime = after != null ? after.getTime() : 0;
         final long beforeTime = before != null ? before.getTime() : 0;
         File[] files = new File(root, feedId).listFiles(new FileFilter() {
@@ -284,16 +287,19 @@ public class FileStorage implements Storage {
     }
 
     public static File getFeedFileForFeedId(String feedId) {
+        feedId = Common.encodeURL(feedId);
         return new File(new File(getRoot(), feedId), FEED_XML);
     }
 
     public static File getEntryFileForFeedEntry(String feedId, long entryId) {
+        feedId = Common.encodeURL(feedId);
         return new File(new File(getRoot(), feedId), Long.toHexString(entryId)
                 + ENTRY_SUFFIX);
     }
 
     public static File getResourceFileForFeedEntry(String feedId, long entryId,
             String resourceid) {
+        feedId = Common.encodeURL(feedId);
         return new File(new File(getRoot(), feedId), Long.toHexString(entryId)
                 + '-' + resourceid);
     }

@@ -205,7 +205,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
      *            a hint for implementors
      * @return a Storage for the specified feed id
      */
-    protected Storage getStorageForFeedId(String feedId) {
+    protected Storage getStorageForFeedId(RequestContext request) {
         if (sharedStorage == null) {
             sharedStorage = new FileStorage();
         }
@@ -221,9 +221,9 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
      *            a hint for implementors
      * @return a TrsstAdapter for the specified feed id
      */
-    protected TrsstAdapter getAdapterForFeedId(String feedId)
+    protected TrsstAdapter getAdapterForFeedId(RequestContext request)
             throws IOException {
-        return new TrsstAdapter(feedId, getStorageForFeedId(feedId));
+        return new TrsstAdapter(request, getStorageForFeedId(request));
     }
 
     private static Storage sharedStorage;
@@ -234,7 +234,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
             try {
                 TrsstAdapter result = idsToAdapters.get(feedId);
                 if (result == null) {
-                    result = getAdapterForFeedId(feedId);
+                    result = getAdapterForFeedId(request);
                     workspace.addCollection(result);
                     idsToAdapters.put(feedId, result);
                 }

@@ -20,6 +20,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyFactory;
@@ -163,6 +167,17 @@ public class Common {
 
     public static boolean isAccountId(String id) {
         return (decodeChecked(id) != null);
+    }
+
+    public static boolean isExternalId(String id) {
+        // "external id" a.k.a. URL
+        try {
+            // test for valid url
+            new URL(id);
+            return true;
+        } catch (MalformedURLException e) {
+            return false;
+        }
     }
 
     /**
@@ -412,6 +427,24 @@ public class Common {
             output.write(buf, 0, c);
         }
         return output.toByteArray();
+    }
+
+    public static String encodeURL(String parameter) {
+        try {
+            return URLEncoder.encode(parameter, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            log.error("encodeURL: should never happen", e);
+            return null;
+        }
+    }
+
+    public static String decodeURL(String parameter) {
+        try {
+            return URLDecoder.decode(parameter, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            log.error("encodeURL: should never happen", e);
+            return null;
+        }
     }
 
 }

@@ -317,7 +317,7 @@ public class Command {
 
         List<String> ids = new LinkedList<String>();
         for (String arg : arguments) {
-            if (Common.isAccountId(arg)) {
+            if (Common.isAccountId(arg) || Common.isExternalId(arg)) {
                 ids.add(arg);
             } else {
                 System.err.println("Ignoring invalid id: " + arg);
@@ -532,7 +532,7 @@ public class Command {
                 signingKeys = Common.generateSigningKeyPair();
                 id = Common.toFeedId(signingKeys.getPublic());
             } while (vanity != null && !id.startsWith(vanity));
-            if ( vanity != null ) {
+            if (vanity != null) {
                 System.err.println("Finished: " + new Date());
             }
 

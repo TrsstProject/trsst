@@ -20,8 +20,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -104,6 +106,20 @@ public class Client {
      */
     public Feed pull(String feedId, long entryId) {
         AbderaClient client = new AbderaClient(Abdera.getInstance());
+        if (!Common.isAccountId(feedId)) {
+            try {
+                // see if this is a url to an external resource
+                new URL(feedId);
+                // the url of the external feed becomes our feed id
+                feedId = URLEncoder.encode(feedId, "UTF-8");
+            } catch (MalformedURLException e) {
+                System.err.println("Invalid feed id: " + feedId);
+                return null;
+            } catch (UnsupportedEncodingException e) {
+                System.err.println("Could not encode id: " + feedId);
+                return null;
+            }
+        }
         URL url = getURL(serving, feedId, entryId);
         ClientResponse response = client.get(url.toString());
         if (response.getType() == ResponseType.SUCCESS) {
