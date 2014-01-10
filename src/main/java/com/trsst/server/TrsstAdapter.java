@@ -34,6 +34,7 @@ import javax.xml.namespace.QName;
 import org.apache.abdera.Abdera;
 import org.apache.abdera.i18n.templates.Template;
 import org.apache.abdera.model.AtomDate;
+import org.apache.abdera.model.Category;
 import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
@@ -162,8 +163,14 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             InputStream input = url.openStream();
             result = (Feed) Abdera.getInstance().getParser().parse(input)
                     .getRoot();
-            // convert from atom or rss and persist
+
+            // convert from rss if needed
+            if (result.getClass().getName().indexOf("RssFeed") != -1) {
+                result = convertFromRSS(feedId, result);
+            }
+            // process and persist external feed
             processExternalFeed(feedId, result);
+
         } catch (MalformedURLException urle) {
             log.warn("Not a valid external feed id: " + feedId, urle);
             throw new FileNotFoundException("Invalid external feed id: "
@@ -632,6 +639,64 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             persistence.updateEntry(feedId, Common.toEntryId(entry.getId()),
                     date, entry.toString());
         }
+    }
+
+    /**
+     * Converts from RSS parser's read-only Feed to a mutable Feed.
+     */
+    protected Feed convertFromRSS(String feedId, Feed feed) {
+        Feed result = Abdera.getInstance().newFeed();
+
+        // for our purposes: replace the existing feed id with the URL
+        result.setId(Common.toFeedUrn(feedId));
+
+        result.setBaseUri(feed.getBaseUri());
+        result.setUpdated(feed.getUpdated());
+        result.setIconElement(feed.getIconElement());
+        result.setLogoElement(feed.getLogoElement());
+        result.setTitle(feed.getTitle());
+        result.setSubtitle(feed.getSubtitle());
+        if (feed.getAuthor() != null) {
+            result.addAuthor(feed.getAuthor());
+        }
+        for (Category category : feed.getCategories()) {
+            result.addCategory(category);
+        }
+        for (Link link : feed.getLinks()) {
+            result.addLink(link);
+        }
+
+        for (Entry entry : feed.getEntries()) {
+
+            // convert existing entry id to a trsst timestamp-based id
+            Entry converted = Abdera.getInstance().newEntry();
+            String existing = entry.getId().toString();
+            long timestamp = entry.getUpdated().getTime();
+
+            // RSS feeds don't have millisecond precision
+            // so we need to add it to avoid duplicate ids
+            if (timestamp % 1000 == 0) {
+                timestamp = timestamp + existing.hashCode() % 1000;
+            }
+            converted.setId(Common.toEntryUrn(feedId, timestamp));
+            converted.setUpdated(entry.getUpdated());
+            converted.setPublished(entry.getPublished());
+            converted.setTitle(entry.getTitle());
+            converted.setSummary(entry.getSummary());
+            converted.setContentElement(entry.getContentElement());
+            if (entry.getAuthor() != null) {
+                converted.addAuthor(entry.getAuthor());
+            }
+            for (Link link : entry.getLinks()) {
+                converted.addLink(link);
+            }
+            converted.setRights(entry.getRights());
+
+            // remove from feed parent
+            result.addEntry(converted);
+        }
+
+        return result;
     }
 
     /**
