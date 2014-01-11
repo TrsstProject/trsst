@@ -15,6 +15,7 @@
  */
 package com.trsst.server;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
@@ -80,7 +81,7 @@ public interface Storage {
      * 
      * @param feedId
      *            the specified feed.
-     * @param start
+     * @param offset
      *            the number of entries to skip starting with the most recent
      *            entry.
      * @param length
@@ -123,10 +124,12 @@ public interface Storage {
      *            the specified feed.
      * @return a signed feed element and child elements but excluding entry
      *         elements.
+     * @throws FileNotFoundException
+     *             if the specified feed does not exist on this server.
      * @throws IOException
-     *             if an error occurs obtaining the entry data, such as if the specified feed does not exist on this server.
+     *             if an error occurs obtaining the entry data.
      */
-    String readFeed(String feedId) throws IOException;
+    String readFeed(String feedId) throws FileNotFoundException, IOException;
 
     /**
      * Receives the contents of a signed feed element to be stored and
@@ -158,10 +161,13 @@ public interface Storage {
      * @param entryId
      *            the desired entry for the specified feed.
      * @return a signed entry element.
+     * @throws FileNotFoundException
+     *             if the specified entry does not exist.
      * @throws IOException
-     *             if a error occurs obtaining the entry data, such as if the specified entry does not exist.
+     *             if a error occurs obtaining the entry data.
      */
-    String readEntry(String feedId, long entryId) throws IOException;
+    String readEntry(String feedId, long entryId)
+            throws FileNotFoundException, IOException;
 
     /**
      * Receives the contents of a signed entry element to be stored and
@@ -192,10 +198,13 @@ public interface Storage {
      *            the specified feed.
      * @param entryId
      *            the desired entry for the specified feed.
+     * @throws FileNotFoundException
+     *             if the specified entry does not exist.
      * @throws IOException
-     *             if a error occurs while deleting the entry data such as if the specified entry does not exist.
+     *             if a error occurs while deleting the entry data.
      */
-    void deleteEntry(String feedId, long entryId) throws IOException;
+    void deleteEntry(String feedId, long entryId)
+            throws FileNotFoundException, IOException;
 
     /**
      * Returns the mime-type of the contents of the resource data for the
@@ -209,11 +218,13 @@ public interface Storage {
      * @param resourceId
      *            the desired resource id for the specified feed and entry.
      * @return the mime type of the resource, or null if not known.
+     * @throws FileNotFoundException
+     *             if the specified resource does not exist on this server.
      * @throws IOException
-     *             if a error occurs obtaining the resource data such as if the specified resource does not exist on this server.
+     *             if a error occurs obtaining the resource data.
      */
     String readFeedEntryResourceType(String feedId, long entryId,
-            String resourceId) throws IOException;
+            String resourceId) throws FileNotFoundException, IOException;
 
     /**
      * Obtains an input stream to read the contents of the resource data for the
@@ -227,10 +238,13 @@ public interface Storage {
      * @param resourceId
      *            the desired resource id for the specified feed and entry.
      * @return an input stream to read the contents of the resource.
+     * @throws FileNotFoundException
+     *             if the specified entry does not exist.
      * @throws IOException
-     *             if a error occurs obtaining the resource data such as if the specified entry does not exist.
+     *             if a error occurs obtaining the resource data.
      */
-    InputStream readFeedEntryResource(String feedId, long entryId, String resourceId) throws IOException;
+    InputStream readFeedEntryResource(String feedId, long entryId,
+            String resourceId) throws FileNotFoundException, IOException;
 
     /**
      * Stores a binary resource for the specified feed and entry by reading the
