@@ -20,6 +20,7 @@ import static org.apache.hadoop.hbase.util.Bytes.toBytes;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.Date;
 
 import org.apache.commons.lang.StringUtils;
@@ -38,25 +39,26 @@ import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.zookeeper.server.ByteBufferInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HBaseStorage implements Storage {
 
 	private static final byte[] FEED_TABLE = toBytes("feed");
-	private static final byte[] FEED_COLUMN_XML = toBytes("xml");
+	private static final byte[] FEED_COLUMN_DATA = toBytes("data");
 	private static final byte[] FEED_COLUMN_UPDATED = toBytes("updated");
 	// TODO: Should we add a 'count' column for the number of entries,
 	// (incremented, decremented each time an entry is written)
 
 	private static final byte[] ENTRY_TABLE = toBytes("entry");
-	private static final byte[] ENTRY_COLUMN_XML = toBytes("xml");
+	private static final byte[] ENTRY_COLUMN_DATA = toBytes("data");
 	private static final byte[] ENTRY_COLUMN_UPDATED = toBytes("updated");
 
 	private static final byte[] RESOURCE_TABLE = toBytes("entry");
 
-	private static final byte[] RESOURCE_COLUMN_XML(String resourceId) {
-		return toBytes(resourceId + "_xml");
+	private static final byte[] RESOURCE_COLUMN_DATA(String resourceId) {
+		return toBytes(resourceId + "_data");
 	}
 
 	private static final byte[] RESOURCE_COLUMN_UPDATED(String resourceId) {
@@ -222,7 +224,7 @@ public class HBaseStorage implements Storage {
 
 	public String readFeed(String feedId) throws FileNotFoundException, IOException {
 		Get get = new Get(createFeedKey(feedId));
-		get.addColumn(CF, FEED_COLUMN_XML);
+		get.addColumn(CF, FEED_COLUMN_DATA);
 
 		Result result = get(get, FEED_TABLE);
 		return readFirstCell(result);
@@ -268,7 +270,7 @@ public class HBaseStorage implements Storage {
 
 	public void updateFeed(String feedId, Date lastUpdated, String feed) throws IOException {
 		Put put = new Put(createFeedKey(feedId));
-		put.add(CF, FEED_COLUMN_XML, toBytes(feed));
+		put.add(CF, FEED_COLUMN_DATA, toBytes(feed));
 		put.add(CF, FEED_COLUMN_UPDATED, toBytes(lastUpdated.getTime()));
 
 		put(put, FEED_TABLE);
@@ -276,7 +278,7 @@ public class HBaseStorage implements Storage {
 
 	public String readEntry(String feedId, long entryId) throws FileNotFoundException, IOException {
 		Get get = new Get(createEntryKey(feedId, entryId));
-		get.addColumn(CF, ENTRY_COLUMN_XML);
+		get.addColumn(CF, ENTRY_COLUMN_DATA);
 
 		Result result = get(get, ENTRY_TABLE);
 		return readFirstCell(result);
@@ -284,7 +286,7 @@ public class HBaseStorage implements Storage {
 
 	public void updateEntry(String feedId, long entryId, Date publishDate, String entry) throws IOException {
 		Put put = new Put(createEntryKey(feedId, entryId));
-		put.add(CF, ENTRY_COLUMN_XML, toBytes(entry));
+		put.add(CF, ENTRY_COLUMN_DATA, toBytes(entry));
 		put.add(CF, ENTRY_COLUMN_UPDATED, toBytes(publishDate.getTime()));
 
 		put(put, FEED_TABLE);
@@ -296,20 +298,37 @@ public class HBaseStorage implements Storage {
 	}
 
 	public String readFeedEntryResourceType(String feedId, long entryId, String resourceId) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		Get get = new Get(createResourceKey(feedId, entryId));
+		byte[] column = RESOURCE_COLUMN_TYPE(resourceId);
+		get.addColumn(CF, column);
+
+		Result result = get(get, RESOURCE_TABLE);
+		// this will return null if not found
+		byte[] value = result.getValue(CF, column);
+		return value == null ? null : Bytes.toString(value);
 	}
 
-	public InputStream readFeedEntryResource(String feedId, long entryId, String resourceId) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+	public InputStream readFeedEntryResource(String feedId, long entryId, String resourceId)
+			throws FileNotFoundException, IOException {
+		Get get = new Get(createResourceKey(feedId, entryId));
+		byte[] column = RESOURCE_COLUMN_DATA(resourceId);
+		get.addColumn(CF, column);
+
+		Result result = get(get, ENTRY_TABLE);
+		ByteBuffer data = result.getValueAsByteBuffer(CF, column);
+		if (data == null) {
+			String message = "Couldn't find resource data for: " + feedId + "/" + entryId + "/" + resourceId;
+			log.error(message);
+			throw new FileNotFoundException(message);
+		}
+		return new ByteBufferInputStream(data);
 	}
 
 	public void updateFeedEntryResource(String feedId, long entryId, String resourceId, String mimeType,
 			Date publishDate, byte[] data) throws IOException {
 
 		Put put = new Put(createResourceKey(feedId, entryId));
-		put.add(CF, RESOURCE_COLUMN_XML(resourceId), data);
+		put.add(CF, RESOURCE_COLUMN_DATA(resourceId), data);
 		put.add(CF, RESOURCE_COLUMN_UPDATED(resourceId), toBytes(publishDate.getTime()));
 
 		if (mimeType != null) {
