@@ -14,7 +14,7 @@
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
-			<version>3.8.1</version>
+			<version>4.11</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -121,6 +121,19 @@
 			<artifactId>jul-to-slf4j</artifactId>
 			<version>1.7.5</version>
 		</dependency>
+		<!-- Begin Hbase Dependencies -->
+		<dependency>
+			<groupId>org.apache.hbase</groupId>
+			<artifactId>hbase-client</artifactId>
+            <version>0.96.1.1-hadoop2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
+		</dependency>
+		<!-- End Hbase Dependencies -->
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
