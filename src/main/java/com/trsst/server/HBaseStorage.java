@@ -151,7 +151,7 @@ public class HBaseStorage implements Storage {
 	}
 
 	/** Composite of reversed feed id + entryId. Non-monotonic */
-	protected static byte[] createEntryKeyString(String feedId, long entryId) {
+	protected static byte[] createEntryKey(String feedId, long entryId) {
 		return toBytes(StringUtils.reverse(feedId) + Long.toString(entryId));
 	}
 
@@ -207,9 +207,21 @@ public class HBaseStorage implements Storage {
 		HTableInterface table = connection.getTable(FEED_TABLE);
 		Result result = table.get(get);
 		table.close();
+		return readFirstCell(result);
+	}
+
+	/**
+	 * Reads first cell's value and returns it as a String.
+	 * 
+	 * @param result
+	 * @return
+	 * @throws FileNotFoundException
+	 *             If the result parameter contains no entries
+	 */
+	private static String readFirstCell(Result result) throws FileNotFoundException {
 		Cell[] cells = result.rawCells();
 		if (cells.length < 1) {
-			String message = "Couldn't find feed given ID: " + feedId;
+			String message = "Couldn't read cell's contents as string";
 			log.error(message);
 			throw new FileNotFoundException(message);
 		}
@@ -227,15 +239,21 @@ public class HBaseStorage implements Storage {
 		table.close();
 	}
 
-	public String readEntry(String feedId, long entryId) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+	public String readEntry(String feedId, long entryId) throws FileNotFoundException, IOException {
+		byte[] entryKey = createEntryKey(feedId, entryId);
+		Get get = new Get(entryKey);
+		get.addColumn(COLUMN_FAMILY, ENTRY_COLUMN_XML);
+
+		HTableInterface table = connection.getTable(ENTRY_TABLE);
+		Result result = table.get(get);
+		table.close();
+		return readFirstCell(result);
 	}
 
 	public void updateEntry(String feedId, long entryId, Date publishDate, String entry) throws IOException {
 		long updated = publishDate == null ? System.currentTimeMillis() : publishDate.getTime();
 
-		Put put = new Put(createEntryKeyString(feedId, entryId));
+		Put put = new Put(createEntryKey(feedId, entryId));
 		put.add(COLUMN_FAMILY, ENTRY_COLUMN_XML, toBytes(entry));
 		put.add(COLUMN_FAMILY, COLUMN_DATE_UPDATED, toBytes(updated));
 
@@ -263,7 +281,7 @@ public class HBaseStorage implements Storage {
 			Date publishDate, byte[] data) throws IOException {
 		long updated = publishDate == null ? System.currentTimeMillis() : publishDate.getTime();
 
-		Put put = new Put(createEntryKeyString(feedId, entryId));
+		Put put = new Put(createEntryKey(feedId, entryId));
 		put.add(COLUMN_FAMILY, toBytes(resourceId), data);
 		put.add(COLUMN_FAMILY, toBytes(resourceId + "_updated"), toBytes(updated));
 
