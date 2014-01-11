@@ -43,6 +43,27 @@ import org.slf4j.LoggerFactory;
 
 public class HBaseStorage implements Storage {
 
+	private static final byte[] FEED_TABLE = toBytes("feed");
+	private static final byte[] FEED_COLUMN_XML = toBytes("xml");
+	private static final byte[] FEED_COLUMN_UPDATED = toBytes("updated");
+	// TODO: Should we add a 'count' column for the number of entries,
+	// (incremented, decremented each time an entry is written)
+
+	private static final byte[] ENTRY_TABLE = toBytes("entry");
+	private static final byte[] ENTRY_COLUMN_XML = toBytes("xml");
+	private static final byte[] ENTRY_COLUMN_UPDATED = toBytes("updated");
+
+	private static final byte[] RESOURCE_TABLE = toBytes("entry");
+	private static final byte[] RESOURCE_COLUMN_XML(String resourceId) {
+		return toBytes(resourceId + "_xml");
+	}
+	private static final byte[] RESOURCE_COLUMN_UPDATED(String resourceId) {
+		return toBytes(resourceId + "_updated");
+	}
+	private static final byte[] RESOURCE_COLUMN_TYPE(String resourceId) {
+		return toBytes(resourceId + "_type");
+	}
+
 	/**
 	 * Best to only use one column family and to keep column family names as
 	 * small as possible, preferably one character.
@@ -51,19 +72,8 @@ public class HBaseStorage implements Storage {
 	 * href="http://hbase.apache.org/book.html#schema"
 	 * >http://hbase.apache.org/book.html#schema</a>
 	 */
-	private static final byte[] COLUMN_FAMILY = toBytes("d");
-
-	private static final byte[] FEED_TABLE = toBytes("feed");
-	private static final byte[] FEED_COLUMN_XML = toBytes("xml");
-	// TODO: Should we add a 'count' column for the number of entries,
-	// (incremented, decremented each time an entry is written)
-
-	private static final byte[] ENTRY_TABLE = toBytes("entry");
-	private static final byte[] ENTRY_COLUMN_XML = toBytes("xml");
-
-	/** Common name for common field across tables */
-	private static final byte[] COLUMN_DATE_UPDATED = toBytes("updated");
-
+	private static final byte[] CF = toBytes("d");
+	
 	/** HBase configuration object */
 	private static final Configuration configuration = HBaseConfiguration.create();
 
@@ -155,6 +165,14 @@ public class HBaseStorage implements Storage {
 		return toBytes(StringUtils.reverse(feedId) + Long.toString(entryId));
 	}
 
+	/**
+	 * Resources go to same row as their corresponding Entries. Composite of
+	 * reversed feed id + entryId. Non-monotonic
+	 */
+	protected static byte[] createResourceKey(String feedId, long entryId) {
+		return createEntryKey(feedId, entryId);
+	}
+
 	private static void createTable(HBaseAdmin admin, byte[] nameOfTable) throws IOException {
 		HTableInterface iTable = null;
 		try {
@@ -168,7 +186,7 @@ public class HBaseStorage implements Storage {
 
 			// Best to only use one ColumnFamily. See Section 6.2 of
 			// http://hbase.apache.org/book.html#schema
-			HColumnDescriptor baseColumnFamily = new HColumnDescriptor(COLUMN_FAMILY);
+			HColumnDescriptor baseColumnFamily = new HColumnDescriptor(CF);
 			admin.addColumn(qualifiedTableName, baseColumnFamily);
 
 			// Done updating, re-enable the table
@@ -200,14 +218,31 @@ public class HBaseStorage implements Storage {
 	}
 
 	public String readFeed(String feedId) throws FileNotFoundException, IOException {
-		byte[] feedRowKey = createFeedKey(feedId);
-		Get get = new Get(feedRowKey);
-		get.addColumn(COLUMN_FAMILY, FEED_COLUMN_XML);
+		Get get = new Get(createFeedKey(feedId));
+		get.addColumn(CF, FEED_COLUMN_XML);
 
-		HTableInterface table = connection.getTable(FEED_TABLE);
-		Result result = table.get(get);
-		table.close();
+		Result result = get(get, FEED_TABLE);
 		return readFirstCell(result);
+	}
+
+	/** Puts and closes out a table connection. */
+	private void put(Put put, byte[] tableName) throws IOException {
+		HTableInterface table = connection.getTable(tableName);
+		try {
+			table.put(put);
+		} finally {
+			table.close();
+		}
+	}
+
+	/** Gets and closes out a table connection. */
+	private Result get(Get get, byte[] tableName) throws IOException {
+		HTableInterface table = connection.getTable(tableName);
+		try {
+			return table.get(get);
+		} finally {
+			table.close();
+		}
 	}
 
 	/**
@@ -231,22 +266,17 @@ public class HBaseStorage implements Storage {
 	public void updateFeed(String feedId, Date lastUpdated, String feed) throws IOException {
 		long updated = lastUpdated == null ? System.currentTimeMillis() : lastUpdated.getTime();
 		Put put = new Put(createFeedKey(feedId));
-		put.add(COLUMN_FAMILY, FEED_COLUMN_XML, toBytes(feed));
-		put.add(COLUMN_FAMILY, COLUMN_DATE_UPDATED, toBytes(updated));
+		put.add(CF, FEED_COLUMN_XML, toBytes(feed));
+		put.add(CF, FEED_COLUMN_UPDATED, toBytes(updated));
 
-		HTableInterface table = connection.getTable(FEED_TABLE);
-		table.put(put);
-		table.close();
+		put(put, FEED_TABLE);
 	}
 
 	public String readEntry(String feedId, long entryId) throws FileNotFoundException, IOException {
-		byte[] entryKey = createEntryKey(feedId, entryId);
-		Get get = new Get(entryKey);
-		get.addColumn(COLUMN_FAMILY, ENTRY_COLUMN_XML);
+		Get get = new Get(createEntryKey(feedId, entryId));
+		get.addColumn(CF, ENTRY_COLUMN_XML);
 
-		HTableInterface table = connection.getTable(ENTRY_TABLE);
-		Result result = table.get(get);
-		table.close();
+		Result result = get(get, ENTRY_TABLE);
 		return readFirstCell(result);
 	}
 
@@ -254,12 +284,10 @@ public class HBaseStorage implements Storage {
 		long updated = publishDate == null ? System.currentTimeMillis() : publishDate.getTime();
 
 		Put put = new Put(createEntryKey(feedId, entryId));
-		put.add(COLUMN_FAMILY, ENTRY_COLUMN_XML, toBytes(entry));
-		put.add(COLUMN_FAMILY, COLUMN_DATE_UPDATED, toBytes(updated));
+		put.add(CF, ENTRY_COLUMN_XML, toBytes(entry));
+		put.add(CF, ENTRY_COLUMN_UPDATED, toBytes(updated));
 
-		HTableInterface table = connection.getTable(FEED_TABLE);
-		table.put(put);
-		table.close();
+		put(put, FEED_TABLE);
 	}
 
 	public void deleteEntry(String feedId, long entryId) throws IOException {
@@ -281,18 +309,16 @@ public class HBaseStorage implements Storage {
 			Date publishDate, byte[] data) throws IOException {
 		long updated = publishDate == null ? System.currentTimeMillis() : publishDate.getTime();
 
-		Put put = new Put(createEntryKey(feedId, entryId));
-		put.add(COLUMN_FAMILY, toBytes(resourceId), data);
-		put.add(COLUMN_FAMILY, toBytes(resourceId + "_updated"), toBytes(updated));
+		Put put = new Put(createResourceKey(feedId, entryId));
+		put.add(CF, RESOURCE_COLUMN_XML(resourceId), data);
+		put.add(CF, RESOURCE_COLUMN_UPDATED(resourceId), toBytes(updated));
 
 		if (mimeType != null) {
 			// Column name = resourceId_type
-			put.add(COLUMN_FAMILY, toBytes(resourceId + "_type"), toBytes(mimeType));
+			put.add(CF, RESOURCE_COLUMN_TYPE(resourceId), toBytes(mimeType));
 		}
 
-		HTableInterface table = connection.getTable(FEED_TABLE);
-		table.put(put);
-		table.close();
+		put(put, RESOURCE_TABLE);
 	}
 
 	public void deleteFeedEntryResource(String feedId, long entryId, String resourceId) throws IOException {
