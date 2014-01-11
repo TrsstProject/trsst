@@ -33,87 +33,150 @@ import org.mortbay.jetty.servlet.ServletHolder;
  * @author mpowers
  */
 public class Server {
-    private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(this
-            .getClass());
+	private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(this.getClass());
 
-    int port;
-    String path;
-    org.mortbay.jetty.Server server;
+	int port;
+	String path;
+	org.mortbay.jetty.Server server;
 
-    public Server() throws Exception {
-        this(0, null);
-    }
+	private boolean isUsingHBase = false;
 
-    public Server(int port) throws Exception {
-        this(port, null);
-    }
+	public Server() throws Exception {
+		this(0, null);
+	}
 
-    public Server(int port, String path) throws Exception {
-        try {
-            if (path != null) {
-                if (path.endsWith("/")) {
-                    path = path.substring(0, path.length() - 1);
-                }
-                if (!path.startsWith("/")) {
-                    path = "/" + path;
-                }
-            } else {
-                path = "";
-            }
-            if (port == 0) {
-                port = allocatePort();
-            }
-            server = new org.mortbay.jetty.Server(port);
-            Context context = new Context(server, "/", Context.SESSIONS);
-            ServletHolder servletHolder = new ServletHolder(new AbderaServlet());
-            servletHolder.setInitParameter(
-                    "org.apache.abdera.protocol.server.Provider",
-                    "com.trsst.server.AbderaProvider");
-            context.addServlet(servletHolder, path + "/*");
-            this.port = port;
-            this.path = path;
-            server.start();
-        } catch (Exception ioe) {
-            log.error("could not start server on " + port + " : " + path, ioe);
-            throw ioe;
-        }
-    }
+	public Server(int port) throws Exception {
+		this(port, null);
+	}
 
-    /**
-     * Grabs a new server port. Borrowed from axiom.
-     */
-    private int allocatePort() {
-        try {
-            ServerSocket ss = new ServerSocket(0);
-            int port = ss.getLocalPort();
-            ss.close();
-            return port;
-        } catch (IOException ex) {
-            log.error("Unable to allocate TCP port; defaulting to 54445.", ex);
-            return 54445; // arbitrary port
-        }
-    }
+	public Server(int port, String path) throws Exception {
+		try {
+			if (path != null) {
+				if (path.endsWith("/")) {
+					path = path.substring(0, path.length() - 1);
+				}
+				if (!path.startsWith("/")) {
+					path = "/" + path;
+				}
+			} else {
+				path = "";
+			}
+			if (port == 0) {
+				port = allocatePort();
+			}
+			server = new org.mortbay.jetty.Server(port);
+			Context context = new Context(server, "/", Context.SESSIONS);
+			ServletHolder servletHolder = new ServletHolder(new AbderaServlet());
+			String provider = detectProviderForEnvironment();
+			servletHolder.setInitParameter("org.apache.abdera.protocol.server.Provider", provider);
+			context.addServlet(servletHolder, path + "/*");
+			this.port = port;
+			this.path = path;
+			server.start();
+		} catch (Exception ioe) {
+			log.error("could not start server on " + port + " : " + path, ioe);
+			throw ioe;
+		}
+	}
 
-    public URL getServiceURL() {
-        URL result = null;
-        try {
-            result = new URL("http", "localhost", port, path); // default
-            result = new URL("http", InetAddress.getLocalHost()
-                    .getHostAddress(), port, path);
-        } catch (MalformedURLException e) {
-            // accept default
-        } catch (UnknownHostException e) {
-            // accept default
-        }
-        return result;
-    }
+	private String detectProviderForEnvironment() {
+		String storageProvider = System.getProperty("com.trsst.storage.provider");
+		if (storageProvider != null) {
+			storageProvider = storageProvider.trim().toLowerCase();
+			if (storageProvider.equals("hbase")) {
+				isUsingHBase = true;
+				initHBaseConnectionFromEnvironment();
+				return "com.trsst.server.HBaseAbderaProvider";
+			}
+		}
 
-    public void stop() {
-        try {
-            server.stop();
-        } catch (Exception e) {
-            log.error("Error while stopping server", e);
-        }
-        server.destroy();
-    }
+		// Default AbderaProvider
+		return "com.trsst.server.AbderaProvider";
+	}
+
+	/**
+	 * Initializes the provider based on the environment variables, if present.
+	 * Opens connection to HBase.
+	 * 
+	 * <pre>
+	 * com.trsst.hbase.hostname = host name of HBase server to use
+	 * com.trsst.hbase.port = port of HBase server to use
+	 * </pre>
+	 * 
+	 * If either variables are not present, they're ignored individually and the
+	 * default for that value is used.
+	 * 
+	 * <pre>
+	 * default hostname = localhost
+	 * default port = 2181
+	 * </pre>
+	 */
+	private void initHBaseConnectionFromEnvironment() {
+		log.info("Configuring HBase connection from environment");
+		String hostName = System.getProperty("com.trsst.hbase.hostname");
+		hostName = hostName == null ? "" : hostName.trim().toLowerCase();
+		if (hostName.length() > 0) {
+			HBaseStorage.setZookeeperHostName(hostName);
+			log.info("Using HBase Zookeeper hostname: " + hostName);
+		}
+
+		String port = System.getProperty("com.trsst.hbase.port");
+		port = port == null ? "" : port.trim().toLowerCase();
+		if (port.length() > 0) {
+			HBaseStorage.setZookeeperPort(port);
+			log.info("Using HBase Zookeeper port: " + port);
+		} 
+
+		try {
+			HBaseStorage.connect();	
+		} catch(IOException e) {
+			log.error("Error opening HBase connection: " + e.getMessage(), e);
+		}
+	}
+
+	/**
+	 * Grabs a new server port. Borrowed from axiom.
+	 */
+	private int allocatePort() {
+		try {
+			ServerSocket ss = new ServerSocket(0);
+			int port = ss.getLocalPort();
+			ss.close();
+			return port;
+		} catch (IOException ex) {
+			log.error("Unable to allocate TCP port; defaulting to 54445.", ex);
+			return 54445; // arbitrary port
+		}
+	}
+
+	public URL getServiceURL() {
+		URL result = null;
+		try {
+			result = new URL("http", "localhost", port, path); // default
+			result = new URL("http", InetAddress.getLocalHost().getHostAddress(), port, path);
+		} catch (MalformedURLException e) {
+			// accept default
+		} catch (UnknownHostException e) {
+			// accept default
+		}
+		return result;
+	}
+
+	/** Shuts down the server and closes any open database connections */
+	public void stop() {
+		if (isUsingHBase) {
+			try {
+				HBaseStorage.close();	
+			} catch(IOException e) {
+				log.warn("Trouble closing HBase connection: " + e.getMessage(), e);
+			}
+		}
+
+		try {
+			server.stop();
+		} catch (Exception e) {
+			log.error("Error while stopping server", e);
+		}
+		server.destroy();
+	}
 }
