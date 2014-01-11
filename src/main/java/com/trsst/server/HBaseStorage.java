@@ -54,12 +54,15 @@ public class HBaseStorage implements Storage {
 	private static final byte[] ENTRY_COLUMN_UPDATED = toBytes("updated");
 
 	private static final byte[] RESOURCE_TABLE = toBytes("entry");
+
 	private static final byte[] RESOURCE_COLUMN_XML(String resourceId) {
 		return toBytes(resourceId + "_xml");
 	}
+
 	private static final byte[] RESOURCE_COLUMN_UPDATED(String resourceId) {
 		return toBytes(resourceId + "_updated");
 	}
+
 	private static final byte[] RESOURCE_COLUMN_TYPE(String resourceId) {
 		return toBytes(resourceId + "_type");
 	}
@@ -73,7 +76,7 @@ public class HBaseStorage implements Storage {
 	 * >http://hbase.apache.org/book.html#schema</a>
 	 */
 	private static final byte[] CF = toBytes("d");
-	
+
 	/** HBase configuration object */
 	private static final Configuration configuration = HBaseConfiguration.create();
 
@@ -264,10 +267,9 @@ public class HBaseStorage implements Storage {
 	}
 
 	public void updateFeed(String feedId, Date lastUpdated, String feed) throws IOException {
-		long updated = lastUpdated == null ? System.currentTimeMillis() : lastUpdated.getTime();
 		Put put = new Put(createFeedKey(feedId));
 		put.add(CF, FEED_COLUMN_XML, toBytes(feed));
-		put.add(CF, FEED_COLUMN_UPDATED, toBytes(updated));
+		put.add(CF, FEED_COLUMN_UPDATED, toBytes(lastUpdated.getTime()));
 
 		put(put, FEED_TABLE);
 	}
@@ -281,11 +283,9 @@ public class HBaseStorage implements Storage {
 	}
 
 	public void updateEntry(String feedId, long entryId, Date publishDate, String entry) throws IOException {
-		long updated = publishDate == null ? System.currentTimeMillis() : publishDate.getTime();
-
 		Put put = new Put(createEntryKey(feedId, entryId));
 		put.add(CF, ENTRY_COLUMN_XML, toBytes(entry));
-		put.add(CF, ENTRY_COLUMN_UPDATED, toBytes(updated));
+		put.add(CF, ENTRY_COLUMN_UPDATED, toBytes(publishDate.getTime()));
 
 		put(put, FEED_TABLE);
 	}
@@ -307,11 +307,10 @@ public class HBaseStorage implements Storage {
 
 	public void updateFeedEntryResource(String feedId, long entryId, String resourceId, String mimeType,
 			Date publishDate, byte[] data) throws IOException {
-		long updated = publishDate == null ? System.currentTimeMillis() : publishDate.getTime();
 
 		Put put = new Put(createResourceKey(feedId, entryId));
 		put.add(CF, RESOURCE_COLUMN_XML(resourceId), data);
-		put.add(CF, RESOURCE_COLUMN_UPDATED(resourceId), toBytes(updated));
+		put.add(CF, RESOURCE_COLUMN_UPDATED(resourceId), toBytes(publishDate.getTime()));
 
 		if (mimeType != null) {
 			// Column name = resourceId_type
