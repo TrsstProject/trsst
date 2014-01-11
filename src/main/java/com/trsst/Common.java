@@ -20,6 +20,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyFactory;
@@ -44,6 +48,8 @@ import org.bouncycastle.util.encoders.Hex;
  * @author mpowers
  */
 public class Common {
+    public static final String FEED_URN_PREFIX = "urn:feed:";
+    public static final String ENTRY_URN_PREFIX = "urn:entry:";
     public static final String CURVE_NAME = "secp256k1";
     public static final String NS_URI = "http://trsst.com/spec/0.1";
     public static final String NS_ABBR = "trsst";
@@ -90,8 +96,8 @@ public class Common {
         if (i != -1) {
             entryId = entryId.substring(i + 1);
         }
-        if (entryId.startsWith("urn:entry:")) {
-            entryId = entryId.substring("urn:entry:".length());
+        if (entryId.startsWith(ENTRY_URN_PREFIX)) {
+            entryId = entryId.substring(ENTRY_URN_PREFIX.length());
         }
         return entryId;
     }
@@ -113,20 +119,20 @@ public class Common {
     }
 
     public static final String toEntryUrn(String feedId, long entryId) {
-        return "urn:entry:" + feedId + '/' + Long.toHexString(entryId);
+        return ENTRY_URN_PREFIX + feedId + '/' + Long.toHexString(entryId);
     }
 
     public static final String fromFeedUrn(Object feedUrn) {
         String feedId = feedUrn.toString();
-        if (feedId.startsWith("urn:feed:")) {
+        if (feedId.startsWith(FEED_URN_PREFIX)) {
             feedId = feedId.substring(9);
         }
         return feedId;
     }
 
     public static final String toFeedUrn(String feedId) {
-        if (!feedId.startsWith("urn:feed:")) {
-            feedId = "urn:feed:" + feedId;
+        if (!feedId.startsWith(FEED_URN_PREFIX)) {
+            feedId = FEED_URN_PREFIX + feedId;
         }
         // return as string to avoid uri try/catch
         return feedId;
@@ -161,6 +167,17 @@ public class Common {
 
     public static boolean isAccountId(String id) {
         return (decodeChecked(id) != null);
+    }
+
+    public static boolean isExternalId(String id) {
+        // "external id" a.k.a. URL
+        try {
+            // test for valid url
+            new URL(id);
+            return true;
+        } catch (MalformedURLException e) {
+            return false;
+        }
     }
 
     /**
@@ -226,10 +243,11 @@ public class Common {
      */
     public static PublicKey toPublicKeyFromX509(String stored)
             throws GeneralSecurityException {
-        KeyFactory factory = KeyFactory.getInstance("EC", "BC");
+        KeyFactory factory = KeyFactory.getInstance("EC");
         byte[] data = Base64.decodeBase64(stored);
         X509EncodedKeySpec spec = new X509EncodedKeySpec(data);
         return factory.generatePublic(spec);
+
     }
 
     /**
@@ -237,7 +255,7 @@ public class Common {
      */
     public static String toX509FromPublicKey(PublicKey publicKey)
             throws GeneralSecurityException {
-        KeyFactory factory = KeyFactory.getInstance("EC", "BC");
+        KeyFactory factory = KeyFactory.getInstance("EC");
         X509EncodedKeySpec spec = factory.getKeySpec(publicKey,
                 X509EncodedKeySpec.class);
         return new Base64(0, null, true).encodeToString(spec.getEncoded());
@@ -409,6 +427,24 @@ public class Common {
             output.write(buf, 0, c);
         }
         return output.toByteArray();
+    }
+
+    public static String encodeURL(String parameter) {
+        try {
+            return URLEncoder.encode(parameter, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            log.error("encodeURL: should never happen", e);
+            return null;
+        }
+    }
+
+    public static String decodeURL(String parameter) {
+        try {
+            return URLDecoder.decode(parameter, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            log.error("encodeURL: should never happen", e);
+            return null;
+        }
     }
 
 }

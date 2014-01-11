@@ -15,6 +15,7 @@
  */
 package com.trsst.server;
 
+import org.apache.abdera.protocol.server.RequestContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +38,7 @@ public class HBaseAbderaProvider extends AbderaProvider {
 	 * @return a HBaseStorage implementation
 	 */
 	@Override
-	protected Storage getStorageForFeedId(String feedId) {
+	protected Storage getStorageForFeedId(RequestContext request) {
 		// Double locking singleton, which makes this threadsafe and without
 		// penalty due to 'synchronized' block thanks to the 'helper' variable
 		Storage helper = storage;

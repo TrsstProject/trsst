@@ -20,13 +20,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.interfaces.ECPublicKey;
 import java.util.Date;
 import java.util.List;
 
@@ -59,6 +62,7 @@ import org.bouncycastle.crypto.engines.IESEngine;
 import org.bouncycastle.crypto.generators.KDF2BytesGenerator;
 import org.bouncycastle.crypto.macs.HMac;
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.IESCipher;
 
 import com.trsst.Common;
@@ -102,6 +106,20 @@ public class Client {
      */
     public Feed pull(String feedId, long entryId) {
         AbderaClient client = new AbderaClient(Abdera.getInstance());
+        if (!Common.isAccountId(feedId)) {
+            try {
+                // see if this is a url to an external resource
+                new URL(feedId);
+                // the url of the external feed becomes our feed id
+                feedId = URLEncoder.encode(feedId, "UTF-8");
+            } catch (MalformedURLException e) {
+                System.err.println("Invalid feed id: " + feedId);
+                return null;
+            } catch (UnsupportedEncodingException e) {
+                System.err.println("Could not encode id: " + feedId);
+                return null;
+            }
+        }
         URL url = getURL(serving, feedId, entryId);
         ClientResponse response = client.get(url.toString());
         if (response.getType() == ResponseType.SUCCESS) {
@@ -323,7 +341,10 @@ public class Client {
                                 "activity"), options.verb);
             }
             if (options.body != null) {
-                entry.setSummary(options.body);
+                // was: entry.setSummary(options.body);
+                entry.setSummary(options.body,
+                        org.apache.abdera.model.Text.Type.HTML);
+                // FIXME: some readers only show type=html
             }
             if (options.mentions != null) {
                 for (String s : options.mentions) {
@@ -345,16 +366,38 @@ public class Client {
                             options.recipientKey);
                 }
 
-                // calculate digest
+                // calculate digest to determine content id
                 byte[] digest = Common.ripemd160(options.content); // Common.keyhash(content);
                 contentId = new Base64(0, null, true).encodeToString(digest);
+
+                // add mime-type hint to content id (if not encrypted):
+                // (some readers like to see a file extension on enclosures)
+                if (options.mimetype != null && options.recipientKey == null) {
+                    String extension = "";
+                    int i = options.mimetype.lastIndexOf('/');
+                    if (i != -1) {
+                        extension = '.' + options.mimetype.substring(i + 1);
+                    }
+                    contentId = contentId + extension;
+                }
+
+                // set the content element
                 entry.setContent(new IRI(contentId), options.mimetype);
 
                 // use a base uri so src attribute is simpler to process
                 entry.getContentElement().setBaseUri(
-                        Common.toEntryIdString(entry.getId()) + "/");
+                        Common.toEntryIdString(entry.getId()) + '/');
                 entry.getContentElement().setAttributeValue(
                         new QName(Common.NS_URI, "hash", "trsst"), "ripemd160");
+
+                // if not encrypted
+                if (options.recipientKey == null) {
+                    // add an enclosure link
+                    entry.addLink(Common.toEntryIdString(entry.getId()) + '/'
+                            + contentId, Link.REL_ENCLOSURE, options.mimetype,
+                            null, null, options.content.length);
+                }
+
             } else if (options.url != null) {
                 Content content = Abdera.getInstance().getFactory()
                         .newContent();
@@ -489,9 +532,15 @@ public class Client {
             signatureElement.discard();
         }
 
-        // remove all links before signing
+        // remove all navigation links before signing
         for (Link link : feed.getLinks()) {
-            link.discard();
+            if (Link.REL_FIRST.equals(link.getRel())
+                    || Link.REL_LAST.equals(link.getRel())
+                    || Link.REL_CURRENT.equals(link.getRel())
+                    || Link.REL_NEXT.equals(link.getRel())
+                    || Link.REL_PREVIOUS.equals(link.getRel())) {
+                link.discard();
+            }
         }
         // remove all opensearch elements before signing
         for (Element e : feed
@@ -577,6 +626,11 @@ public class Client {
                     new ECDHBasicAgreement(), new KDF2BytesGenerator(
                             new SHA1Digest()), new HMac(new SHA256Digest()),
                     new PaddedBufferedBlockCipher(new AESEngine())));
+
+            // BC appears to be happier with BCECPublicKeys:
+            // see BC's IESCipher.engineInit's check for ECPublicKey
+            publicKey = new BCECPublicKey((ECPublicKey) publicKey, null);
+
             cipher.engineInit(Cipher.ENCRYPT_MODE, publicKey,
                     new SecureRandom());
             after = cipher.engineDoFinal(before, 0, before.length);
