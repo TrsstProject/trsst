@@ -62,15 +62,36 @@ public interface Storage {
     String[] getCategories(int start, int length);
 
     /**
-     * Returns the total number of entries for the specified feed id, or -1 if
-     * the feed id is unrecognized or unsupported.
+     * Returns the total number of entries for the specified feed id, with the
+     * optional filters, or -1 if the feed id is unrecognized.
      * 
      * @param feedId
      *            the specified feed.
+     * @param after
+     *            (optional) restricts results to those entries posted on or
+     *            after the specified date, or null if no restriction.
+     * @param before
+     *            (optional) restricts results to those entries posted on or
+     *            before the specified date, or null if no restriction.
+     * @param query
+     *            (optional) a space-delimited string of query terms, or null if
+     *            for no query; query language is implementation-dependent, but
+     *            at minimum a single-term search returns only results that
+     *            containing the specified term.
+     * @param mentions
+     *            (optional) restricts results to those entries that contain all
+     *            of the specified mentions
+     * @param tags
+     *            (optional) restricts results to those entries that contain all
+     *            of the specified tags
+     * @param verb
+     *            (optional) restricts results to those entries that contain the
+     *            specified verb
      * @return the total number of entries for the specified feed, or -1 if not
      *         found.
      */
-    int getEntryCountForFeedId(String feedId);
+    int getEntryCountForFeedId(String feedId, Date after, Date before,
+            String query, String[] mentions, String[] tags, String verb);
 
     /**
      * Return a string array containing entry ids for the specified feed id,
@@ -108,7 +129,7 @@ public interface Storage {
      *            (optional) restricts results to those entries that contain the
      *            specified verb
      * @return an array containing the matching entry ids; will contain no more
-     *         entries and the specified length, but may contain fewer entries,
+     *         entries than the specified length, but may contain fewer entries,
      *         or zero entries; null if error or feed not found.
      */
     long[] getEntryIdsForFeedId(String feedId, int start, int length,
@@ -166,8 +187,8 @@ public interface Storage {
      * @throws IOException
      *             if a error occurs obtaining the entry data.
      */
-    String readEntry(String feedId, long entryId)
-            throws FileNotFoundException, IOException;
+    String readEntry(String feedId, long entryId) throws FileNotFoundException,
+            IOException;
 
     /**
      * Receives the contents of a signed entry element to be stored and
@@ -188,8 +209,8 @@ public interface Storage {
      * @throws IOException
      *             if a error occurs persisting the entry data.
      */
-    void updateEntry(String feedId, long entryId, Date publishDate,
-            String entry) throws IOException;
+    void updateEntry(String feedId, long entryId, Date publishDate, String entry)
+            throws IOException;
 
     /**
      * Delete an existing entry for the specified feed.
@@ -203,8 +224,8 @@ public interface Storage {
      * @throws IOException
      *             if a error occurs while deleting the entry data.
      */
-    void deleteEntry(String feedId, long entryId)
-            throws FileNotFoundException, IOException;
+    void deleteEntry(String feedId, long entryId) throws FileNotFoundException,
+            IOException;
 
     /**
      * Returns the mime-type of the contents of the resource data for the
@@ -247,10 +268,8 @@ public interface Storage {
             String resourceId) throws FileNotFoundException, IOException;
 
     /**
-     * Stores a binary resource for the specified feed and entry by reading the
-     * specified input stream and persisting the contents for later retrieval by
-     * readFeedEntryResource(). Implementors must close the input stream when
-     * finished.
+     * Stores a binary resource for the specified feed and entry for later retrieval by
+     * readFeedEntryResource(). 
      * 
      * @param feedId
      *            the specified feed.
@@ -270,7 +289,7 @@ public interface Storage {
      */
     void updateFeedEntryResource(String feedId, long entryId,
             String resourceId, String mimeType, Date publishDate,
-            InputStream data) throws IOException;
+            byte[] data) throws IOException;
 
     /**
      * Delete an existing resource for the specified feed and entry.
@@ -284,7 +303,7 @@ public interface Storage {
      * @throws IOException
      *             if a error occurs while deleting the resource data.
      */
-    void deleteFeedEntryResource(String feedId, long entryId,
-            String resourceId) throws IOException;
+    void deleteFeedEntryResource(String feedId, long entryId, String resourceId)
+            throws IOException;
 
 }

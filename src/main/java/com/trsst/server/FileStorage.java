@@ -36,6 +36,8 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.trsst.Common;
+
 /**
  * Dumb file persistence for small nodes and test cases. This will get you up
  * and running quickly, but you'll want to replace it with an implementation
@@ -73,7 +75,8 @@ public class FileStorage implements Storage {
         return new File(path, "trsstd");
     }
 
-    public int getEntryCountForFeedId(String feedId) {
+    public int getEntryCountForFeedId(String feedId, Date after, Date before,
+            String query, String[] mentions, String[] tags, String verb) {
         File[] files = new File(root, feedId).listFiles(new FileFilter() {
             public boolean accept(File file) {
                 return file.getName().toLowerCase().endsWith(ENTRY_SUFFIX);
@@ -170,27 +173,21 @@ public class FileStorage implements Storage {
     }
 
     public void updateFeedEntryResource(String feedId, long entryId,
-            String resourceId, String mimetype, Date publishDate,
-            InputStream data) throws IOException {
+            String resourceId, String mimetype, Date publishDate, byte[] data)
+            throws IOException {
         File file = getResourceFileForFeedEntry(feedId, entryId, resourceId);
-        InputStream input = new BufferedInputStream(data);
         OutputStream output = new BufferedOutputStream(new FileOutputStream(
                 file));
         try {
-            int c;
-            byte[] buf = new byte[256];
-            while ((c = input.read(buf)) > 0) {
-                output.write(buf, 0, c);
-            }
+            output.write(data, 0, data.length);
             output.flush();
             System.err.println("wrote: " + file.getAbsolutePath());
         } finally {
             try {
-                input.close();
+                output.close();
             } catch (IOException ioe) {
                 // suppress any futher error on closing
             }
-            output.close();
         }
         if (publishDate != null) {
             file.setLastModified(publishDate.getTime());
@@ -210,6 +207,7 @@ public class FileStorage implements Storage {
     }
 
     private long[] getEntryIdsForFeedId(String feedId, Date after, Date before) {
+        feedId = Common.encodeURL(feedId);
         final long afterTime = after != null ? after.getTime() : 0;
         final long beforeTime = before != null ? before.getTime() : 0;
         File[] files = new File(root, feedId).listFiles(new FileFilter() {
@@ -235,7 +233,8 @@ public class FileStorage implements Storage {
         long[] result = new long[files.length];
         for (int i = 0; i < files.length; i++) {
             name = files[i].getName();
-            result[i] = Long.parseLong(name.substring(0, name.length() - suffix), 16);
+            result[i] = Long.parseLong(
+                    name.substring(0, name.length() - suffix), 16);
         }
         return result;
     }
@@ -288,16 +287,21 @@ public class FileStorage implements Storage {
     }
 
     public static File getFeedFileForFeedId(String feedId) {
+        feedId = Common.encodeURL(feedId);
         return new File(new File(getRoot(), feedId), FEED_XML);
     }
 
     public static File getEntryFileForFeedEntry(String feedId, long entryId) {
-        return new File(new File(getRoot(), feedId), Long.toHexString(entryId) + ENTRY_SUFFIX);
+        feedId = Common.encodeURL(feedId);
+        return new File(new File(getRoot(), feedId), Long.toHexString(entryId)
+                + ENTRY_SUFFIX);
     }
 
-    public static File getResourceFileForFeedEntry(String feedId,
-            long entryId, String resourceid) {
-        return new File(new File(getRoot(), feedId), Long.toHexString(entryId) + '-' + resourceid);
+    public static File getResourceFileForFeedEntry(String feedId, long entryId,
+            String resourceid) {
+        feedId = Common.encodeURL(feedId);
+        return new File(new File(getRoot(), feedId), Long.toHexString(entryId)
+                + '-' + resourceid);
     }
 
 }

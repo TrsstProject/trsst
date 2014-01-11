@@ -314,7 +314,6 @@ public class TrsstTest extends TestCase {
             String encoded = signatureElement.getText();
             Entry decoded = (Entry) Client.decryptElement(
                     new Base64().decode(encoded), recipientKeys.getPrivate());
-            System.out.println(decoded.getTitle());
             assertTrue("Decoded entry retains status",
                     "This is the encrypted entry".equals(decoded.getTitle()));
             assertTrue("Decoded entry retains body",

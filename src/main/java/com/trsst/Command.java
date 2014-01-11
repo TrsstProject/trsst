@@ -215,6 +215,10 @@ public class Command {
         postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
                 .withArgName("url").withLongOpt("logo")
                 .withDescription("Set this feed's logo url").create('l'));
+        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
+                .withArgName("prefix").withLongOpt("vanity")
+                .withDescription("Generate feed id with specified prefix")
+                .create());
 
         // merge options parameters
         mergedOptions = new Options();
@@ -313,7 +317,7 @@ public class Command {
 
         List<String> ids = new LinkedList<String>();
         for (String arg : arguments) {
-            if (Common.isAccountId(arg)) {
+            if (Common.isAccountId(arg) || Common.isExternalId(arg)) {
                 ids.add(arg);
             } else {
                 System.err.println("Ignoring invalid id: " + arg);
@@ -430,6 +434,7 @@ public class Command {
         String recipient = commands.getOptionValue("e");
         String attach = commands.getOptionValue("a");
         String url = commands.getOptionValue("u");
+        String vanity = commands.getOptionValue("vanity");
 
         // obtain password
         char[] password = null;
@@ -496,9 +501,42 @@ public class Command {
             }
 
             // create new account
-            signingKeys = Common.generateSigningKeyPair();
+            if (vanity != null) {
+                System.err.println("Searching for vanity feed id prefix: "
+                        + vanity);
+                switch (vanity.length()) {
+                case 0:
+                case 1:
+                    break;
+                case 2:
+                    System.err.println("This may take several minutes.");
+                    break;
+                case 3:
+                    System.err.println("This may take several hours.");
+                    break;
+                case 4:
+                    System.err.println("This may take several days.");
+                    break;
+                case 5:
+                    System.err.println("This may take several months.");
+                    break;
+                default:
+                    System.err.println("This may take several years.");
+                    break;
+                }
+                System.err.println("Started: " + new Date());
+                System.err.println("^C to exit");
+                vanity = "1" + vanity;
+            }
+            do {
+                signingKeys = Common.generateSigningKeyPair();
+                id = Common.toFeedId(signingKeys.getPublic());
+            } while (vanity != null && !id.startsWith(vanity));
+            if (vanity != null) {
+                System.err.println("Finished: " + new Date());
+            }
+
             encryptionKeys = Common.generateEncryptionKeyPair();
-            id = Common.toFeedId(signingKeys.getPublic());
             System.err.println("New feed id created: " + id);
 
             File keyFile;
@@ -510,7 +548,7 @@ public class Command {
 
             // persist to keystore
             writeSigningKeyPair(signingKeys, id, keyFile, password);
-            writeEncryptionKeyPair(signingKeys, id, keyFile, password);
+            writeEncryptionKeyPair(encryptionKeys, id, keyFile, password);
 
         } else {
 
