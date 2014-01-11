@@ -17,12 +17,15 @@ package com.trsst.server;
 
 import static org.apache.hadoop.hbase.util.Bytes.toBytes;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -196,16 +199,21 @@ public class HBaseStorage implements Storage {
 		return null;
 	}
 
-	public String readFeed(String feedId) throws IOException {
+	public String readFeed(String feedId) throws FileNotFoundException, IOException {
 		byte[] feedRowKey = createFeedKey(feedId);
 		Get get = new Get(feedRowKey);
 		get.addColumn(COLUMN_FAMILY, FEED_COLUMN_XML);
-		
+
 		HTableInterface table = connection.getTable(FEED_TABLE);
 		Result result = table.get(get);
 		table.close();
-		//Cell [] cells = result.rawCells();
-		return "";
+		Cell[] cells = result.rawCells();
+		if (cells.length < 1) {
+			String message = "Couldn't find feed given ID: " + feedId;
+			log.error(message);
+			throw new FileNotFoundException(message);
+		}
+		return Bytes.toString(CellUtil.cloneValue(cells[0]));
 	}
 
 	public void updateFeed(String feedId, Date lastUpdated, String feed) throws IOException {
@@ -271,12 +279,12 @@ public class HBaseStorage implements Storage {
 
 	public void deleteFeedEntryResource(String feedId, long entryId, String resourceId) throws IOException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
-	// The below methods are new in the parent interface since started this class
-	
-	
+	// The below methods are new in the parent interface since started this
+	// class
+
 	public int getEntryCountForFeedId(String feedId, Date after, Date before, String query, String[] mentions,
 			String[] tags, String verb) {
 		// TODO Auto-generated method stub
