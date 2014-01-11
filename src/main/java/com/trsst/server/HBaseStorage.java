@@ -28,15 +28,16 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 public class HBaseStorage implements Storage {
 
@@ -60,7 +61,7 @@ public class HBaseStorage implements Storage {
 
 	/** Common name for common field across tables */
 	private static final byte[] COLUMN_DATE_UPDATED = toBytes("updated");
-	
+
 	/** HBase configuration object */
 	private static final Configuration configuration = HBaseConfiguration.create();
 
@@ -142,15 +143,14 @@ public class HBaseStorage implements Storage {
 		}
 	}
 
-	protected static String createFeedKey(String feedId) {
-		// Since feeds start w/ the same character, reverse them to avoid
-		// montonic keys
-		return StringUtils.reverse(feedId);
+	/** Essentially reverses the feedId so that the row keys aren't montonic */
+	protected static byte[] createFeedKey(String feedId) {
+		return toBytes(StringUtils.reverse(feedId));
 	}
 
-	protected static String createEntryKeyString(String feedId, long entryId) {
-		// Put feedkey first, since entryId is a timestamp, hence montonic
-		return createFeedKey(feedId) + Long.toString(entryId);
+	/** Composite of reversed feed id + entryId. Non-monotonic */
+	protected static byte[] createEntryKeyString(String feedId, long entryId) {
+		return toBytes(StringUtils.reverse(feedId) + Long.toString(entryId));
 	}
 
 	private static void createTable(HBaseAdmin admin, byte[] nameOfTable) throws IOException {
@@ -203,18 +203,23 @@ public class HBaseStorage implements Storage {
 	}
 
 	public String readFeed(String feedId) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		byte[] feedRowKey = createFeedKey(feedId);
+		Get get = new Get(feedRowKey);
+		get.addColumn(COLUMN_FAMILY, FEED_COLUMN_XML);
+		
+		HTableInterface table = connection.getTable(FEED_TABLE);
+		Result result = table.get(get);
+		table.close();
+		//Cell [] cells = result.rawCells();
+		return "";
 	}
 
-	
 	public void updateFeed(String feedId, Date lastUpdated, String feed) throws IOException {
-		long updated = lastUpdated == null? System.currentTimeMillis() : lastUpdated.getTime(); 
-		byte [] feedRowKey = toBytes(createFeedKey(feedId));
-		Put put = new Put(feedRowKey);
+		long updated = lastUpdated == null ? System.currentTimeMillis() : lastUpdated.getTime();
+		Put put = new Put(createFeedKey(feedId));
 		put.add(COLUMN_FAMILY, FEED_COLUMN_XML, toBytes(feed));
 		put.add(COLUMN_FAMILY, COLUMN_DATE_UPDATED, toBytes(updated));
-				
+
 		HTableInterface table = connection.getTable(FEED_TABLE);
 		table.put(put);
 		table.close();
@@ -226,13 +231,12 @@ public class HBaseStorage implements Storage {
 	}
 
 	public void updateEntry(String feedId, long entryId, Date publishDate, String entry) throws IOException {
-		long updated = publishDate == null? System.currentTimeMillis() : publishDate.getTime(); 
-		byte [] entryRowKey = toBytes(createEntryKeyString(feedId, entryId));
-		
-		Put put = new Put(entryRowKey);
+		long updated = publishDate == null ? System.currentTimeMillis() : publishDate.getTime();
+
+		Put put = new Put(createEntryKeyString(feedId, entryId));
 		put.add(COLUMN_FAMILY, ENTRY_COLUMN_XML, toBytes(entry));
 		put.add(COLUMN_FAMILY, COLUMN_DATE_UPDATED, toBytes(updated));
-				
+
 		HTableInterface table = connection.getTable(FEED_TABLE);
 		table.put(put);
 		table.close();
@@ -255,30 +259,27 @@ public class HBaseStorage implements Storage {
 
 	public void updateFeedEntryResource(String feedId, long entryId, String resourceId, String mimeType,
 			Date publishDate, InputStream data) throws IOException {
-		long updated = publishDate == null? System.currentTimeMillis() : publishDate.getTime();
-		// same row as entry
-		byte [] entryRowKey = toBytes(createEntryKeyString(feedId, entryId));
-		
-		Put put = new Put(entryRowKey);
-		byte [] content = IOUtils.toByteArray(data);
-		data.close();
+		byte[] content = IOUtils.toByteArray(data);
+		// JavaDocs indicate we must close this stream
+		data.close(); 
+		long updated = publishDate == null ? System.currentTimeMillis() : publishDate.getTime();
+
+		Put put = new Put(createEntryKeyString(feedId, entryId));
 		put.add(COLUMN_FAMILY, toBytes(resourceId), content);
 		put.add(COLUMN_FAMILY, toBytes(resourceId + "_updated"), toBytes(updated));
-		
+
 		if (mimeType != null) {
 			// Column name = resourceId_type
-			put.add(COLUMN_FAMILY, toBytes(resourceId + "_type"), toBytes(mimeType));	
+			put.add(COLUMN_FAMILY, toBytes(resourceId + "_type"), toBytes(mimeType));
 		}
-		
+
 		HTableInterface table = connection.getTable(FEED_TABLE);
 		table.put(put);
 		table.close();
 	}
 
-
 	public void deleteFeedEntryResource(String feedId, long entryId, String resourceId) throws IOException {
 		// TODO Auto-generated method stub
-
+		
 	}
-
 }
