@@ -21,7 +21,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -216,6 +219,12 @@ public class HBaseStorage implements Storage {
 		return null;
 	}
 
+	public int getEntryCountForFeedId(String feedId, Date after, Date before, String query, String[] mentions,
+			String[] tags, String verb) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 	public long[] getEntryIdsForFeedId(String feedId, int start, int length, Date after, Date before, String query,
 			String[] mentions, String[] tags, String verb) {
 		// TODO Auto-generated method stub
@@ -235,6 +244,16 @@ public class HBaseStorage implements Storage {
 		HTableInterface table = connection.getTable(tableName);
 		try {
 			table.put(put);
+		} finally {
+			table.close();
+		}
+	}
+
+	/** Deletes the given attributes then closes the table. */
+	private void delete(byte[] tableName, List<Delete> deletes) throws IOException {
+		HTableInterface table = connection.getTable(tableName);
+		try {
+			table.delete(deletes);
 		} finally {
 			table.close();
 		}
@@ -292,11 +311,6 @@ public class HBaseStorage implements Storage {
 		put(put, FEED_TABLE);
 	}
 
-	public void deleteEntry(String feedId, long entryId) throws IOException {
-		// TODO Auto-generated method stub
-
-	}
-
 	public String readFeedEntryResourceType(String feedId, long entryId, String resourceId) throws IOException {
 		Get get = new Get(createResourceKey(feedId, entryId));
 		byte[] column = RESOURCE_COLUMN_TYPE(resourceId);
@@ -339,18 +353,39 @@ public class HBaseStorage implements Storage {
 		put(put, RESOURCE_TABLE);
 	}
 
+	public void deleteEntry(String feedId, long entryId) throws IOException {
+		// Only delete the appropriate entry-specific columns
+		byte[] rowKey = createEntryKey(feedId, entryId);
+		List<Delete> deletes = new ArrayList<Delete>();
+
+		Delete delete = new Delete(rowKey);
+		delete.deleteColumns(CF, ENTRY_COLUMN_DATA);
+		deletes.add(delete);
+
+		delete = new Delete(rowKey);
+		delete.deleteColumns(CF, ENTRY_COLUMN_UPDATED);
+		deletes.add(delete);
+
+		delete(ENTRY_TABLE, deletes);
+	}
+
 	public void deleteFeedEntryResource(String feedId, long entryId, String resourceId) throws IOException {
-		// TODO Auto-generated method stub
+		// Only delete the appropriate entry-specific columns
+		byte[] rowKey = createResourceKey(feedId, entryId);
+		List<Delete> deletes = new ArrayList<Delete>();
 
+		Delete delete = new Delete(rowKey);
+		delete.deleteColumns(CF, RESOURCE_COLUMN_DATA(resourceId));
+		deletes.add(delete);
+
+		delete = new Delete(rowKey);
+		delete.deleteColumns(CF, RESOURCE_COLUMN_UPDATED(resourceId));
+		deletes.add(delete);
+
+		delete = new Delete(rowKey);
+		delete.deleteColumns(CF, RESOURCE_COLUMN_TYPE(resourceId));
+		deletes.add(delete);
+
+		delete(RESOURCE_TABLE, deletes);
 	}
-
-	// The below methods are new in the parent interface since started this
-	// class
-
-	public int getEntryCountForFeedId(String feedId, Date after, Date before, String query, String[] mentions,
-			String[] tags, String verb) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
 }
