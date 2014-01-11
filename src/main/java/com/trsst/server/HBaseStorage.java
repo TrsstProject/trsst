@@ -15,10 +15,14 @@
  */
 package com.trsst.server;
 
+import static org.apache.hadoop.hbase.util.Bytes.toBytes;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -28,16 +32,13 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HBaseStorage implements Storage {
 
-	/** Table to store all our feed data */
-	private static final String FEED_TABLE = "feed";
-	
-	/** Table to store all our entry data */
-	private static final String ENTRY_TABLE = "entry";
+public class HBaseStorage implements Storage {
 
 	/**
 	 * Best to only use one column family and to keep column family names as
@@ -47,8 +48,19 @@ public class HBaseStorage implements Storage {
 	 * href="http://hbase.apache.org/book.html#schema"
 	 * >http://hbase.apache.org/book.html#schema</a>
 	 */
-	private static final String COLUMN_FAMILY = "d";
+	private static final byte[] COLUMN_FAMILY = toBytes("d");
 
+	private static final byte[] FEED_TABLE = toBytes("feed");
+	private static final byte[] FEED_COLUMN_XML = toBytes("xml");
+	// TODO: Should we add a 'count' column for the number of entries,
+	// (incremented, decremented each time an entry is written)
+
+	private static final byte[] ENTRY_TABLE = toBytes("entry");
+	private static final byte[] ENTRY_COLUMN_XML = toBytes("xml");
+
+	/** Common name for common field across tables */
+	private static final byte[] COLUMN_DATE_UPDATED = toBytes("updated");
+	
 	/** HBase configuration object */
 	private static final Configuration configuration = HBaseConfiguration.create();
 
@@ -110,12 +122,16 @@ public class HBaseStorage implements Storage {
 		HBaseAdmin admin = null;
 		try {
 			admin = new HBaseAdmin(configuration);
-			HTableDescriptor[] existingFeedTables = admin.listTables(FEED_TABLE);
-			if (existingFeedTables.length == 0) {
+			HTableDescriptor[] existingTables = admin.listTables(Bytes.toString(FEED_TABLE));
+			if (existingTables.length == 0) {
 				createTable(admin, FEED_TABLE);
-				createTable(admin, ENTRY_TABLE);
-				// Later can add more tables (Categories, SearchIndex...)
 			}
+			existingTables = admin.listTables(Bytes.toString(FEED_TABLE));
+			if (existingTables.length == 0) {
+				createTable(admin, ENTRY_TABLE);
+			}
+			// Later can add more tables here... (Categories,
+			// SearchIndex...)
 		} catch (IOException e) {
 			log.error("Trouble creating feed schema.", e);
 			throw e;
@@ -125,8 +141,19 @@ public class HBaseStorage implements Storage {
 			}
 		}
 	}
-	
-	private static void createTable(HBaseAdmin admin, String nameOfTable) throws IOException {
+
+	protected static String createFeedKey(String feedId) {
+		// Since feeds start w/ the same character, reverse them to avoid
+		// montonic keys
+		return StringUtils.reverse(feedId);
+	}
+
+	protected static String createEntryKeyString(String feedId, long entryId) {
+		// Put feedkey first, since entryId is a timestamp, hence montonic
+		return createFeedKey(feedId) + Long.toString(entryId);
+	}
+
+	private static void createTable(HBaseAdmin admin, byte[] nameOfTable) throws IOException {
 		HTableInterface iTable = null;
 		try {
 			iTable = connection.getTable(nameOfTable);
@@ -180,9 +207,17 @@ public class HBaseStorage implements Storage {
 		return null;
 	}
 
+	
 	public void updateFeed(String feedId, Date lastUpdated, String feed) throws IOException {
-		// TODO Auto-generated method stub
-
+		long updated = lastUpdated == null? System.currentTimeMillis() : lastUpdated.getTime(); 
+		byte [] feedRowKey = toBytes(createFeedKey(feedId));
+		Put put = new Put(feedRowKey);
+		put.add(COLUMN_FAMILY, FEED_COLUMN_XML, toBytes(feed));
+		put.add(COLUMN_FAMILY, COLUMN_DATE_UPDATED, toBytes(updated));
+				
+		HTableInterface table = connection.getTable(FEED_TABLE);
+		table.put(put);
+		table.close();
 	}
 
 	public String readEntry(String feedId, long entryId) throws IOException {
@@ -191,8 +226,16 @@ public class HBaseStorage implements Storage {
 	}
 
 	public void updateEntry(String feedId, long entryId, Date publishDate, String entry) throws IOException {
-		// TODO Auto-generated method stub
-
+		long updated = publishDate == null? System.currentTimeMillis() : publishDate.getTime(); 
+		byte [] entryRowKey = toBytes(createEntryKeyString(feedId, entryId));
+		
+		Put put = new Put(entryRowKey);
+		put.add(COLUMN_FAMILY, ENTRY_COLUMN_XML, toBytes(entry));
+		put.add(COLUMN_FAMILY, COLUMN_DATE_UPDATED, toBytes(updated));
+				
+		HTableInterface table = connection.getTable(FEED_TABLE);
+		table.put(put);
+		table.close();
 	}
 
 	public void deleteEntry(String feedId, long entryId) throws IOException {
@@ -212,9 +255,26 @@ public class HBaseStorage implements Storage {
 
 	public void updateFeedEntryResource(String feedId, long entryId, String resourceId, String mimeType,
 			Date publishDate, InputStream data) throws IOException {
-		// TODO Auto-generated method stub
-
+		long updated = publishDate == null? System.currentTimeMillis() : publishDate.getTime();
+		// same row as entry
+		byte [] entryRowKey = toBytes(createEntryKeyString(feedId, entryId));
+		
+		Put put = new Put(entryRowKey);
+		byte [] content = IOUtils.toByteArray(data);
+		data.close();
+		put.add(COLUMN_FAMILY, toBytes(resourceId), content);
+		put.add(COLUMN_FAMILY, toBytes(resourceId + "_updated"), toBytes(updated));
+		
+		if (mimeType != null) {
+			// Column name = resourceId_type
+			put.add(COLUMN_FAMILY, toBytes(resourceId + "_type"), toBytes(mimeType));	
+		}
+		
+		HTableInterface table = connection.getTable(FEED_TABLE);
+		table.put(put);
+		table.close();
 	}
+
 
 	public void deleteFeedEntryResource(String feedId, long entryId, String resourceId) throws IOException {
 		// TODO Auto-generated method stub

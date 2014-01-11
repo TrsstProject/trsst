@@ -80,7 +80,7 @@ public interface Storage {
      * 
      * @param feedId
      *            the specified feed.
-     * @param offset
+     * @param start
      *            the number of entries to skip starting with the most recent
      *            entry.
      * @param length
