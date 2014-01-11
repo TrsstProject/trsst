@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -191,11 +190,6 @@ public class HBaseStorage implements Storage {
 		return null;
 	}
 
-	public int getEntryCountForFeedId(String feedId) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
 	public long[] getEntryIdsForFeedId(String feedId, int start, int length, Date after, Date before, String query,
 			String[] mentions, String[] tags, String verb) {
 		// TODO Auto-generated method stub
@@ -258,14 +252,11 @@ public class HBaseStorage implements Storage {
 	}
 
 	public void updateFeedEntryResource(String feedId, long entryId, String resourceId, String mimeType,
-			Date publishDate, InputStream data) throws IOException {
-		byte[] content = IOUtils.toByteArray(data);
-		// JavaDocs indicate we must close this stream
-		data.close(); 
+			Date publishDate, byte[] data) throws IOException {
 		long updated = publishDate == null ? System.currentTimeMillis() : publishDate.getTime();
 
 		Put put = new Put(createEntryKeyString(feedId, entryId));
-		put.add(COLUMN_FAMILY, toBytes(resourceId), content);
+		put.add(COLUMN_FAMILY, toBytes(resourceId), data);
 		put.add(COLUMN_FAMILY, toBytes(resourceId + "_updated"), toBytes(updated));
 
 		if (mimeType != null) {
@@ -282,4 +273,14 @@ public class HBaseStorage implements Storage {
 		// TODO Auto-generated method stub
 		
 	}
+
+	// The below methods are new in the parent interface since started this class
+	
+	
+	public int getEntryCountForFeedId(String feedId, Date after, Date before, String query, String[] mentions,
+			String[] tags, String verb) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }
