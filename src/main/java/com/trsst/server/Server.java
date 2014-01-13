@@ -23,8 +23,12 @@ import java.net.URL;
 import java.net.UnknownHostException;
 
 import org.apache.abdera.protocol.server.servlet.AbderaServlet;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 
 /**
  * Jetty-specific configuration to host an Abdera servlet that is configured to
@@ -38,7 +42,7 @@ public class Server {
 
     int port;
     String path;
-    org.mortbay.jetty.Server server;
+    org.eclipse.jetty.server.Server server;
 
     public Server() throws Exception {
         this(0, null);
@@ -63,8 +67,13 @@ public class Server {
             if (port == 0) {
                 port = allocatePort();
             }
-            server = new org.mortbay.jetty.Server(port);
-            Context context = new Context(server, "/", Context.SESSIONS);
+            server = new org.eclipse.jetty.server.Server(port);
+
+            ServletContextHandler context = new ServletContextHandler(
+                    ServletContextHandler.SESSIONS);
+            context.setContextPath("/");
+            server.setHandler(context);
+
             ServletHolder servletHolder = new ServletHolder(new AbderaServlet());
             servletHolder.setInitParameter(
                     "org.apache.abdera.protocol.server.Provider",
@@ -72,7 +81,16 @@ public class Server {
             context.addServlet(servletHolder, path + "/*");
             this.port = port;
             this.path = path;
+
+            HttpConfiguration http_config = new HttpConfiguration();
+            ServerConnector http = new ServerConnector(server,
+                    new HttpConnectionFactory(http_config));
+            http.setPort(port);
+            http.setIdleTimeout(500000);
+
+            server.setConnectors(new Connector[] { http });
             server.start();
+
         } catch (Exception ioe) {
             log.error("could not start server on " + port + " : " + path, ioe);
             throw ioe;
