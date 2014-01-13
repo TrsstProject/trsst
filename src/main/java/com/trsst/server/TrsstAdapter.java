@@ -41,6 +41,7 @@ import org.apache.abdera.model.Entry;
 import org.apache.abdera.model.Feed;
 import org.apache.abdera.model.Link;
 import org.apache.abdera.model.Person;
+import org.apache.abdera.model.Text;
 import org.apache.abdera.parser.ParseException;
 import org.apache.abdera.protocol.server.ProviderHelper;
 import org.apache.abdera.protocol.server.RequestContext;
@@ -644,6 +645,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     /**
      * Converts from RSS parser's read-only Feed to a mutable Feed.
      */
+    /**
+     * Converts from RSS parser's read-only Feed to a mutable Feed.
+     */
     protected Feed convertFromRSS(String feedId, Feed feed) {
         Feed result = Abdera.getInstance().newFeed();
 
@@ -652,8 +656,12 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         result.setBaseUri(feed.getBaseUri());
         result.setUpdated(feed.getUpdated());
-        result.setIconElement(feed.getIconElement());
-        result.setLogoElement(feed.getLogoElement());
+        if (feed.getIcon() != null) {
+            result.setIcon(feed.getIcon().toString());
+        }
+        if (feed.getLogo() != null) {
+            result.setLogo(feed.getLogo().toString());
+        }
         result.setTitle(feed.getTitle());
         result.setSubtitle(feed.getSubtitle());
         if (feed.getAuthor() != null) {
@@ -682,15 +690,30 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             converted.setUpdated(entry.getUpdated());
             converted.setPublished(entry.getPublished());
             converted.setTitle(entry.getTitle());
-            converted.setSummary(entry.getSummary());
             converted.setContentElement(entry.getContentElement());
             if (entry.getAuthor() != null) {
-                converted.addAuthor(entry.getAuthor());
+                Person existingAuthor = entry.getAuthor();
+                Person author = Abdera.getInstance().getFactory().newAuthor();
+                author.setName(existingAuthor.getName());
+                author.setEmail(existingAuthor.getEmail());
+                if (existingAuthor.getUri() != null) {
+                    author.setUri(existingAuthor.getUri().toString());
+                }
+                converted.addAuthor(author);
             }
             for (Link link : entry.getLinks()) {
                 converted.addLink(link);
             }
             converted.setRights(entry.getRights());
+
+            String summary = entry.getSummary();
+            if (summary != null) {
+                if (Text.Type.HTML.equals(converted.getSummaryType())) {
+                    converted.setSummary(entry.getSummary(), Text.Type.HTML);
+                } else {
+                    converted.setSummary(entry.getSummary(), Text.Type.TEXT);
+                }
+            }
 
             // remove from feed parent
             result.addEntry(converted);

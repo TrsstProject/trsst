@@ -38,6 +38,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 import org.bouncycastle.util.encoders.Hex;
 
@@ -447,4 +448,11 @@ public class Common {
         }
     }
 
+    public static String escapeHTML(String html) {
+        return StringEscapeUtils.escapeHtml3(html);
+    }
+
+    public static String unescapeHTML(String escapedHtml) {
+        return StringEscapeUtils.unescapeHtml3(escapedHtml);
+    }
 }
