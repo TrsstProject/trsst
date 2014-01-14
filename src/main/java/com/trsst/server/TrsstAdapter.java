@@ -15,6 +15,7 @@
  */
 package com.trsst.server;
 
+import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -730,8 +731,16 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     public ResponseContext postEntry(RequestContext request) {
         if (request.isAtom()) {
             try {
+                //FIXME: using SSL, this line fails from erroneously loading a UTF-32 reader
+                // CharConversionException: Invalid UTF-32 character 0x6565663c at char #0, byte #3)
+                // at com.ctc.wstx.io.UTF32Reader.reportInvalid(UTF32Reader.java:197)
+                //Feed incomingFeed = (Feed) request.getDocument().getRoot();
+                
+                //WORKAROUND: loading the stream and making our own parser works
+                byte[] bytes = Common.readFully(request.getInputStream());
+                Feed incomingFeed = (Feed) Abdera.getInstance().getParser().parse(new ByteArrayInputStream(bytes)).getRoot();
+                
                 // we require a feed entity (not solo entries like atompub)
-                Feed incomingFeed = (Feed) request.getDocument().getRoot();
                 processFeed(incomingFeed);
                 return ProviderHelper.returnBase(incomingFeed, 201, null);
             } catch (XMLSignatureException xmle) {

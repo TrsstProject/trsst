@@ -54,6 +54,8 @@ import org.apache.abdera.security.Signature;
 import org.apache.abdera.security.SignatureOptions;
 import org.apache.abdera.writer.StreamWriter;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.httpclient.protocol.Protocol;
+import org.apache.commons.httpclient.protocol.ProtocolSocketFactory;
 import org.bouncycastle.crypto.agreement.ECDHBasicAgreement;
 import org.bouncycastle.crypto.digests.SHA1Digest;
 import org.bouncycastle.crypto.digests.SHA256Digest;
@@ -82,6 +84,13 @@ public class Client {
      */
     public Client(URL url) {
         this.serving = url;
+
+        // allow anonymous SSL:
+        // trsst clients aren't vulnerable to MITM
+        // because we don't trust the man anyway.
+        Protocol anonhttps = new Protocol("https",
+                (ProtocolSocketFactory) new AnonymSSLSocketFactory(), 443);
+        Protocol.registerProtocol("https", anonhttps);
     }
 
     /**
