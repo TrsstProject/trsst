@@ -68,16 +68,16 @@ public interface Storage {
      * @param feedId
      *            the specified feed.
      * @param after
-     *            (optional) restricts results to those entries posted on or
+     *            (optional) restricts results to those entries posted 
      *            after the specified date, or null if no restriction.
      * @param before
-     *            (optional) restricts results to those entries posted on or
+     *            (optional) restricts results to those entries posted 
      *            before the specified date, or null if no restriction.
      * @param query
      *            (optional) a space-delimited string of query terms, or null if
      *            for no query; query language is implementation-dependent, but
      *            at minimum a single-term search returns only results that
-     *            containing the specified term.
+     *            contain the specified term.
      * @param mentions
      *            (optional) restricts results to those entries that contain all
      *            of the specified mentions
@@ -109,16 +109,16 @@ public interface Storage {
      *            the number of entries to return after skipping the offset
      *            entries.
      * @param after
-     *            (optional) restricts results to those entries posted on or
+     *            (optional) restricts results to those entries posted 
      *            after the specified date, or null if no restriction.
      * @param before
-     *            (optional) restricts results to those entries posted on or
+     *            (optional) restricts results to those entries posted 
      *            before the specified date, or null if no restriction.
      * @param query
      *            (optional) a space-delimited string of query terms, or null if
      *            for no query; query language is implementation-dependent, but
      *            at minimum a single-term search returns only results that
-     *            containing the specified term.
+     *            contain the specified term.
      * @param mentions
      *            (optional) restricts results to those entries that contain all
      *            of the specified mentions
