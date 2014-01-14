@@ -144,6 +144,7 @@ public class Command {
     private Options mergedOptions;
     private Options postOptions;
     private Option helpOption;
+    private boolean format = false;
 
     @SuppressWarnings("static-access")
     public int doBegin(String[] argv) {
@@ -328,8 +329,11 @@ public class Command {
             try {
                 Object feed = client.pull(id);
                 if (feed != null) {
-                    String s = feed.toString();
-                    System.out.println(s);
+                    if (format) {
+                        System.out.println(Common.formatXML(feed.toString()));
+                    } else {
+                        System.out.println(feed.toString());
+                    }
                 } else {
                     System.err.println("Could not fetch: " + id + " : "
                             + client);
@@ -662,7 +666,11 @@ public class Command {
         }
 
         if (result != null) {
-            System.out.println(result);
+            if (format) {
+                System.out.println(Common.formatXML(result.toString()));
+            } else {
+                System.out.println(result.toString());
+            }
         }
 
         return 0; // "OK"

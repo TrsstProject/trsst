@@ -1,6 +1,7 @@
 package com.trsst;
 
 import java.io.File;
+import java.io.StringReader;
 import java.net.URL;
 import java.security.KeyPair;
 import java.security.PublicKey;
@@ -9,6 +10,7 @@ import java.util.List;
 
 import javax.xml.namespace.QName;
 
+import org.apache.abdera.Abdera;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
 import org.apache.abdera.model.Feed;
@@ -111,6 +113,20 @@ public class TrsstTest extends TestCase {
                     "http://www.w3.org/2000/09/xmldsig#", "Signature"));
             assertNotNull("Feed has signature", signatureElement);
 
+            // verify string serialization roundtrip
+            String raw = feed.toString();
+            feed = (Feed) Abdera.getInstance().getParser()
+                    .parse(new StringReader(raw)).getRoot();
+            feed = client.push(feed, serviceURL);
+            assertNotNull("String serialization", feed);
+            assertEquals("Serialized feed retains id",
+                    Common.fromFeedUrn(feed.getId()), feedId);
+            assertEquals("Serialized feed contains no entries", feed.getEntries()
+                    .size(), 0);
+            signatureElement = feed.getFirstChild(new QName(
+                    "http://www.w3.org/2000/09/xmldsig#", "Signature"));
+            assertNotNull("Serialized feed has signature", signatureElement);
+            
             // generate account
             signingKeys = Common.generateSigningKeyPair();
             assertNotNull("Generating signing keys", signingKeys);
@@ -135,6 +151,28 @@ public class TrsstTest extends TestCase {
                     Common.toEntryId(entry.getId())));
             assertEquals("Entry retains title", "First Post!", entry.getTitle());
 
+            // verify string serialization with-entry roundtrip
+            raw = feed.toString();
+            feed = (Feed) Abdera.getInstance().getParser()
+                    .parse(new StringReader(raw)).getRoot();
+            feed = client.push(feed, serviceURL);
+            assertNotNull("String serialization with entry", feed);
+            assertEquals("Serialized feed with entry retains id",
+                    Common.fromFeedUrn(feed.getId()), feedId);
+            assertEquals("Serialized feed contains one entry", 1, feed.getEntries().size());
+            signatureElement = feed.getFirstChild(new QName(
+                    "http://www.w3.org/2000/09/xmldsig#", "Signature"));
+            assertNotNull("Serialized feed with entry has signature", signatureElement);
+            
+            // verify edited string fails to validate
+            raw = feed.toString();
+            raw = raw.replace("First", "Second");
+            feed = (Feed) Abdera.getInstance().getParser()
+                    .parse(new StringReader(raw)).getRoot();
+            // this generates some errors on the console but it's ok
+            feed = client.push(feed, serviceURL);
+            assertNull("Verification fails with edited entry", feed);
+            
             // encryption roundtrip
             String test = entry.toString();
             KeyPair b = Common.generateEncryptionKeyPair();
