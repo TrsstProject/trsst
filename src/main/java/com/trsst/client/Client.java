@@ -221,7 +221,18 @@ public class Client {
         return null;
     }
 
-    private Feed push(Feed feed, URL url) {
+    /**
+     * Pushes entries from the specified feed to the remote services hosted at
+     * the specified URL.
+     * 
+     * @param feed
+     *            a feed containing entries
+     * @param url
+     *            a URL to a remote trsst service
+     * @return a Feed returned by the server successfully accepting the feed, or
+     *         null if unsuccessful.
+     */
+    public Feed push(Feed feed, URL url) {
         return push(feed, null, null, null, url);
     }
 
