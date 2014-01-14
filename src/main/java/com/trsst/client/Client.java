@@ -369,7 +369,7 @@ public class Client {
             if (options.mentions != null) {
                 for (String s : options.mentions) {
                     entry.addSimpleExtension(new QName(Common.NS_URI,
-                            "mention", "trsst"), s);
+                            Common.REFERENCE, Common.NS_ABBR), s);
                 }
             }
             if (options.tags != null) {
