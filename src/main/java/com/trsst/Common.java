@@ -15,9 +15,12 @@
  */
 package com.trsst;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
@@ -37,10 +40,21 @@ import java.security.spec.ECGenParameterSpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.apache.abdera.Abdera;
+import org.apache.abdera.model.Document;
+import org.apache.abdera.model.Element;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 import org.bouncycastle.util.encoders.Hex;
+import org.w3c.tidy.Tidy;
 
 /**
  * Shared utilities and constants used by both clients and servers. Portions
@@ -51,16 +65,19 @@ import org.bouncycastle.util.encoders.Hex;
 public class Common {
     public static final String FEED_URN_PREFIX = "urn:feed:";
     public static final String ENTRY_URN_PREFIX = "urn:entry:";
+    public static final String URN_SEPARATOR = ":";
     public static final String CURVE_NAME = "secp256k1";
     public static final String NS_URI = "http://trsst.com/spec/0.1";
     public static final String NS_ABBR = "trsst";
     public static final String SIGN = "sign";
     public static final String ENCRYPT = "encrypt";
+    public static final String REFERENCE = "reference";
     public static final String PREDECESSOR = "predecessor";
     public static final String ATTACHMENT_DIGEST = "digest";
     public static final String PREDECESSOR_ID = "id";
 
     private final static org.slf4j.Logger log;
+
     static {
         log = org.slf4j.LoggerFactory.getLogger(Common.class);
         try {
@@ -83,17 +100,17 @@ public class Common {
      */
     public static String toFeedId(PublicKey key) {
         byte[] keyDigest = keyHash(key.getEncoded());
-        byte[] addressBytes = new byte[1 + keyDigest.length + 4];
-        // leave first byte as zero for bitcoin common production network
-        System.arraycopy(keyDigest, 0, addressBytes, 1, keyDigest.length);
-        byte[] check = hash(addressBytes, 0, keyDigest.length + 1);
-        System.arraycopy(check, 0, addressBytes, keyDigest.length + 1, 4);
+        byte[] addressBytes = new byte[keyDigest.length + 4];
+        // note: now leaving out BTC's first byte identifier
+        System.arraycopy(keyDigest, 0, addressBytes, 0, keyDigest.length);
+        byte[] check = hash(addressBytes, 0, keyDigest.length);
+        System.arraycopy(check, 0, addressBytes, keyDigest.length, 4);
         return toBase58(addressBytes);
     }
 
     public static final String toEntryIdString(Object entryUrn) {
         String entryId = entryUrn.toString();
-        int i = entryId.lastIndexOf('/');
+        int i = entryId.lastIndexOf(URN_SEPARATOR);
         if (i != -1) {
             entryId = entryId.substring(i + 1);
         }
@@ -120,7 +137,8 @@ public class Common {
     }
 
     public static final String toEntryUrn(String feedId, long entryId) {
-        return ENTRY_URN_PREFIX + feedId + '/' + Long.toHexString(entryId);
+        return ENTRY_URN_PREFIX + feedId + URN_SEPARATOR
+                + Long.toHexString(entryId);
     }
 
     public static final String fromFeedUrn(Object feedUrn) {
@@ -454,5 +472,86 @@ public class Common {
 
     public static String unescapeHTML(String escapedHtml) {
         return StringEscapeUtils.unescapeHtml3(escapedHtml);
+    }
+
+    public static org.w3c.dom.Document fomToDom(Document<Element> doc) {
+        org.w3c.dom.Document dom = null;
+        if (doc != null) {
+            try {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                doc.writeTo(out);
+                ByteArrayInputStream in = new ByteArrayInputStream(
+                        out.toByteArray());
+                DocumentBuilderFactory dbf = DocumentBuilderFactory
+                        .newInstance();
+                dbf.setValidating(false);
+                dbf.setNamespaceAware(true);
+                DocumentBuilder db = dbf.newDocumentBuilder();
+                dom = db.parse(in);
+            } catch (Exception e) {
+            }
+        }
+        return dom;
+    }
+
+    public static Document<Element> domToFom(org.w3c.dom.Document dom) {
+        Document<Element> doc = null;
+        if (dom != null) {
+            try {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                TransformerFactory tf = TransformerFactory.newInstance();
+                Transformer t = tf.newTransformer();
+                t.transform(new DOMSource(dom), new StreamResult(out));
+                ByteArrayInputStream in = new ByteArrayInputStream(
+                        out.toByteArray());
+                doc = Abdera.getInstance().getParser().parse(in);
+            } catch (Exception e) {
+            }
+        }
+        return doc;
+    }
+
+    public static org.w3c.dom.Element fomToDom(Element element) {
+        org.w3c.dom.Element dom = null;
+        if (element != null) {
+            try {
+                ByteArrayInputStream in = new ByteArrayInputStream(element
+                        .toString().getBytes());
+                DocumentBuilderFactory dbf = DocumentBuilderFactory
+                        .newInstance();
+                dbf.setValidating(false);
+                dbf.setNamespaceAware(true);
+                DocumentBuilder db = dbf.newDocumentBuilder();
+                dom = db.parse(in).getDocumentElement();
+            } catch (Exception e) {
+            }
+        }
+        return dom;
+    }
+
+    public static Element domToFom(org.w3c.dom.Element element) {
+        Element el = null;
+        if (element != null) {
+            try {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                TransformerFactory tf = TransformerFactory.newInstance();
+                Transformer t = tf.newTransformer();
+                t.transform(new DOMSource(element), new StreamResult(out));
+                ByteArrayInputStream in = new ByteArrayInputStream(
+                        out.toByteArray());
+                el = Abdera.getInstance().getParser().parse(in).getRoot();
+            } catch (Exception e) {
+            }
+        }
+        return el;
+    }
+
+    public static String formatXML(String xml) {
+        Tidy tidy = new Tidy();
+        tidy.setXmlTags(true);
+        tidy.setXmlOut(true);
+        StringWriter writer = new StringWriter();
+        tidy.parse(new StringReader(xml), writer);
+        return writer.toString();
     }
 }
