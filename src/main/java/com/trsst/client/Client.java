@@ -94,6 +94,13 @@ public class Client {
     }
 
     /**
+     * Returns the url this client is using to connect to services.
+     */
+    public URL getURL() {
+        return this.serving;
+    }
+
+    /**
      * Returns a Feed for the specified feed id.
      * 
      * @param feedId
