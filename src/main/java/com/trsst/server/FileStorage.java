@@ -91,7 +91,7 @@ public class FileStorage implements Storage {
         for (File f : files) {
             if (f.isDirectory()) {
                 if (new File(f, FEED_XML).exists()) {
-                    result.add(f.getName());
+                    result.add(Common.unescapeHTML(f.getName()));
                 }
             }
         }
