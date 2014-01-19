@@ -22,6 +22,18 @@ public class FeedOptions {
     public FeedOptions() {
     }
 
+    /** 
+     * Convenience to reset these options to original state for reuse.
+     */
+    public void reset() {
+        name = null;
+        email = null;
+        title = null;
+        subtitle = null;
+        icon = null;
+        logo = null;
+    }
+
     /**
      * @return the name
      */

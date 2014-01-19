@@ -31,6 +31,23 @@ public class EntryOptions {
     }
 
     /**
+     * Convenience to reset these options to original state for reuse.
+     */
+    public void reset() {
+        status = null;
+        verb = null;
+        publish = null;
+        body = null;
+        url = null;
+        mentions = null;
+        tags = null;
+        mimetype = null;
+        content = null;
+        recipientKey = null;
+        publicOptions = null;
+    }
+
+    /**
      * @return the status
      */
     public String getStatus() {
