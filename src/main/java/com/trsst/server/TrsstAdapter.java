@@ -174,7 +174,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             processExternalFeed(feedId, result);
 
         } catch (MalformedURLException urle) {
-            log.warn("Not a valid external feed id: " + feedId, urle);
+            log.warn("Not a valid external feed id: " + feedId);
             throw new FileNotFoundException("Invalid external feed id: "
                     + feedId);
         } catch (IOException ioe) {

@@ -16,7 +16,11 @@
 package com.trsst.server;
 
 import java.io.IOException;
+import java.io.StringReader;
+import java.net.InetAddress;
+import java.util.Collection;
 import java.util.Hashtable;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,8 +28,13 @@ import java.util.regex.Pattern;
 import javax.security.auth.Subject;
 
 import org.apache.abdera.Abdera;
+import org.apache.abdera.model.Feed;
+import org.apache.abdera.model.Workspace;
+import org.apache.abdera.parser.ParseException;
+import org.apache.abdera.parser.Parser;
 import org.apache.abdera.protocol.Request;
 import org.apache.abdera.protocol.server.CollectionAdapter;
+import org.apache.abdera.protocol.server.CollectionInfo;
 import org.apache.abdera.protocol.server.Filter;
 import org.apache.abdera.protocol.server.FilterChain;
 import org.apache.abdera.protocol.server.ProviderHelper;
@@ -35,13 +44,14 @@ import org.apache.abdera.protocol.server.ResponseContext;
 import org.apache.abdera.protocol.server.Target;
 import org.apache.abdera.protocol.server.TargetType;
 import org.apache.abdera.protocol.server.Transactional;
+import org.apache.abdera.protocol.server.WorkspaceInfo;
 import org.apache.abdera.protocol.server.WorkspaceManager;
 import org.apache.abdera.protocol.server.context.RequestContextWrapper;
 import org.apache.abdera.protocol.server.context.ResponseContextException;
 import org.apache.abdera.protocol.server.filters.OpenSearchFilter;
 import org.apache.abdera.protocol.server.impl.AbstractWorkspaceProvider;
 import org.apache.abdera.protocol.server.impl.RegexTargetResolver;
-import org.apache.abdera.protocol.server.impl.SimpleWorkspaceInfo;
+import org.apache.abdera.protocol.server.impl.SimpleCollectionInfo;
 import org.apache.abdera.protocol.server.impl.TemplateTargetBuilder;
 
 /**
@@ -49,12 +59,19 @@ import org.apache.abdera.protocol.server.impl.TemplateTargetBuilder;
  * 
  * @author mpowers
  */
-public class AbderaProvider extends AbstractWorkspaceProvider {
+public class AbderaProvider extends AbstractWorkspaceProvider implements
+        WorkspaceInfo {
 
     Hashtable<String, TrsstAdapter> idsToAdapters = new Hashtable<String, TrsstAdapter>();
-    SimpleWorkspaceInfo workspace = new SimpleWorkspaceInfo();
+    String hostname;
 
     public AbderaProvider() {
+        try {
+            hostname = InetAddress.getLocalHost().getHostName();
+        } catch (Throwable t) {
+            log.info("Could not obtain hostname: defaulting to 'localhost'");
+            hostname = "localhost";
+        }
     }
 
     @Override
@@ -82,13 +99,13 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
                 return null;
             }
         };
-        resolver.setPattern("/(\\?[^#]*)?", TargetType.TYPE_SERVICE)
-                .setPattern("/([^/#?]+);categories",
+        resolver.setPattern("/([^/#?]+);categories",
                         TargetType.TYPE_CATEGORIES, "collection")
                 .setPattern("/([^/#?;]+)(\\?[^#]*)?",
                         TargetType.TYPE_COLLECTION, "collection")
                 .setPattern("/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
                         TargetType.TYPE_ENTRY, "collection", "entry")
+                .setPattern("/feeds", TargetType.TYPE_SERVICE)
                 .setPattern("/([^/#?]+)/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
                         TargetType.TYPE_MEDIA, "collection", "entry",
                         "resource");
@@ -105,9 +122,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
                 .setTemplate(TargetType.TYPE_ENTRY,
                         "{target_base}/{collection}/{entry}"));
 
-        workspace.setTitle("Trsst Feeds");
-        addWorkspace(workspace);
-
+        addWorkspace(this);
         addFilter(new PaginationFilter());
         addFilter(new OpenSearchFilter()
                 .setShortName("Trsst Search")
@@ -205,7 +220,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
      *            a hint for implementors
      * @return a Storage for the specified feed id
      */
-    protected Storage getStorageForFeedId(RequestContext request) {
+    protected Storage getStorage(RequestContext request) {
         if (sharedStorage == null) {
             sharedStorage = new FileStorage();
         }
@@ -223,7 +238,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
      */
     protected TrsstAdapter getAdapterForFeedId(RequestContext request)
             throws IOException {
-        return new TrsstAdapter(request, getStorageForFeedId(request));
+        return new TrsstAdapter(request, getStorage(request));
     }
 
     private static Storage sharedStorage;
@@ -235,7 +250,6 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
                 TrsstAdapter result = idsToAdapters.get(feedId);
                 if (result == null) {
                     result = getAdapterForFeedId(request);
-                    workspace.addCollection(result);
                     idsToAdapters.put(feedId, result);
                 }
                 return result;
@@ -260,4 +274,52 @@ public class AbderaProvider extends AbstractWorkspaceProvider {
 
     private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(this
             .getClass());
+
+    @Override
+    public String getTitle(RequestContext requsest) {
+        return hostname;
+    }
+
+    /**
+     * Returns some or all of the most active feeds hosted on this server. This
+     * implementation calls Storage.getFeedIds(0,100). Override to think
+     * different.
+     */
+    protected String[] getFeedIds(RequestContext request) {
+        // arbitrary cap: get up to most active hundred.
+        return getStorage(request).getFeedIds(0, 100);
+    }
+
+    @Override
+    public Collection<CollectionInfo> getCollections(RequestContext request) {
+        LinkedList<CollectionInfo> result = new LinkedList<CollectionInfo>();
+        Feed feed;
+        Parser parser = Abdera.getInstance().getParser();
+        CollectionInfo info;
+        Storage storage = getStorage(request);
+        for (String id : getFeedIds(request)) {
+            try {
+                feed = (Feed) parser.parse(
+                        new StringReader(storage.readFeed(id))).getRoot();
+                info = new SimpleCollectionInfo(feed.getTitle(), id,
+                        "text/plain", "text/html", "text/xml", "image/png",
+                        "image/jpeg", "image/gif", "image/svg+xml", "video/mp4");
+                result.add(info);
+            } catch (ParseException e) {
+                log.warn("Could not parse collection info for feed: " + id, e);
+            } catch (IOException e) {
+                log.warn("Could not read collection info for feed: " + id, e);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public Workspace asWorkspaceElement(RequestContext request) {
+        Workspace workspace = request.getAbdera().getFactory().newWorkspace();
+        workspace.setTitle(getTitle(request));
+        for (CollectionInfo collection : getCollections(request))
+            workspace.addCollection(collection.asCollectionElement(request));
+        return workspace;
+    }
 }
