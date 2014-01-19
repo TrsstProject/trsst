@@ -63,7 +63,7 @@ public class Server {
     int port;
     String path;
     boolean secure;
-    org.eclipse.jetty.server.Server server;
+    private org.eclipse.jetty.server.Server server;
 
     public Server() throws Exception {
         this(0, null);
@@ -77,9 +77,16 @@ public class Server {
         this(port, path, false);
     }
 
+    public Server(boolean secure) throws Exception {
+        this(0, null, secure);
+    }
+
+    public Server(String path, boolean secure) throws Exception {
+        this(0, path, secure);
+    }
+
     public Server(int port, String path, boolean secure) throws Exception {
         try {
-            this.secure = secure;
             if (path != null) {
                 if (path.endsWith("/")) {
                     path = path.substring(0, path.length() - 1);
@@ -93,59 +100,11 @@ public class Server {
             if (port == 0) {
                 port = allocatePort();
             }
-            server = new org.eclipse.jetty.server.Server(port);
 
-            ServletContextHandler context = new ServletContextHandler(
-                    ServletContextHandler.SESSIONS);
-            context.setContextPath("/");
-            server.setHandler(context);
-
-            ServletHolder servletHolder = new ServletHolder(new AbderaServlet());
-            servletHolder.setInitParameter(
-                    "org.apache.abdera.protocol.server.Provider",
-                    "com.trsst.server.AbderaProvider");
-            context.addServlet(servletHolder, path + "/*");
+            this.secure = secure;
             this.port = port;
             this.path = path;
-
-            HttpConfiguration http_config = new HttpConfiguration();
-            ServerConnector http = new ServerConnector(server,
-                    new HttpConnectionFactory(http_config));
-            http.setPort(port);
-            http.setIdleTimeout(500000);
-
-            if (secure) {
-
-                http_config.setSecureScheme("https");
-                http_config.setSecurePort(8443);
-                http_config.setOutputBufferSize(32768);
-
-                final KeyStore keystore = getKeyStore();
-                SslContextFactory sslContextFactory = new SslContextFactory(
-                        true);
-                sslContextFactory.setKeyStore(keystore);
-                sslContextFactory.setCertAlias("jetty");
-                sslContextFactory.setKeyStorePassword("ignored");
-                sslContextFactory.setKeyManagerPassword("ignored");
-                sslContextFactory.setTrustAll(true);
-                HttpConfiguration https_config = new HttpConfiguration(
-                        http_config);
-                https_config.addCustomizer(new SecureRequestCustomizer());
-
-                ServerConnector https = new ServerConnector(
-                        server,
-                        new SslConnectionFactory(sslContextFactory, "http/1.1"),
-                        new HttpConnectionFactory(https_config));
-                https.setPort(port);
-                https.setIdleTimeout(500000);
-                server.setConnectors(new Connector[] { https });
-
-            } else {
-                server.setConnectors(new Connector[] { http });
-            }
-
-            server.start();
-
+            start();
         } catch (Exception ioe) {
             log.error("could not start server on " + port + " : " + path, ioe);
             throw ioe;
@@ -233,6 +192,14 @@ public class Server {
         return result;
     }
 
+    public void start() {
+        try {
+            getJetty().start();
+        } catch (Exception e) {
+            log.error("Error while starting server", e);
+        }
+    }
+
     public void stop() {
         try {
             server.stop();
@@ -241,4 +208,59 @@ public class Server {
         }
         server.destroy();
     }
+
+    protected void configureContext(ServletContextHandler context) {
+        ServletHolder servletHolder = new ServletHolder(new AbderaServlet());
+        servletHolder.setInitParameter(
+                "org.apache.abdera.protocol.server.Provider",
+                "com.trsst.server.AbderaProvider");
+        context.addServlet(servletHolder, path + "/*");
+
+        HttpConfiguration http_config = new HttpConfiguration();
+        ServerConnector http = new ServerConnector(server,
+                new HttpConnectionFactory(http_config));
+        http.setPort(port);
+
+        if (secure) {
+
+            http_config.setSecureScheme("https");
+            http_config.setSecurePort(8443);
+            http_config.setOutputBufferSize(32768);
+
+            final KeyStore keystore = getKeyStore();
+            SslContextFactory sslContextFactory = new SslContextFactory(true);
+            sslContextFactory.setKeyStore(keystore);
+            sslContextFactory.setCertAlias("jetty");
+            sslContextFactory.setKeyStorePassword("ignored");
+            sslContextFactory.setKeyManagerPassword("ignored");
+            sslContextFactory.setTrustAll(true);
+            HttpConfiguration https_config = new HttpConfiguration(http_config);
+            https_config.addCustomizer(new SecureRequestCustomizer());
+
+            ServerConnector https = new ServerConnector(server,
+                    new SslConnectionFactory(sslContextFactory, "http/1.1"),
+                    new HttpConnectionFactory(https_config));
+            https.setPort(port);
+            server.setConnectors(new Connector[] { https });
+
+        } else {
+            server.setConnectors(new Connector[] { http });
+        }
+    }
+
+    /**
+     * Returns the jetty server.
+     */
+    public org.eclipse.jetty.server.Server getJetty() {
+        if (server == null) {
+            server = new org.eclipse.jetty.server.Server(port);
+            ServletContextHandler context = new ServletContextHandler(
+                    ServletContextHandler.NO_SESSIONS);
+            context.setContextPath("/");
+            server.setHandler(context);
+            configureContext(context);
+        }
+        return server;
+    }
+
 }
