@@ -23,6 +23,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -125,9 +126,25 @@ public class Command {
             }
         }
 
+        Console console = System.console();
+
         int result;
         try {
-            result = new Command().doBegin(argv);
+            if (console == null && argv.length == 0) {
+                // attempt GUI mode
+                try {
+                    Class<?> app = Command.class.getClassLoader().loadClass(
+                            "com.trsst.ui.AppMain");
+                    app.getMethod("main", new String[0].getClass()).invoke(
+                            null, (Object) argv);
+                } catch (Throwable t) {
+                    log.debug("Could not launch GUI client", t);
+                }
+                result = 0;
+            } else {
+                // CLI mode
+                result = new Command().doBegin(argv, System.out);
+            }
         } catch (Throwable t) {
             result = 1; // "general catchall error code"
             log.error("Unexpected error, exiting.", t);
@@ -147,7 +164,7 @@ public class Command {
     private boolean format = false;
 
     @SuppressWarnings("static-access")
-    public int doBegin(String[] argv) {
+    public int doBegin(String[] argv, PrintStream out) {
 
         // create the command line parser
         pullOptions = new Options();
@@ -287,13 +304,13 @@ public class Command {
 
             if ("pull".equals(mode)) {
                 // pull feeds from server
-                result = doPull(client, commands, arguments);
+                result = doPull(client, commands, arguments, out);
             } else if ("push".equals(mode)) {
                 // push feeds to server
-                result = doPush(client, commands, arguments);
+                result = doPush(client, commands, arguments, out);
             } else if ("post".equals(mode)) {
                 // post (and push) entries
-                result = doPost(client, commands, arguments);
+                result = doPost(client, commands, arguments, out);
             } else {
                 printAllUsage();
                 result = 127; // "command not found"
@@ -309,7 +326,7 @@ public class Command {
     }
 
     public int doPull(Client client, CommandLine commands,
-            LinkedList<String> arguments) {
+            LinkedList<String> arguments, PrintStream out) {
 
         if (arguments.size() < 1) {
             printPullUsage();
@@ -330,9 +347,9 @@ public class Command {
                 Object feed = client.pull(id);
                 if (feed != null) {
                     if (format) {
-                        System.out.println(Common.formatXML(feed.toString()));
+                        out.println(Common.formatXML(feed.toString()));
                     } else {
-                        System.out.println(feed.toString());
+                        out.println(feed.toString());
                     }
                 } else {
                     System.err.println("Could not fetch: " + id + " : "
@@ -346,7 +363,7 @@ public class Command {
     }
 
     public int doPush(Client client, CommandLine commands,
-            LinkedList<String> arguments) {
+            LinkedList<String> arguments, PrintStream out) {
 
         // if a second argument was specified
         if (arguments.size() < 2) {
@@ -372,7 +389,7 @@ public class Command {
                 // if ( feed != null ) {
                 // feed = client.push(feed, url);
                 // if ( feed != null ) {
-                // System.out.println(feed);
+                // out.println(feed);
                 // } else {
                 // System.err.println("Failed to push feed for id: " + id);
                 // }
@@ -409,7 +426,7 @@ public class Command {
     }
 
     public int doPost(Client client, CommandLine commands,
-            LinkedList<String> arguments) {
+            LinkedList<String> arguments, PrintStream out) {
 
         String id = null;
 
@@ -667,9 +684,9 @@ public class Command {
 
         if (result != null) {
             if (format) {
-                System.out.println(Common.formatXML(result.toString()));
+                out.println(Common.formatXML(result.toString()));
             } else {
-                System.out.println(result.toString());
+                out.println(result.toString());
             }
         }
 
