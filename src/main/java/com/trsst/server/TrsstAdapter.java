@@ -33,6 +33,7 @@ import javax.xml.crypto.dsig.XMLSignatureException;
 import javax.xml.namespace.QName;
 
 import org.apache.abdera.Abdera;
+import org.apache.abdera.i18n.iri.IRI;
 import org.apache.abdera.i18n.templates.Template;
 import org.apache.abdera.model.AtomDate;
 import org.apache.abdera.model.Category;
@@ -46,10 +47,10 @@ import org.apache.abdera.model.Text;
 import org.apache.abdera.parser.ParseException;
 import org.apache.abdera.protocol.server.ProviderHelper;
 import org.apache.abdera.protocol.server.RequestContext;
+import org.apache.abdera.protocol.server.RequestContext.Scope;
 import org.apache.abdera.protocol.server.ResponseContext;
 import org.apache.abdera.protocol.server.Target;
 import org.apache.abdera.protocol.server.TargetType;
-import org.apache.abdera.protocol.server.RequestContext.Scope;
 import org.apache.abdera.protocol.server.context.MediaResponseContext;
 import org.apache.abdera.protocol.server.context.RequestContextWrapper;
 import org.apache.abdera.protocol.server.context.ResponseContextException;
@@ -115,77 +116,96 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * Returns the current feed to service this request, fetching from the
      * current request, from local storage, or from remote peers as needed.
      */
-    protected Feed currentFeed(RequestContext request) throws ParseException,
+    private Feed currentFeed(RequestContext request) throws ParseException,
             FileNotFoundException, IOException {
         Feed feed = null;
         RequestContextWrapper wrapper = new RequestContextWrapper(request);
+
         // fetch from request context
         feed = (Feed) wrapper.getAttribute(Scope.REQUEST, "com.trsst.Feed");
+
         if (feed == null) {
             // fetch from storage
-            try {
-                feed = (Feed) Abdera.getInstance().getParser()
-                        .parse(new StringReader(persistence.readFeed(feedId)))
-                        .getRoot();
-            } catch (FileNotFoundException fnfe) {
-                log.debug("Not found in local storage: " + feedId);
+            feed = fetchFeedFromStorage(feedId);
+            if (feed != null) {
+                // trigger async fetch in case we're stale
+                fetchLaterFromRelay(feedId, request);
             }
         }
-        if (feed == null && !Common.isAccountId(feedId)) {
-            try {
-                feed = fetchDirectly(feedId);
-            } catch (FileNotFoundException fnfe) {
-                log.warn("Could not fetch directly: " + feedId);
-            } catch (Exception e) {
-                log.warn("Unexpected error while fetching directly: " + feedId,
-                        e);
-            }
-        }
+
         if (feed == null) {
-            feed = fetchFromRelay(request, feedId);
+            // fetch from network
+            if (!Common.isAccountId(feedId)) {
+                // external feeds don't relay:
+                // because they're unsigned,
+                // we fetch directly from source
+                feed = fetchFromExternalSource(feedId);
+            } else {
+                // attempt to fetch from relay peer
+                feed = fetchFromRelay(request);
+            }
         }
+
         if (feed != null) {
+            // store in request context
             wrapper.setAttribute(Scope.REQUEST, "com.trsst.Feed", feed);
             return feed;
         }
+
         throw new FileNotFoundException("Not found: " + feedId);
     }
 
-    /**
-     * For external feed ids: fetch directly from external source, convert to a
-     * trsst feed, (optionally validate it), (optionally persist it), and return
-     * the feed.
-     */
-    private Feed fetchDirectly(String feedId) throws FileNotFoundException,
-            Exception {
-        Feed result = null;
+    private Feed fetchFeedFromStorage(String feedId) {
+        Feed feed = null;
         try {
-            feedId = Common.decodeURL(feedId);
-            URL url = new URL(feedId);
-            InputStream input = url.openStream();
-            result = (Feed) Abdera.getInstance().getParser().parse(input)
+            log.debug("fetchFeedFromStorage: " + feedId);
+            feed = (Feed) Abdera.getInstance().getParser()
+                    .parse(new StringReader(persistence.readFeed(feedId)))
                     .getRoot();
-
-            // convert from rss if needed
-            if (result.getClass().getName().indexOf("RssFeed") != -1) {
-                result = convertFromRSS(feedId, result);
-            }
-            // process and persist external feed
-            processExternalFeed(feedId, result);
-
-        } catch (MalformedURLException urle) {
-            log.warn("Not a valid external feed id: " + feedId);
-            throw new FileNotFoundException("Invalid external feed id: "
-                    + feedId);
-        } catch (IOException ioe) {
-            log.warn("Error while fetching: " + feedId, ioe);
-        } catch (ClassCastException cce) {
-            log.warn("Not a valid feed: " + feedId, cce);
+        } catch (FileNotFoundException fnfe) {
+            log.debug("Not found in local storage: " + feedId);
+        } catch (ParseException e) {
+            log.debug("Could not parse feed from local storage: " + feedId, e);
+        } catch (IOException e) {
+            log.debug("Unexpected error reading from local storage: " + feedId,
+                    e);
         }
-        return result;
+        return feed;
     }
 
-    private Feed fetchFromRelay(RequestContext request, String feedId) {
+    /**
+     * Called to trigger an asynchronous fetch, usually after we have returned
+     * possibly stale data and we want to make sure it's refreshed on the next
+     * pull. This implementation spawns a new thread, but others should
+     * implement a heuristic to queue this task for later based on the
+     * likelihood that a refetch is needed, e.g. factoring in time since last
+     * update and frequency of updates, etc.
+     */
+    protected void fetchLaterFromRelay(final String feedId,
+            final RequestContext request) {
+        new Thread(new Runnable() {
+            public void run() {
+                log.info("fetchLaterFromRelay: starting: "
+                        + request.getResolvedUri());
+                if (!Common.isAccountId(feedId)) {
+                    // external feeds don't relay:
+                    // because they're unsigned,
+                    // we fetch directly from source
+                    fetchFromExternalSource(feedId);
+                } else {
+                    // attempt to fetch from relay peer
+                    fetchFromRelay(request);
+                }
+            }
+        }).start();
+    }
+
+    /**
+     * 
+     * @param request
+     * @return
+     */
+    private Feed fetchFromRelay(RequestContext request) {
         Feed result = null;
         RequestContextWrapper wrapper = new RequestContextWrapper(request);
         int limit = 5; // arbitrary
@@ -199,23 +219,110 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 }
             }
         } catch (Throwable t) {
-            log.warn("Could not parse relayLimit");
+            log.warn("Could not parse relayLimit; defaulting to: " + limit);
         }
-        List<String> relays = wrapper.getParameters("relay");
-        if (relays == null) {
-            relays = new LinkedList<String>();
-        }
-        // if relay peer count is less than search limit
-        if (relays.size() <= limit) {
-            // if we're not in the list of relay peers
-            String host = wrapper.getUri().getHost();
-            if (!relays.contains(host)) {
-                // add self to list of relay peers
-                relays.add(host);
-                // fetch from another relay peer
-                // TODO: implement
-            }
 
+        // if relay peer count is less than search limit
+        List<String> relays = wrapper.getParameters("relay");
+        if (relays == null || relays.size() <= limit) {
+            URL relayPeer = getRelayPeer();
+            if (relayPeer != null) {
+                fetchFromServiceUrl(request, getRelayPeer());
+            } else {
+                log.info("No relay peer available for request: "
+                        + request.getResolvedUri());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Returns a relay peer to use to fetch contents. Implementors should return
+     * a url chosen from an evenly or randomly distributed mix of known trsst
+     * servers based on the home urls of this servers hosted content. This
+     * implementation returns null.
+     */
+    protected URL getRelayPeer() {
+        return null;
+    }
+
+    /**
+     * Fetch from the specified trsst service url, validate it, ingest it, and
+     * return the returned feed.
+     */
+    private Feed fetchFromServiceUrl(RequestContext request, URL serviceUrl) {
+        Feed result = null;
+        log.info("fetchFromServiceUrl: uri: " + request.getResolvedUri());
+        IRI uri = request.getResolvedUri();
+        String hostName = uri.getHost();
+        String queryString = uri.getQuery();
+        if (queryString == null) {
+            queryString = "";
+        }
+        if (queryString.indexOf("relay=" + hostName) != -1) {
+            // if we're alerady in the list of relay peers
+            log.error("Unexpected relay loopback: ignoring request");
+            return result;
+        }
+        if (queryString.length() > 0) {
+            queryString = queryString + '&';
+        }
+        // add self as relay
+        queryString = queryString + "relay=" + hostName;
+
+        try {
+            URL url = new URL(serviceUrl.toString() + '?' + queryString);
+            log.info("fetchFromServiceUrl: " + url);
+            InputStream input = url.openStream();
+            result = (Feed) Abdera.getInstance().getParser().parse(input)
+                    .getRoot();
+            ingestFeed(result);
+        } catch (FileNotFoundException fnfe) {
+            log.warn("Could not fetch from relay: " + feedId);
+        } catch (MalformedURLException urle) {
+            log.error("Could not construct relay fetch url: "
+                    + serviceUrl.toString() + '?' + queryString);
+        } catch (IOException ioe) {
+            log.error("Could not connect: " + feedId, ioe);
+        } catch (ClassCastException cce) {
+            log.error("Not a valid feed: " + feedId, cce);
+        } catch (Exception e) {
+            log.error("Could not process feed from relay: " + feedId, e);
+        }
+        return result;
+    }
+
+    /**
+     * For external feed ids: fetch directly from external source, convert to a
+     * trsst feed, (optionally validate it), (optionally persist it), and return
+     * the feed.
+     */
+    private Feed fetchFromExternalSource(String feedId) {
+        Feed result = null;
+        try {
+            feedId = Common.decodeURL(feedId);
+            URL url = new URL(feedId);
+            InputStream input = url.openStream();
+            result = (Feed) Abdera.getInstance().getParser().parse(input)
+                    .getRoot();
+
+            // convert from rss if needed
+            if (result.getClass().getName().indexOf("RssFeed") != -1) {
+                result = convertFromRSS(feedId, result);
+            }
+            // process and persist external feed
+            ingestExternalFeed(feedId, result);
+
+        } catch (FileNotFoundException fnfe) {
+            log.warn("Could not fetch from external source: " + feedId);
+        } catch (MalformedURLException urle) {
+            log.error("Not a valid external feed id: " + feedId);
+        } catch (IOException ioe) {
+            log.error("Could not connect: " + feedId, ioe);
+        } catch (ClassCastException cce) {
+            log.error("Not a valid feed: " + feedId, cce);
+        } catch (Exception e) {
+            log.error("Could not process external feed: " + feedId, e);
         }
         return result;
     }
@@ -285,7 +392,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     public ResponseContext getFeed(RequestContext request) {
         try {
             Feed result = currentFeed(request);
-            getEntries(request, result);
+            fetchEntriesFromStorage(request, result);
             return ProviderHelper.returnBase(result, 200, result.getUpdated())
                     .setEntityTag(ProviderHelper.calculateEntityTag(result));
         } catch (IllegalArgumentException e) {
@@ -305,7 +412,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
     /**
      * Returns a feed document containing the single requested entry. NOTE: this
-     * is a deviation from atompub.
+     * is a deviation from atompub. TODO: not much point in returning feed now;
+     * prolly should conform to spec.
      */
     public ResponseContext getEntry(RequestContext request) {
         // make a copy of the current template
@@ -336,6 +444,11 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
     private Document<Entry> getEntry(RequestContext context, long entryId) {
         try {
+            // NOTE: by this point currentFeed() will have fetched
+            // the requested entry via relay if needed
+            // FIXME: this is not currently working; need a test case
+
+            // fetch from local storage
             return context
                     .getAbdera()
                     .getParser()
@@ -404,7 +517,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                     }
                     // if all content ids match an entry content element
                     if (contentIdToEntry.size() == posts.size()) {
-                        processFeed(incomingFeed);
+                        ingestFeed(incomingFeed);
                         for (Map.Entry<String, Entry> i : contentIdToEntry
                                 .entrySet()) {
                             String cid = i.getKey();
@@ -463,7 +576,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @throws Exception
      *             any other problem
      */
-    protected void processFeed(Feed feed) throws XMLSignatureException,
+    protected void ingestFeed(Feed feed) throws XMLSignatureException,
             IllegalArgumentException, Exception {
 
         // clone a copy so we can manipulate
@@ -585,7 +698,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @throws Exception
      *             any other problem
      */
-    protected void processExternalFeed(String feedId, Feed feed)
+    protected void ingestExternalFeed(String feedId, Feed feed)
             throws XMLSignatureException, IllegalArgumentException, Exception {
 
         // clone a copy so we can manipulate
@@ -731,17 +844,22 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     public ResponseContext postEntry(RequestContext request) {
         if (request.isAtom()) {
             try {
-                //FIXME: using SSL, this line fails from erroneously loading a UTF-32 reader
-                // CharConversionException: Invalid UTF-32 character 0x6565663c at char #0, byte #3)
-                // at com.ctc.wstx.io.UTF32Reader.reportInvalid(UTF32Reader.java:197)
-                //Feed incomingFeed = (Feed) request.getDocument().getRoot();
-                
-                //WORKAROUND: loading the stream and making our own parser works
+                // FIXME: using SSL, this line fails from erroneously loading a
+                // UTF-32 reader
+                // CharConversionException: Invalid UTF-32 character 0x6565663c
+                // at char #0, byte #3)
+                // at
+                // com.ctc.wstx.io.UTF32Reader.reportInvalid(UTF32Reader.java:197)
+                // Feed incomingFeed = (Feed) request.getDocument().getRoot();
+
+                // WORKAROUND: loading the stream and making our own parser
+                // works
                 byte[] bytes = Common.readFully(request.getInputStream());
-                Feed incomingFeed = (Feed) Abdera.getInstance().getParser().parse(new ByteArrayInputStream(bytes)).getRoot();
-                
+                Feed incomingFeed = (Feed) Abdera.getInstance().getParser()
+                        .parse(new ByteArrayInputStream(bytes)).getRoot();
+
                 // we require a feed entity (not solo entries like atompub)
-                processFeed(incomingFeed);
+                ingestFeed(incomingFeed);
                 return ProviderHelper.returnBase(incomingFeed, 201, null);
             } catch (XMLSignatureException xmle) {
                 log.error("Could not verify signature: ", xmle);
@@ -772,8 +890,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * deviation from atompub.
      */
     public ResponseContext deleteEntry(RequestContext request) {
-        // TODO: post distribution revocation entry referencing the specified
-        // entry
+        // TODO: post revocation entry referencing the specified entry
         Target target = request.getTarget();
         String entryId = target.getParameter("entry");
         try {
@@ -806,7 +923,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }.setStatus(200).setContentType(Constants.CAT_MEDIA_TYPE);
     }
 
-    private void getEntries(RequestContext context, Feed feed)
+    private void fetchEntriesFromStorage(RequestContext context, Feed feed)
             throws FileNotFoundException, IOException {
         String searchTerms = (String) context.getAttribute(Scope.REQUEST,
                 "OpenSearch__searchTerms");
