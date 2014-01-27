@@ -100,7 +100,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
             }
         };
         resolver.setPattern("/([^/#?]+);categories",
-                        TargetType.TYPE_CATEGORIES, "collection")
+                TargetType.TYPE_CATEGORIES, "collection")
                 .setPattern("/([^/#?;]+)(\\?[^#]*)?",
                         TargetType.TYPE_COLLECTION, "collection")
                 .setPattern("/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
@@ -222,7 +222,11 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
      */
     protected Storage getStorage(RequestContext request) {
         if (sharedStorage == null) {
-            sharedStorage = new FileStorage();
+            try {
+                sharedStorage = new LuceneStorage();
+            } catch (IOException e) {
+                log.error("Could not initialize storage", e);
+            }
         }
         return sharedStorage;
     }
