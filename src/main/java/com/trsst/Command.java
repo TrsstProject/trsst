@@ -102,7 +102,7 @@ import com.trsst.server.Server;
  */
 @SuppressWarnings("deprecation")
 public class Command {
-    private static final String KEY_EXTENSION = ".jks";
+    private static final String KEY_EXTENSION = ".p12";
     private static File ROOT;
 
     static {
@@ -756,7 +756,7 @@ public class Command {
             char[] pwd) {
         FileInputStream input = null;
         try {
-            KeyStore keyStore = KeyStore.getInstance("JKS");
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
             input = new FileInputStream(file);
             keyStore.load(new FileInputStream(file), pwd);
             input.close();
@@ -786,7 +786,7 @@ public class Command {
         FileInputStream input = null;
         FileOutputStream output = null;
         try {
-            KeyStore keyStore = KeyStore.getInstance("JKS");
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
             if (file.exists()) {
                 input = new FileInputStream(file);
                 keyStore.load(new FileInputStream(file), pwd);
