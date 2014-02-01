@@ -86,12 +86,15 @@ public class FileStorage implements Storage {
     }
 
     public String[] getFeedIds(int start, int length) {
+        /* Returns feeds for which we have a keystore. */
         File[] files = root.listFiles();
         List<String> result = new LinkedList<String>();
+        int i;
         for (File f : files) {
-            if (f.isDirectory()) {
+            i = f.getName().indexOf(".p12");
+            if (i != -1) {
                 if (new File(f, FEED_XML).exists()) {
-                    result.add(Common.unescapeHTML(f.getName()));
+                    result.add(Common.unescapeHTML(f.getName().substring(0, i)));
                 }
             }
         }

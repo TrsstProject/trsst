@@ -630,22 +630,22 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         List<Entry> entries = new LinkedList<Entry>();
         entries.addAll(feed.getEntries()); // make a copy
         for (Entry entry : feed.getEntries()) {
+            if (!signature.verify(entry, options)) {
+                log.warn("Could not verify signature for entry with id: "
+                        + feedId);
+                throw new XMLSignatureException(
+                        "Could not verify signature for entry with id: "
+                                + entry.getId() + " : " + feedId);
+            }
+            // remove from feed parent
+            entry.discard();
             try {
                 // see if this file already exists
                 persistence.readEntry(feedId, Common.toEntryId(entry.getId()));
                 // this file exists; remove from processing
                 entries.remove(entry);
             } catch (FileNotFoundException e) {
-                // we don't already have it: now verify
-                if (!signature.verify(entry, options)) {
-                    log.warn("Could not verify signature for entry with id: "
-                            + feedId);
-                    throw new XMLSignatureException(
-                            "Could not verify signature for entry with id: "
-                                    + entry.getId() + " : " + feedId);
-                }
-                // remove from feed parent
-                entry.discard();
+                // file does not already exist: resume
             }
         }
         // setEditDetail(request, entry, key);
