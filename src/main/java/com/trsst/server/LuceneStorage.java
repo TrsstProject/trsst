@@ -33,6 +33,7 @@ import org.apache.lucene.index.IndexWriterConfig.OpenMode;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.flexible.core.QueryNodeException;
 import org.apache.lucene.queryparser.flexible.standard.StandardQueryParser;
+import org.apache.lucene.queryparser.flexible.standard.config.StandardQueryConfigHandler;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.IndexSearcher;
@@ -79,6 +80,7 @@ public class LuceneStorage implements Storage {
 
     private IndexWriter writer;
     private IndexReader reader;
+    private Analyzer analyzer;
 
     /**
      * Default constructor manages individual feed, entry, and resource
@@ -102,7 +104,7 @@ public class LuceneStorage implements Storage {
         abdera = Abdera.getInstance();
         Directory dir = FSDirectory.open(new File(FileStorage.getRoot(),
                 "entry.idx"));
-        Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_46);
+        analyzer = new StandardAnalyzer(Version.LUCENE_46);
 
         IndexWriterConfig iwc = new IndexWriterConfig(Version.LUCENE_46,
                 analyzer);
@@ -236,7 +238,6 @@ public class LuceneStorage implements Storage {
             search = "";
         }
         // feedId = "M9Dvwqp4GcRJe6gh7p73bCcQk8dKLG19z";
-        search = search + " feed:\"" + feedId + "\"";
         // search = "feed:\"HSzp9eneHcqsp4Vdt9pMfP1Qy83FZZwmE\"";
         if (verb != null) {
             search = search + " verb:" + verb;
@@ -268,7 +269,10 @@ public class LuceneStorage implements Storage {
                 search = search + " tag:\"" + mention + "\"";
             }
         }
-        return new StandardQueryParser().parse(search, "text");
+        search = "feed:\"" + feedId + "\"" + search.toLowerCase();
+        StandardQueryParser parser = new StandardQueryParser();
+        parser.setDefaultOperator(StandardQueryConfigHandler.Operator.AND);
+        return parser.parse(search, "text");
     }
 
     /**
@@ -466,12 +470,13 @@ public class LuceneStorage implements Storage {
             text.append(verb).append(' ');
 
             if (entry.getTitle() != null) {
-                document.add(new TextField("title", entry.getTitle(),
+                String title = entry.getTitle().toLowerCase();
+                document.add(new TextField("title", title,
                         Field.Store.NO));
-                text.append(entry.getTitle()).append(' ');
+                text.append(title).append(' ');
             }
             if (entry.getSummary() != null) {
-                String summary = extractTextFromHtml(entry.getSummary());
+                String summary = extractTextFromHtml(entry.getSummary()).toLowerCase();
                 // System.out.println("extracting: " + summary);
                 document.add(new TextField("summary", summary, Field.Store.NO));
                 text.append(summary).append(' ');
