@@ -33,10 +33,11 @@ import javax.xml.crypto.dsig.XMLSignatureException;
 import javax.xml.namespace.QName;
 
 import org.apache.abdera.Abdera;
+import org.apache.abdera.ext.rss.RssConstants;
 import org.apache.abdera.i18n.iri.IRI;
 import org.apache.abdera.i18n.templates.Template;
 import org.apache.abdera.model.AtomDate;
-import org.apache.abdera.model.Category;
+import org.apache.abdera.model.Content;
 import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
@@ -120,6 +121,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             FileNotFoundException, IOException {
         Feed feed = null;
         RequestContextWrapper wrapper = new RequestContextWrapper(request);
+        System.err.println(new Date().toString() + " "
+                + wrapper.getTargetPath());
 
         // fetch from request context
         feed = (Feed) wrapper.getAttribute(Scope.REQUEST, "com.trsst.Feed");
@@ -626,16 +629,24 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // validate, persist, and remove each entry
         List<Entry> entries = new LinkedList<Entry>();
         entries.addAll(feed.getEntries()); // make a copy
-        for (Entry entry : entries) {
-            if (!signature.verify(entry, options)) {
-                log.warn("Could not verify signature for entry with id: "
-                        + feedId);
-                throw new XMLSignatureException(
-                        "Could not verify signature for entry with id: "
-                                + entry.getId() + " : " + feedId);
+        for (Entry entry : feed.getEntries()) {
+            try {
+                // see if this file already exists
+                persistence.readEntry(feedId, Common.toEntryId(entry.getId()));
+                // this file exists; remove from processing
+                entries.remove(entry);
+            } catch (FileNotFoundException e) {
+                // we don't already have it: now verify
+                if (!signature.verify(entry, options)) {
+                    log.warn("Could not verify signature for entry with id: "
+                            + feedId);
+                    throw new XMLSignatureException(
+                            "Could not verify signature for entry with id: "
+                                    + entry.getId() + " : " + feedId);
+                }
+                // remove from feed parent
+                entry.discard();
             }
-            // remove from feed parent
-            entry.discard();
         }
         // setEditDetail(request, entry, key);
         // String edit = entry.getEditLinkResolvedHref().toString();
@@ -710,7 +721,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // validate, persist, and remove each entry
         List<Entry> entries = new LinkedList<Entry>();
         entries.addAll(feed.getEntries()); // make a copy
-        for (Entry entry : entries) {
+        for (Entry entry : feed.getEntries()) {
+
             // convert existing entry id to a trsst timestamp-based id
             String existing = entry.getId().toString();
             long timestamp = entry.getUpdated().getTime();
@@ -720,8 +732,16 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             if (timestamp % 1000 == 0) {
                 timestamp = timestamp + existing.hashCode() % 1000;
             }
-            entry.setId(Common.toEntryUrn(feedId, timestamp));
 
+            try {
+                // see if this file already exists
+                persistence.readEntry(feedId, timestamp);
+                // this file exists; remove from processing
+                entries.remove(entry);
+            } catch (FileNotFoundException e) {
+                // we don't already have it:
+                entry.setId(Common.toEntryUrn(feedId, timestamp));
+            }
             // remove from feed parent
             entry.discard();
         }
@@ -768,6 +788,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // for our purposes: replace the existing feed id with the URL
         result.setId(Common.toFeedUrn(feedId));
 
+        Date mostRecent = null;
         result.setBaseUri(feed.getBaseUri());
         result.setUpdated(feed.getUpdated());
         if (feed.getIcon() != null) {
@@ -781,9 +802,12 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         if (feed.getAuthor() != null) {
             result.addAuthor(feed.getAuthor());
         }
-        for (Category category : feed.getCategories()) {
-            result.addCategory(category);
-        }
+        // for (Category category : feed.getCategories()) {
+        // result.addCategory(category.getTerm());
+        // java.lang.ClassCastException:
+        // org.apache.abdera.parser.stax.FOMExtensibleElement cannot be cast to
+        // org.apache.abdera.model.Category
+        // }
         for (Link link : feed.getLinks()) {
             result.addLink(link);
         }
@@ -793,7 +817,11 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             // convert existing entry id to a trsst timestamp-based id
             Entry converted = Abdera.getInstance().newEntry();
             String existing = entry.getId().toString();
-            long timestamp = entry.getUpdated().getTime();
+            Date updated = entry.getUpdated();
+            long timestamp = updated.getTime();
+            if (mostRecent == null || mostRecent.before(updated)) {
+                mostRecent = updated;
+            }
 
             // RSS feeds don't have millisecond precision
             // so we need to add it to avoid duplicate ids
@@ -804,7 +832,60 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             converted.setUpdated(entry.getUpdated());
             converted.setPublished(entry.getPublished());
             converted.setTitle(entry.getTitle());
-            converted.setContentElement(entry.getContentElement());
+
+            // find "link"
+            String linkSrc = null;
+            if (entry.getExtension(RssConstants.QNAME_LINK) != null) {
+                Element existingLink = entry
+                        .getExtension(RssConstants.QNAME_LINK);
+                linkSrc = existingLink.getText();
+                Link link = Abdera.getInstance().getFactory().newLink();
+                link.setAttributeValue("src", linkSrc);
+                link.setRel("alternate");
+                link.setMimeType("text/html");
+                converted.addLink(link);
+            }
+
+            // convert content
+            Content existingContent = entry.getContentElement();
+            if (existingContent != null) {
+                Content convertedContent = Abdera.getInstance().getFactory()
+                        .newContent();
+                List<QName> attributes = existingContent.getAttributes();
+                for (QName attribute : attributes) {
+                    convertedContent.setAttributeValue(attribute,
+                            existingContent.getAttributeValue(attribute));
+                }
+                converted.setContentElement(convertedContent);
+            } else if (entry.getExtension(RssConstants.QNAME_ENCLOSURE) != null) {
+                Element enclosure = entry
+                        .getExtension(RssConstants.QNAME_ENCLOSURE);
+                Content convertedContent = Abdera.getInstance().getFactory()
+                        .newContent();
+                convertedContent.setAttributeValue("src",
+                        enclosure.getAttributeValue("url"));
+                convertedContent.setAttributeValue("type",
+                        enclosure.getAttributeValue("type"));
+                convertedContent.setAttributeValue("length",
+                        enclosure.getAttributeValue("length"));
+                converted.setContentElement(convertedContent);
+                Link link = Abdera.getInstance().getFactory().newLink();
+                link.setAttributeValue("src",
+                        enclosure.getAttributeValue("url"));
+                link.setAttributeValue("type",
+                        enclosure.getAttributeValue("type"));
+                link.setAttributeValue("length",
+                        enclosure.getAttributeValue("length"));
+                link.setRel("enclosure");
+                converted.addLink(link);
+            } else if (linkSrc != null) {
+                Content convertedContent = Abdera.getInstance().getFactory()
+                        .newContent();
+                convertedContent.setAttributeValue("src", linkSrc);
+                convertedContent.setAttributeValue("type", "text/html");
+                converted.setContentElement(convertedContent);
+            }
+
             if (entry.getAuthor() != null) {
                 Person existingAuthor = entry.getAuthor();
                 Person author = Abdera.getInstance().getFactory().newAuthor();
@@ -832,6 +913,21 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             // remove from feed parent
             result.addEntry(converted);
         }
+
+        // workaround: some RSS feeds have no update timestamp
+        // and that throws abdera for an NPE.
+        Date updated = feed.getUpdated();
+        if (updated == null) {
+            log.warn("Ingesting RSS feed with no update timestamp: using most recent entry"
+                    + feedId);
+            updated = mostRecent;
+        }
+        if (updated == null) {
+            log.error("Ingesting RSS feed with no update timestamp: using current time"
+                    + feedId);
+            updated = new Date();
+        }
+        result.setUpdated(updated);
 
         return result;
     }
