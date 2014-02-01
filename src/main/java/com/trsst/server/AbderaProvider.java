@@ -20,6 +20,7 @@ import java.io.StringReader;
 import java.net.InetAddress;
 import java.util.Collection;
 import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -80,32 +81,14 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
         super.init(abdera, properties);
 
         // map paths to handlers
-        RegexTargetResolver resolver = new RegexTargetResolver() {
-            // override to exclude BaseTargetPath
-            public Target resolve(Request request) {
-                RequestContext context = (RequestContext) request;
-                String uri = context.getTargetPath();
-                if (uri.startsWith(context.getTargetBasePath())) {
-                    uri = uri.substring(context.getTargetBasePath().length());
-                }
-                for (Pattern pattern : patterns.keySet()) {
-                    Matcher matcher = pattern.matcher(uri);
-                    if (matcher.matches()) {
-                        TargetType type = this.patterns.get(pattern);
-                        String[] fields = this.fields.get(pattern);
-                        return getTarget(type, context, matcher, fields);
-                    }
-                }
-                return null;
-            }
-        };
-        resolver.setPattern("/([^/#?]+);categories",
-                TargetType.TYPE_CATEGORIES, "collection")
+        RegexTargetResolver resolver = new OrderedRegexTargetResolver();
+        resolver.setPattern("/service", TargetType.TYPE_SERVICE)
+                .setPattern("/([^/#?]+);categories",
+                        TargetType.TYPE_CATEGORIES, "collection")
                 .setPattern("/([^/#?;]+)(\\?[^#]*)?",
                         TargetType.TYPE_COLLECTION, "collection")
                 .setPattern("/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
                         TargetType.TYPE_ENTRY, "collection", "entry")
-                .setPattern("/feeds", TargetType.TYPE_SERVICE)
                 .setPattern("/([^/#?]+)/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
                         TargetType.TYPE_MEDIA, "collection", "entry",
                         "resource");
@@ -281,6 +264,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
 
     @Override
     public String getTitle(RequestContext requsest) {
+        // workspace info title
         return hostname;
     }
 
@@ -305,9 +289,14 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
             try {
                 feed = (Feed) parser.parse(
                         new StringReader(storage.readFeed(id))).getRoot();
-                info = new SimpleCollectionInfo(feed.getTitle(), id,
-                        "text/plain", "text/html", "text/xml", "image/png",
-                        "image/jpeg", "image/gif", "image/svg+xml", "video/mp4");
+                String title = feed.getTitle();
+                // default title to id if null
+                if (title == null) {
+                    title = id;
+                }
+                info = new SimpleCollectionInfo(title, id, "text/plain",
+                        "text/html", "text/xml", "image/png", "image/jpeg",
+                        "image/gif", "image/svg+xml", "video/mp4");
                 result.add(info);
             } catch (ParseException e) {
                 log.warn("Could not parse collection info for feed: " + id, e);
@@ -326,4 +315,40 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
             workspace.addCollection(collection.asCollectionElement(request));
         return workspace;
     }
+
+    private static final class OrderedRegexTargetResolver extends
+            RegexTargetResolver {
+
+        // patterns is final in super
+        Map<Pattern, TargetType> orderedPatterns = new LinkedHashMap<Pattern, TargetType>();
+
+        // override to intercept pattern order
+        public RegexTargetResolver setPattern(String pattern, TargetType type,
+                String... fields) {
+            // ugh: don't call super so we don't compile twice
+            Pattern p = Pattern.compile(pattern);
+            orderedPatterns.put(p, type);
+            this.fields.put(p, fields);
+            return this;
+        }
+
+        // override to exclude BaseTargetPath (and now to use ordered patterns)
+        public Target resolve(Request request) {
+            RequestContext context = (RequestContext) request;
+            String uri = context.getTargetPath();
+            if (uri.startsWith(context.getTargetBasePath())) {
+                uri = uri.substring(context.getTargetBasePath().length());
+            }
+            // note: now first matching pattern wins
+            for (Pattern pattern : orderedPatterns.keySet()) {
+                Matcher matcher = pattern.matcher(uri);
+                if (matcher.matches()) {
+                    TargetType type = this.orderedPatterns.get(pattern);
+                    String[] fields = this.fields.get(pattern);
+                    return getTarget(type, context, matcher, fields);
+                }
+            }
+            return null;
+        }
+    };
 }

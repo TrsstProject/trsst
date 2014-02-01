@@ -93,9 +93,7 @@ public class FileStorage implements Storage {
         for (File f : files) {
             i = f.getName().indexOf(".p12");
             if (i != -1) {
-                if (new File(f, FEED_XML).exists()) {
-                    result.add(Common.unescapeHTML(f.getName().substring(0, i)));
-                }
+                result.add(Common.unescapeHTML(f.getName().substring(0, i)));
             }
         }
         return result.toArray(new String[0]);
