@@ -800,7 +800,14 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         result.setTitle(feed.getTitle());
         result.setSubtitle(feed.getSubtitle());
         if (feed.getAuthor() != null) {
-            result.addAuthor(feed.getAuthor());
+            Person existingAuthor = feed.getAuthor();
+            Person author = Abdera.getInstance().getFactory().newAuthor();
+            author.setName(existingAuthor.getName());
+            author.setEmail(existingAuthor.getEmail());
+            if (existingAuthor.getUri() != null) {
+                author.setUri(existingAuthor.getUri().toString());
+            }
+            result.addAuthor(author);
         }
         // for (Category category : feed.getCategories()) {
         // result.addCategory(category.getTerm());
