@@ -83,6 +83,8 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
         // map paths to handlers
         RegexTargetResolver resolver = new OrderedRegexTargetResolver();
         resolver.setPattern("/service", TargetType.TYPE_SERVICE)
+                .setPattern("/(http[^#?]*)",
+                        TargetType.TYPE_COLLECTION, "collection")
                 .setPattern("/([^/#?]+);categories",
                         TargetType.TYPE_CATEGORIES, "collection")
                 .setPattern("/([^/#?;]+)(\\?[^#]*)?",
