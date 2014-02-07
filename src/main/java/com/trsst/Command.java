@@ -110,10 +110,6 @@ public class Command {
             // if unspecified, default to error-level logging for jetty
             System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "warn");
         }
-    }
-
-    public static void main(String[] argv) {
-
         String path = System.getProperty("user.home", ".");
         ROOT = new File(path, "trsstd");
         path = System.getProperty("com.trsst.client.storage");
@@ -125,6 +121,9 @@ public class Command {
                         + t.getMessage());
             }
         }
+    }
+
+    public static void main(String[] argv) {
 
         Console console = System.console();
 
@@ -802,7 +801,7 @@ public class Command {
             // store away the keystore
             output = new java.io.FileOutputStream(file);
             keyStore.store(output, pwd);
-            output.close();
+            output.flush();
         } catch (Exception e) {
             log.error("Error while storing key: " + e.getMessage(), e);
         } finally {
