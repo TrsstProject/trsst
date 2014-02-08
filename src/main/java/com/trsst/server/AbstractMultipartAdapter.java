@@ -100,7 +100,6 @@ public abstract class AbstractMultipartAdapter extends
             while (stream.available() > 0) {
                 stream.skipBoundary();
                 headers = getHeaders(stream);
-                System.out.println("headers: " + stream.available());
                 if (start != null
                         && (headers.containsKey(CONTENT_ID_HEADER) && start
                                 .equals(headers.get(CONTENT_ID_HEADER)))
