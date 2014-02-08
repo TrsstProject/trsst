@@ -16,6 +16,7 @@ import org.apache.abdera.model.Entry;
 import org.apache.abdera.model.Feed;
 import org.apache.commons.codec.binary.Base64;
 
+import com.google.common.io.Files;
 import com.trsst.client.Client;
 import com.trsst.client.EntryOptions;
 import com.trsst.client.FeedOptions;
@@ -62,6 +63,13 @@ public class TrsstTest extends TestCase {
 
             URL serviceURL = null;
             if (System.getProperty("com.trsst.TrsstTest.server") == null) {
+                
+                // write test files to temp directory
+                File tmp = Files.createTempDir();
+                tmp.deleteOnExit();
+                System.setProperty("com.trsst.server.storage",
+                        tmp.getAbsolutePath());
+
                 // start a local server for testing
                 Server server = new Server();
                 serviceURL = server.getServiceURL();
@@ -121,12 +129,12 @@ public class TrsstTest extends TestCase {
             assertNotNull("String serialization", feed);
             assertEquals("Serialized feed retains id",
                     Common.fromFeedUrn(feed.getId()), feedId);
-            assertEquals("Serialized feed contains no entries", feed.getEntries()
-                    .size(), 0);
+            assertEquals("Serialized feed contains no entries", feed
+                    .getEntries().size(), 0);
             signatureElement = feed.getFirstChild(new QName(
                     "http://www.w3.org/2000/09/xmldsig#", "Signature"));
             assertNotNull("Serialized feed has signature", signatureElement);
-            
+
             // generate account
             signingKeys = Common.generateSigningKeyPair();
             assertNotNull("Generating signing keys", signingKeys);
@@ -159,11 +167,13 @@ public class TrsstTest extends TestCase {
             assertNotNull("String serialization with entry", feed);
             assertEquals("Serialized feed with entry retains id",
                     Common.fromFeedUrn(feed.getId()), feedId);
-            assertEquals("Serialized feed contains one entry", 1, feed.getEntries().size());
+            assertEquals("Serialized feed contains one entry", 1, feed
+                    .getEntries().size());
             signatureElement = feed.getFirstChild(new QName(
                     "http://www.w3.org/2000/09/xmldsig#", "Signature"));
-            assertNotNull("Serialized feed with entry has signature", signatureElement);
-            
+            assertNotNull("Serialized feed with entry has signature",
+                    signatureElement);
+
             // verify edited string fails to validate
             raw = feed.toString();
             raw = raw.replace("First", "Second");
@@ -172,7 +182,7 @@ public class TrsstTest extends TestCase {
             // this generates some errors on the console but it's ok
             feed = client.push(feed, serviceURL);
             assertNull("Verification fails with edited entry", feed);
-            
+
             // encryption roundtrip
             String test = entry.toString();
             KeyPair b = Common.generateEncryptionKeyPair();
