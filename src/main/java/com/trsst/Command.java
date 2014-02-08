@@ -16,7 +16,6 @@
 package com.trsst;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.Console;
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,7 +25,6 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLConnection;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -47,6 +45,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
+import org.apache.tika.Tika;
 
 import com.trsst.client.Client;
 import com.trsst.client.EntryOptions;
@@ -62,9 +61,9 @@ import com.trsst.server.Server;
  * distribution of confidential public keys to groups of other users to form the
  * equivalent of "circles" or "friend lists".
  * 
- * A trsst client must to connect to a server, which we call a "home" server. If
- * no home server is specified, this client will start a temporary server on the
- * local machine, and close it when finished.
+ * A trsst client must to connect to a host server. If no home server is
+ * specified, this client will start a temporary server on the local machine,
+ * and close it when finished.
  * 
  * A client instance stores user keystores in a directory called "trsstd" in the
  * current user's home directory, or the path indicated in the
@@ -73,12 +72,12 @@ import com.trsst.server.Server;
  * There are three basic operations:<br/>
  * <ul>
  * 
- * <li>pull: pulls the specified feed from the specified home server.<br/>
+ * <li>pull: pulls the specified feed from the specified host server.<br/>
  * 
- * <li>push: pushes the specified feed from the home server to the specified
- * remote server.<br/>
+ * <li>push: pushes the specified feed from the current host server to the
+ * specified remote server.<br/>
  * 
- * <li>post: posts a new entry to the specified feed on the home server,
+ * <li>post: posts a new entry to the specified feed on the host server,
  * creating a new feed if no feed id is specified.
  * </ul>
  * 
@@ -142,7 +141,7 @@ public class Command {
                 result = 0;
             } else {
                 // CLI mode
-                result = new Command().doBegin(argv, System.out);
+                result = new Command().doBegin(argv, System.out, System.in);
             }
         } catch (Throwable t) {
             result = 1; // "general catchall error code"
@@ -163,25 +162,27 @@ public class Command {
     private boolean format = false;
 
     @SuppressWarnings("static-access")
-    public int doBegin(String[] argv, PrintStream out) {
+    public int doBegin(String[] argv, PrintStream out, InputStream in) {
 
         // create the command line parser
         pullOptions = new Options();
         pullOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("url").withLongOpt("home")
-                .withDescription("Set home service for this operation")
+                .withArgName("url").withLongOpt("host")
+                .withDescription("Set host server for this operation")
                 .create('h'));
 
         postOptions = new Options();
-        postOptions
-                .addOption(OptionBuilder
-                        .isRequired(false)
-                        .hasArgs(1)
-                        .withArgName("file")
-                        .withLongOpt("attach")
-                        .withDescription(
-                                "Attach the file at the specified path to the new entry")
-                        .create('a'));
+        postOptions.addOption(OptionBuilder
+                .isRequired(false)
+                .hasOptionalArg()
+                .withArgName("file")
+                .withLongOpt("attach")
+                .withDescription(
+                        "Attach the specified file, or - for std input")
+                .create('a'));
+        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
+                .withArgName("url").withLongOpt("base")
+                .withDescription("Set base URL for this feed").create('b'));
         postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
                 .withArgName("file").withLongOpt("key")
                 .withDescription("Use the key store at the specified path")
@@ -207,9 +208,9 @@ public class Command {
                         "Specify an activitystreams verb for this entry")
                 .create('v'));
         postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("markdown").withLongOpt("body")
-                .withDescription("Specify entry body on command line")
-                .create('b'));
+                .withArgName("text").withLongOpt("content")
+                .withDescription("Specify entry content on command line")
+                .create('c'));
         postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
                 .withArgName("text").withLongOpt("title")
                 .withDescription("Set this feed's title").create('t'));
@@ -226,12 +227,14 @@ public class Command {
         postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
                 .withArgName("email").withLongOpt("mail")
                 .withDescription("Set this feed's author email").create('m'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
+        postOptions.addOption(OptionBuilder.isRequired(false).hasOptionalArg()
                 .withArgName("url").withLongOpt("icon")
-                .withDescription("Set this feed's icon url").create('i'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
+                .withDescription("Set as this feed's icon or specify url")
+                .create('i'));
+        postOptions.addOption(OptionBuilder.isRequired(false).hasOptionalArg()
                 .withArgName("url").withLongOpt("logo")
-                .withDescription("Set this feed's logo url").create('l'));
+                .withDescription("Set as this feed's logo or specify url")
+                .create('l'));
         postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
                 .withArgName("prefix").withLongOpt("vanity")
                 .withDescription("Generate feed id with specified prefix")
@@ -309,7 +312,7 @@ public class Command {
                 result = doPush(client, commands, arguments, out);
             } else if ("post".equals(mode)) {
                 // post (and push) entries
-                result = doPost(client, commands, arguments, out);
+                result = doPost(client, commands, arguments, out, in);
             } else {
                 printAllUsage();
                 result = 127; // "command not found"
@@ -425,7 +428,7 @@ public class Command {
     }
 
     public int doPost(Client client, CommandLine commands,
-            LinkedList<String> arguments, PrintStream out) {
+            LinkedList<String> arguments, PrintStream out, InputStream in) {
 
         String id = null;
 
@@ -444,15 +447,25 @@ public class Command {
         // read input text
         String subject = commands.getOptionValue("s");
         String verb = commands.getOptionValue("v");
-        String body = commands.getOptionValue("b");
+        String base = commands.getOptionValue("b");
+        String body = commands.getOptionValue("c");
         String name = commands.getOptionValue("n");
         String email = commands.getOptionValue("m");
         String title = commands.getOptionValue("t");
         String subtitle = commands.getOptionValue("subtitle");
         String icon = commands.getOptionValue("i");
+        if (icon == null && commands.hasOption("i")) {
+            icon = "-";
+        }
         String logo = commands.getOptionValue("l");
-        String recipient = commands.getOptionValue("e");
+        if (logo == null && commands.hasOption("l")) {
+            logo = "-";
+        }
         String attach = commands.getOptionValue("a");
+        if (attach == null && commands.hasOption("a")) {
+            attach = "-";
+        }
+        String recipient = commands.getOptionValue("e");
         String url = commands.getOptionValue("u");
         String vanity = commands.getOptionValue("vanity");
 
@@ -617,29 +630,22 @@ public class Command {
         byte[] attachment = null;
         if (attach != null) {
             InputStream input = null;
-            ByteArrayOutputStream output = null;
-            File file = new File(attach);
             try {
-                input = new BufferedInputStream(new FileInputStream(file));
-                output = new ByteArrayOutputStream();
-                int c;
-                byte[] buf = new byte[256];
-                while ((c = input.read(buf)) > 0) {
-                    output.write(buf, 0, c);
+                if ("-".equals(attach)) {
+                    input = new BufferedInputStream(in);
+                } else {
+                    File file = new File(attach);
+                    System.err.println("Attaching: " + file.getCanonicalPath());
                 }
-                output.flush();
-                attachment = output.toByteArray();
-                System.err.println("Attaching: " + file.getCanonicalPath());
-                mimetype = URLConnection.guessContentTypeFromName(file
-                        .getName());
+                attachment = Common.readFully(input);
+                mimetype = new Tika().detect(attachment);
                 System.err.println("Detected type: " + mimetype);
             } catch (Throwable t) {
-                log.error("Could not read file: " + file.getAbsolutePath());
+                log.error("Could not read attachment: " + attach);
                 return 73; // "can't create output error"
             } finally {
                 try {
                     input.close();
-                    output.close();
                 } catch (IOException ioe) {
                     // suppress any futher error on closing
                 }
@@ -653,7 +659,7 @@ public class Command {
             options.setVerb(verb);
             options.setBody(body);
             if (attachment != null) {
-                options.setContentData(attachment, mimetype);
+                options.addContentData(attachment, mimetype);
             } else if (url != null) {
                 options.setContentUrl(url);
             }
@@ -662,8 +668,21 @@ public class Command {
             feedOptions.setAuthorName(name);
             feedOptions.setTitle(title);
             feedOptions.setSubtitle(subtitle);
-            feedOptions.setIcon(icon);
-            feedOptions.setLogo(logo);
+            feedOptions.setBase(base);
+            if (icon != null) {
+                if ("-".equals(icon)) {
+                    feedOptions.setAsIcon(true);
+                } else {
+                    feedOptions.setIconURL(icon);
+                }
+            }
+            if (logo != null) {
+                if ("-".equals(logo)) {
+                    feedOptions.setAsLogo(true);
+                } else {
+                    feedOptions.setLogoURL(logo);
+                }
+            }
             if (recipientKey != null) {
                 options.encryptWith(recipientKey,
                         new EntryOptions().setStatus("Encrypted content"));
