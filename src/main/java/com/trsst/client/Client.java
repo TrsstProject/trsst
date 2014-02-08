@@ -191,8 +191,8 @@ public class Client {
         return push(pull(feedId, entryId), url);
     }
 
-    private Feed push(Feed feed, String contentId, String contentType,
-            byte[] content, URL url) {
+    private Feed push(Feed feed, String[] contentId, String[] contentType,
+            byte[][] content, URL url) {
         try {
             AbderaClient client = new AbderaClient(Abdera.getInstance());
             url = new URL(url.toString() + '/'
@@ -200,10 +200,8 @@ public class Client {
             ClientResponse response;
             if (contentId != null) {
                 response = client.post(url.toString(),
-                        new MultiPartRequestEntity(feed,
-                                new byte[][] { content },
-                                new String[] { contentId },
-                                new String[] { contentType }));
+                        new MultiPartRequestEntity(feed, content, contentId,
+                                contentType));
             } else {
                 response = client.post(url.toString(), feed);
             }
@@ -277,9 +275,7 @@ public class Client {
         if (feed == null) {
             feed = Abdera.getInstance().newFeed();
             feed.declareNS(Common.NS_URI, Common.NS_ABBR);
-            feed.setBaseUri(new IRI(serving + "/" + feedId + "/"));
         }
-        String contentId = null;
 
         // remove each entry and retain the most recent one (if any)
         List<Entry> entries = feed.getEntries();
@@ -340,16 +336,12 @@ public class Client {
             feed.setLogo(feedOptions.logo);
         }
 
-        // subject is required to create an entry
-        Entry entry = null;
-        if (options.status != null) {
+        // holds any attachments (can be used for logo and icons)
+        String[] contentIds = new String[options.getContentCount()];
 
-            // the arbitrary length limit
-            // (mainly to benefit database implementors)
-            if (options.status.length() > 250) {
-                throw new IllegalArgumentException(
-                        "Status cannot exceed 250 characters");
-            }
+        // subject or attachment is required to create an entry
+        Entry entry = null;
+        if (options.status != null || contentIds.length > 0) {
 
             // create the new entry
             entry = Abdera.getInstance().newEntry();
@@ -385,31 +377,37 @@ public class Client {
                 }
             }
 
-            if (options.content != null) {
+            for (int part = 0; part < contentIds.length; part++) {
+                byte[] currentContent = options.getContentData()[part];
+                String currentType = options.getMimetypes()[part];
 
                 // encrypt before hashing if necessary
                 if (options.recipientKey != null) {
-                    options.content = encryptBytes(options.content,
+                    currentContent = encryptBytes(currentContent,
                             options.recipientKey);
                 }
 
                 // calculate digest to determine content id
-                byte[] digest = Common.ripemd160(options.content); // Common.keyhash(content);
-                contentId = new Base64(0, null, true).encodeToString(digest);
+                byte[] digest = Common.ripemd160(currentContent);
+                contentIds[part] = new Base64(0, null, true)
+                        .encodeToString(digest);
 
                 // add mime-type hint to content id (if not encrypted):
                 // (some readers like to see a file extension on enclosures)
-                if (options.mimetype != null && options.recipientKey == null) {
+                if (currentType != null && options.recipientKey == null) {
                     String extension = "";
-                    int i = options.mimetype.lastIndexOf('/');
+                    int i = currentType.lastIndexOf('/');
                     if (i != -1) {
-                        extension = '.' + options.mimetype.substring(i + 1);
+                        extension = '.' + currentType.substring(i + 1);
                     }
-                    contentId = contentId + extension;
+                    contentIds[part] = contentIds[part] + extension;
                 }
 
                 // set the content element
-                entry.setContent(new IRI(contentId), options.mimetype);
+                if (entry.getContentSrc() == null) {
+                    // only point to the first attachment if multiple
+                    entry.setContent(new IRI(contentIds[part]), currentType);
+                }
 
                 // use a base uri so src attribute is simpler to process
                 entry.getContentElement().setBaseUri(
@@ -421,16 +419,17 @@ public class Client {
                 if (options.recipientKey == null) {
                     // add an enclosure link
                     entry.addLink(Common.toEntryIdString(entry.getId()) + '/'
-                            + contentId, Link.REL_ENCLOSURE, options.mimetype,
-                            null, null, options.content.length);
+                            + contentIds[part], Link.REL_ENCLOSURE,
+                            currentType, null, null, currentContent.length);
                 }
 
-            } else if (options.url != null) {
+            }
+
+            if (contentIds.length == 0 && options.url != null) {
                 Content content = Abdera.getInstance().getFactory()
                         .newContent();
                 content.setSrc(options.url);
                 entry.setContentElement(content);
-                // content.setAttributeValue("src", options.url);
             }
 
             // add the previous entry's signature value
@@ -569,10 +568,29 @@ public class Client {
                 link.discard();
             }
         }
+
         // remove all opensearch elements before signing
         for (Element e : feed
                 .getExtensions("http://a9.com/-/spec/opensearch/1.1/")) {
             e.discard();
+        }
+
+        // set logo and/or icon
+        if (contentIds.length > 0) {
+            System.out.println(entry + " : " + contentIds);
+            String url = Common.toEntryIdString(entry.getId()) + '/'
+                    + contentIds[0];
+            if (feedOptions.asIcon) {
+                feed.setIcon(url);
+            }
+            if (feedOptions.asLogo) {
+                feed.setIcon(url);
+            }
+        }
+
+        // set base
+        if (feedOptions.base != null) {
+            feed.setBaseUri(feedOptions.base);
         }
 
         // sign the feed
@@ -595,9 +613,9 @@ public class Client {
         }
 
         // post to server
-        if (contentId != null) {
-            return push(feed, contentId, options.mimetype, options.content,
-                    serving);
+        if (contentIds.length > 0) {
+            return push(feed, contentIds, options.getMimetypes(),
+                    options.getContentData(), serving);
         }
         return push(feed, serving);
     }
