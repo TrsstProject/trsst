@@ -7,12 +7,15 @@ package com.trsst.client;
  */
 public class FeedOptions {
 
+    String base;
     String name;
     String email;
     String title;
     String subtitle;
     String icon;
     String logo;
+    boolean asIcon;
+    boolean asLogo;
 
     /**
      * Create empty default post options. By default, no entry is created, and
@@ -22,7 +25,7 @@ public class FeedOptions {
     public FeedOptions() {
     }
 
-    /** 
+    /**
      * Convenience to reset these options to original state for reuse.
      */
     public void reset() {
@@ -32,6 +35,25 @@ public class FeedOptions {
         subtitle = null;
         icon = null;
         logo = null;
+        asIcon = false;
+        asLogo = false;
+    }
+
+    /**
+     * @return this feed's home base url.
+     */
+    public String getFeedBase() {
+        return base;
+    }
+
+    /**
+     * @param name
+     *            Specify the home base URL where this feed is permanently
+     *            hosted.
+     */
+    public FeedOptions setBase(String base) {
+        this.base = base;
+        return this;
     }
 
     /**
@@ -101,8 +123,17 @@ public class FeedOptions {
     /**
      * @return the icon
      */
-    public String getIcon() {
+    public String getFeedIcon() {
         return icon;
+    }
+
+    /**
+     * @param asIcon
+     *            Uses the entry attachment as an icon.
+     */
+    public FeedOptions setAsIcon(boolean asIcon) {
+        this.asIcon = asIcon;
+        return this;
     }
 
     /**
@@ -110,7 +141,8 @@ public class FeedOptions {
      *            Updates the icon of the feed, or empty string to remove; this
      *            is the equivalent to a user profile pic.
      */
-    public FeedOptions setIcon(String icon) {
+    public FeedOptions setIconURL(String icon) {
+        this.asIcon = false;
         this.icon = icon;
         return this;
     }
@@ -123,11 +155,21 @@ public class FeedOptions {
     }
 
     /**
+     * @param asLogo
+     *            Uses the entry attachment as a logo.
+     */
+    public FeedOptions setAsLogo(boolean asLogo) {
+        this.asLogo = asLogo;
+        return this;
+    }
+
+    /**
      * @param logo
      *            Updates the logo of the feed, or empty string to remove; this
      *            is the equivalent to a user background image.
      */
-    public FeedOptions setLogo(String logo) {
+    public FeedOptions setLogoURL(String logo) {
+        this.asLogo = false;
         this.logo = logo;
         return this;
     }
