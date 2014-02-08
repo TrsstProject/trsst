@@ -1,7 +1,10 @@
 package com.trsst.client;
 
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Builder class for updating a feed and/or creating an entry.
@@ -17,10 +20,11 @@ public class EntryOptions {
     String url;
     String[] mentions;
     String[] tags;
-    String mimetype;
-    byte[] content;
     PublicKey recipientKey;
+    PrivateKey[] decryptionKeys;
     EntryOptions publicOptions;
+    private List<String> mimetype = new LinkedList<String>();
+    private List<byte[]> content = new LinkedList<byte[]>();
 
     /**
      * Create empty default post options. By default, no entry is created, and
@@ -149,17 +153,24 @@ public class EntryOptions {
     }
 
     /**
-     * @return the mimetype
+     * @return the mimetype parallel array
      */
-    public String getMimetype() {
-        return mimetype;
+    public String[] getMimetypes() {
+        return mimetype.toArray(new String[0]);
     }
 
     /**
-     * @return the content
+     * @return the content parallel array
      */
-    public byte[] getContentData() {
-        return content;
+    public byte[][] getContentData() {
+        return content.toArray(new byte[0][]);
+    }
+
+    /**
+     * @return the size of the content parallel arrays
+     */
+    public int getContentCount() {
+        return content.size();
     }
 
     /**
@@ -168,13 +179,13 @@ public class EntryOptions {
      * @throws IllegalArgumentException
      *             if contentUrl is already set.
      */
-    public EntryOptions setContentData(byte[] content, String mimetype) {
+    public EntryOptions addContentData(byte[] content, String mimetype) {
         if (this.url != null) {
             throw new IllegalArgumentException(
                     "Cannot have set both url and data");
         }
-        this.content = content;
-        this.mimetype = mimetype;
+        this.content.add(content);
+        this.mimetype.add(mimetype);
         return this;
     }
 
@@ -186,18 +197,14 @@ public class EntryOptions {
     }
 
     /**
-     * Sets the optional url to share.
+     * Sets the optional url to share. Note: this will take precedence over any
+     * content attachments, which will still be referenced via an enclosure
+     * link.
      * 
      * @param content
      *            Optional url to share.
-     * @throws IllegalArgumentException
-     *             if contentData is already set.
      */
     public EntryOptions setContentUrl(String url) {
-        if (this.content != null) {
-            throw new IllegalArgumentException(
-                    "Cannot have set both url and data");
-        }
         this.url = url;
         return this;
     }
@@ -221,6 +228,19 @@ public class EntryOptions {
             EntryOptions publicOptions) {
         this.publicOptions = publicOptions;
         this.recipientKey = recipientKey;
+        return this;
+    }
+
+    /**
+     * @param publicOptions
+     *            publicly-readable options for the post that contains the
+     *            encrypted entry data
+     * @param decryptionKeys
+     *            decrypts any encrypted entries using each of the specified
+     *            private keys
+     */
+    public EntryOptions decryptWith(PrivateKey[] decryptionKeys) {
+        this.decryptionKeys = decryptionKeys;
         return this;
     }
 
