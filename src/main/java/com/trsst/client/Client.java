@@ -29,16 +29,19 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.util.Date;
 import java.util.List;
 
+import javax.activation.MimeType;
 import javax.crypto.Cipher;
 import javax.xml.namespace.QName;
 
 import org.apache.abdera.Abdera;
 import org.apache.abdera.i18n.iri.IRI;
 import org.apache.abdera.model.Content;
+import org.apache.abdera.model.Content.Type;
 import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
@@ -64,6 +67,7 @@ import org.bouncycastle.crypto.engines.IESEngine;
 import org.bouncycastle.crypto.generators.KDF2BytesGenerator;
 import org.bouncycastle.crypto.macs.HMac;
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.IESCipher;
 
@@ -108,6 +112,87 @@ public class Client {
      */
     public Feed pull(String feedId) {
         return pull(feedId, 0);
+    }
+
+    /**
+     * Returns a Feed for the specified feed id, and will attempt to decrypt any
+     * encrypted content with the specified key.
+     * 
+     * @param feedId
+     *            a feed id.
+     * @param decryptionKey
+     *            one or more private keys used to attempt to decrypt content.
+     * @return a Feed containing the latest entries for this feed id.
+     */
+    public Feed pull(String feedId, PrivateKey[] decryptionKeys) {
+        return pull(feedId, 0, decryptionKeys);
+    }
+
+    /**
+     * Returns a Feed for the specified feed id that contains only the specified
+     * entry, and will attempt to decrypt any encrypted content with the
+     * specified key.
+     * 
+     * @param feedId
+     *            a feed id.
+     * @param entryId
+     *            an entry id.
+     * @param decryptionKeys
+     *            one or more private keys used to attempt to decrypt content.
+     * @return a Feed containing only the specified entry.
+     */
+    public Feed pull(String feedId, long entryId, PrivateKey[] decryptionKeys) {
+        Feed feed = pull(feedId, entryId);
+        Content content;
+        MimeType contentType;
+        for (Entry entry : feed.getEntries()) {
+            content = entry.getContentElement();
+            if (content != null
+                    && (contentType = content.getMimeType()) != null
+                    && "application/xenc+xml".equals(contentType.toString())) {
+                QName encryptedDataName = new QName(
+                        "http://www.w3.org/2001/04/xmlenc#", "EncryptedData");
+                QName cipherDataName = new QName(
+                        "http://www.w3.org/2001/04/xmlenc#", "CipherData");
+                QName cipherValueName = new QName(
+                        "http://www.w3.org/2001/04/xmlenc#", "CipherValue");
+                Element cipherData, cipherValue, result;
+                for (Element element : content.getElements()) {
+                    if (encryptedDataName.equals(element.getQName())) {
+                        cipherData = element.getFirstChild(cipherDataName);
+                        if (cipherData != null) {
+                            cipherValue = cipherData
+                                    .getFirstChild(cipherValueName);
+                            if (cipherValue != null) {
+                                String encodedBytes = cipherValue.getText();
+                                if (encodedBytes != null) {
+                                    for (PrivateKey decryptionKey : decryptionKeys) {
+                                        try {
+                                            result = decryptElement(
+                                                    new Base64()
+                                                            .decode(encodedBytes),
+                                                    decryptionKey);
+                                            content.setValueElement(result);
+                                            break;
+                                        } catch (SecurityException e) {
+                                            log.error(
+                                                    "Error while decrypting: "
+                                                            + entry.getId(), e);
+                                        } catch (Throwable t) {
+                                            log.warn(
+                                                    "Could not decrypt element on entry: "
+                                                            + entry.getId(), t);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return feed;
     }
 
     /**
@@ -219,6 +304,8 @@ public class Client {
                         + response.getType());
                 System.err.println("Received:");
                 System.err.println(response.getDocument().getRoot());
+                throw new IllegalArgumentException(response.getDocument()
+                        .getRoot().toString());
             }
         } catch (MalformedURLException e) {
             log.error("push: bad url: " + url, e);
@@ -509,7 +596,7 @@ public class Client {
                     } else {
                         writer.writeTitle("Encrypted message"); // arbitrary
                     }
-                    writer.startContent("text/xml");
+                    writer.startContent("application/xenc+xml");
                     writer.startElement("EncryptedData",
                             "http://www.w3.org/2001/04/xmlenc#");
                     writer.startElement("CipherData",
@@ -689,6 +776,9 @@ public class Client {
     public static Element decryptElement(byte[] data, PrivateKey privateKey)
             throws SecurityException {
         Element result;
+
+        // BC appears to be happier with BCECPrivateKey:
+        privateKey = new BCECPrivateKey((ECPrivateKey) privateKey, null);
 
         try {
             byte[] after = decryptBytes(data, privateKey);
