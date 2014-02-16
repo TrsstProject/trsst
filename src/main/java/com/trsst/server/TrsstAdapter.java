@@ -35,6 +35,7 @@ import javax.xml.namespace.QName;
 import org.apache.abdera.Abdera;
 import org.apache.abdera.ext.rss.RssConstants;
 import org.apache.abdera.i18n.iri.IRI;
+import org.apache.abdera.i18n.iri.IRISyntaxException;
 import org.apache.abdera.i18n.templates.Template;
 import org.apache.abdera.model.AtomDate;
 import org.apache.abdera.model.Content;
@@ -188,7 +189,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             final RequestContext request) {
         new Thread(new Runnable() {
             public void run() {
-                log.info("fetchLaterFromRelay: starting: "
+                log.debug("fetchLaterFromRelay: starting: "
                         + request.getResolvedUri());
                 if (!Common.isAccountId(feedId)) {
                     // external feeds don't relay:
@@ -232,7 +233,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             if (relayPeer != null) {
                 fetchFromServiceUrl(request, getRelayPeer());
             } else {
-                log.info("No relay peer available for request: "
+                log.debug("No relay peer available for request: "
                         + request.getResolvedUri());
             }
         }
@@ -313,8 +314,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             if (result.getClass().getName().indexOf("RssFeed") != -1) {
                 result = convertFromRSS(feedId, result);
             }
-            // process and persist external feed
-            ingestExternalFeed(feedId, result);
+            if (result != null) {
+                // process and persist external feed
+                ingestExternalFeed(feedId, result);
+            }
 
         } catch (FileNotFoundException fnfe) {
             log.warn("Could not fetch from external source: " + feedId);
@@ -561,6 +564,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
         } catch (Exception pe) {
             log.error("postMedia: ", pe);
+            return ProviderHelper.badrequest(request,
+                    "Could not process multipart request: " + pe.getMessage() );
         }
         return ProviderHelper.badrequest(request,
                 "Could not process multipart request");
@@ -746,6 +751,12 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             entry.discard();
         }
 
+        if (entries.isEmpty()) {
+            // no new entries to update;
+            // prevent the update of this feed
+            return;
+        }
+
         // remove all navigation links before signing
         for (Link link : feed.getLinks()) {
             if (Link.REL_FIRST.equals(link.getRel())
@@ -820,119 +831,144 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
 
         for (Entry entry : feed.getEntries()) {
+            try {
 
-            // convert existing entry id to a trsst timestamp-based id
-            Entry converted = Abdera.getInstance().newEntry();
-            String existing = entry.getId().toString();
-            Date updated = entry.getUpdated();
-            long timestamp = updated.getTime();
-            if (mostRecent == null || mostRecent.before(updated)) {
-                mostRecent = updated;
-            }
-
-            // RSS feeds don't have millisecond precision
-            // so we need to add it to avoid duplicate ids
-            if (timestamp % 1000 == 0) {
-                timestamp = timestamp + existing.hashCode() % 1000;
-            }
-            converted.setId(Common.toEntryUrn(feedId, timestamp));
-            converted.setUpdated(entry.getUpdated());
-            converted.setPublished(entry.getPublished());
-            converted.setTitle(entry.getTitle());
-
-            // find "link"
-            String linkSrc = null;
-            if (entry.getExtension(RssConstants.QNAME_LINK) != null) {
-                Element existingLink = entry
-                        .getExtension(RssConstants.QNAME_LINK);
-                linkSrc = existingLink.getText();
-                Link link = Abdera.getInstance().getFactory().newLink();
-                link.setAttributeValue("src", linkSrc);
-                link.setRel("alternate");
-                link.setMimeType("text/html");
-                converted.addLink(link);
-            }
-
-            // convert content
-            Content existingContent = entry.getContentElement();
-            if (existingContent != null) {
-                Content convertedContent = Abdera.getInstance().getFactory()
-                        .newContent();
-                List<QName> attributes = existingContent.getAttributes();
-                for (QName attribute : attributes) {
-                    convertedContent.setAttributeValue(attribute,
-                            existingContent.getAttributeValue(attribute));
+                // convert existing entry id to a trsst timestamp-based id
+                Entry converted = Abdera.getInstance().newEntry();
+                Date updated = entry.getUpdated();
+                long timestamp = updated.getTime();
+                if (mostRecent == null || mostRecent.before(updated)) {
+                    mostRecent = updated;
                 }
-                converted.setContentElement(convertedContent);
-            } else if (entry.getExtension(RssConstants.QNAME_ENCLOSURE) != null) {
-                Element enclosure = entry
-                        .getExtension(RssConstants.QNAME_ENCLOSURE);
-                Content convertedContent = Abdera.getInstance().getFactory()
-                        .newContent();
-                convertedContent.setAttributeValue("src",
-                        enclosure.getAttributeValue("url"));
-                convertedContent.setAttributeValue("type",
-                        enclosure.getAttributeValue("type"));
-                convertedContent.setAttributeValue("length",
-                        enclosure.getAttributeValue("length"));
-                converted.setContentElement(convertedContent);
-                Link link = Abdera.getInstance().getFactory().newLink();
-                link.setAttributeValue("src",
-                        enclosure.getAttributeValue("url"));
-                link.setAttributeValue("type",
-                        enclosure.getAttributeValue("type"));
-                link.setAttributeValue("length",
-                        enclosure.getAttributeValue("length"));
-                link.setRel("enclosure");
-                converted.addLink(link);
-            } else if (linkSrc != null) {
-                Content convertedContent = Abdera.getInstance().getFactory()
-                        .newContent();
-                convertedContent.setAttributeValue("src", linkSrc);
-                convertedContent.setAttributeValue("type", "text/html");
-                converted.setContentElement(convertedContent);
-            }
-
-            if (entry.getAuthor() != null) {
-                Person existingAuthor = entry.getAuthor();
-                Person author = Abdera.getInstance().getFactory().newAuthor();
-                author.setName(existingAuthor.getName());
-                author.setEmail(existingAuthor.getEmail());
-                if (existingAuthor.getUri() != null) {
-                    author.setUri(existingAuthor.getUri().toString());
+                Object existing = null;
+                try {
+                    existing = entry.getId();
+                } catch (IRISyntaxException irie) {
+                    // EFF's entry id's have spaces
+                    // "<guid isPermaLink="false">78822 at https://www.eff.org</guid>"
                 }
-                converted.addAuthor(author);
-            }
-            for (Link link : entry.getLinks()) {
-                converted.addLink(link);
-            }
-            converted.setRights(entry.getRights());
-
-            String summary = entry.getSummary();
-            if (summary != null) {
-                if (Text.Type.HTML.equals(converted.getSummaryType())) {
-                    converted.setSummary(entry.getSummary(), Text.Type.HTML);
-                } else {
-                    converted.setSummary(entry.getSummary(), Text.Type.TEXT);
+                if (existing == null) {
+                    existing = updated;
                 }
-            }
 
-            // remove from feed parent
-            result.addEntry(converted);
+                // RSS feeds don't have millisecond precision
+                // so we need to add it to avoid duplicate ids
+                if (timestamp % 1000 == 0) {
+                    timestamp = timestamp + existing.hashCode() % 1000;
+                }
+                converted.setId(Common.toEntryUrn(feedId, timestamp));
+                converted.setUpdated(entry.getUpdated());
+                converted.setPublished(entry.getPublished());
+                converted.setTitle(entry.getTitle());
+
+                // find "link"
+                String linkSrc = null;
+                if (entry.getExtension(RssConstants.QNAME_LINK) != null) {
+                    Element existingLink = entry
+                            .getExtension(RssConstants.QNAME_LINK);
+                    linkSrc = existingLink.getText();
+                    Link link = Abdera.getInstance().getFactory().newLink();
+                    link.setAttributeValue("src", linkSrc);
+                    link.setRel("alternate");
+                    link.setMimeType("text/html");
+                    converted.addLink(link);
+                }
+
+                // convert content
+                Content existingContent = entry.getContentElement();
+                if (existingContent != null) {
+                    Content convertedContent = Abdera.getInstance()
+                            .getFactory().newContent();
+                    List<QName> attributes = existingContent.getAttributes();
+                    for (QName attribute : attributes) {
+                        convertedContent.setAttributeValue(attribute,
+                                existingContent.getAttributeValue(attribute));
+                    }
+                    converted.setContentElement(convertedContent);
+                } else if (entry.getExtension(RssConstants.QNAME_ENCLOSURE) != null) {
+                    Element enclosure = entry
+                            .getExtension(RssConstants.QNAME_ENCLOSURE);
+                    Content convertedContent = Abdera.getInstance()
+                            .getFactory().newContent();
+                    convertedContent.setAttributeValue("src",
+                            enclosure.getAttributeValue("url"));
+                    convertedContent.setAttributeValue("type",
+                            enclosure.getAttributeValue("type"));
+                    convertedContent.setAttributeValue("length",
+                            enclosure.getAttributeValue("length"));
+                    converted.setContentElement(convertedContent);
+                    Link link = Abdera.getInstance().getFactory().newLink();
+                    link.setAttributeValue("src",
+                            enclosure.getAttributeValue("url"));
+                    link.setAttributeValue("type",
+                            enclosure.getAttributeValue("type"));
+                    link.setAttributeValue("length",
+                            enclosure.getAttributeValue("length"));
+                    link.setRel("enclosure");
+                    converted.addLink(link);
+                } else if (linkSrc != null) {
+                    Content convertedContent = Abdera.getInstance()
+                            .getFactory().newContent();
+                    convertedContent.setAttributeValue("src", linkSrc);
+                    convertedContent.setAttributeValue("type", "text/html");
+                    converted.setContentElement(convertedContent);
+                }
+
+                if (entry.getAuthor() != null) {
+                    Person existingAuthor = entry.getAuthor();
+                    Person author = Abdera.getInstance().getFactory()
+                            .newAuthor();
+                    author.setName(existingAuthor.getName());
+                    author.setEmail(existingAuthor.getEmail());
+                    if (existingAuthor.getUri() != null) {
+                        author.setUri(existingAuthor.getUri().toString());
+                    }
+                    converted.addAuthor(author);
+                }
+                for (Link link : entry.getLinks()) {
+                    converted.addLink(link);
+                }
+                converted.setRights(entry.getRights());
+
+                String summary = entry.getSummary();
+                if (summary != null) {
+                    if (Text.Type.HTML.equals(converted.getSummaryType())) {
+                        converted
+                                .setSummary(entry.getSummary(), Text.Type.HTML);
+                    } else {
+                        converted
+                                .setSummary(entry.getSummary(), Text.Type.TEXT);
+                    }
+                }
+
+                // remove from feed parent
+                result.addEntry(converted);
+            } catch (Throwable t) {
+                log.warn("Could not convert RSS entry: " + entry.toString(), t);
+            }
         }
 
         // workaround: some RSS feeds have no update timestamp
         // and that throws abdera for an NPE.
         Date updated = feed.getUpdated();
         if (updated == null) {
-            log.warn("Ingesting RSS feed with no update timestamp: using most recent entry"
+            log.debug("Ingesting RSS feed with no update timestamp: using most recent entry"
                     + feedId);
             updated = mostRecent;
         }
         if (updated == null) {
-            log.error("Ingesting RSS feed with no update timestamp: using current time"
+            log.debug("Ingesting RSS feed with no update timestamp: using last known time"
                     + feedId);
-            updated = new Date();
+            Feed existingFeed = fetchFeedFromStorage(feedId);
+            if (existingFeed != null) {
+                updated = existingFeed.getUpdated();
+            }
+        }
+        if (updated == null) {
+            log.debug("Ingesting RSS feed with no update timestamp: using one day ago"
+                    + feedId);
+            updated = new Date(System.currentTimeMillis()
+                    - (1000 * 60 * 60 * 24));
         }
         result.setUpdated(updated);
 
@@ -1048,31 +1084,44 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         String after = context.getParameter("after");
         if (after != null) {
-            String begin = after;
-            String beginTemplate = "0000-01-01T00:00:00.000Z";
-            if (begin.length() < beginTemplate.length()) {
-                begin = begin + beginTemplate.substring(begin.length());
-            }
             try {
-                beginDate = new AtomDate(begin).getDate();
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException(
-                        "Could not parse begin date: " + begin);
+                // try to parse an entry id timestamp
+                beginDate = new Date(Long.parseLong(after,16));
+            } catch (NumberFormatException nfe) {
+                // try to parse as ISO date
+                String begin = after;
+                String beginTemplate = "0000-01-01T00:00:00.000Z";
+                if (begin.length() < beginTemplate.length()) {
+                    begin = begin + beginTemplate.substring(begin.length());
+                }
+                try {
+                    beginDate = new AtomDate(begin).getDate();
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException(
+                            "Could not parse begin date: " + begin);
+                }
             }
+
         }
         Date endDate = null;
         String before = context.getParameter("before");
         if (before != null) {
-            String end = before;
-            String endTemplate = "9999-12-31T23:59:59.999Z";
-            if (end.length() < endTemplate.length()) {
-                end = end + endTemplate.substring(end.length());
-            }
             try {
-                endDate = new AtomDate(end).getDate();
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Could not parse end date: "
-                        + end);
+                // try to parse an entry id timestamp
+                endDate = new Date(Long.parseLong(before,16));
+            } catch (NumberFormatException nfe) {
+                // try to parse as ISO date
+                String end = before;
+                String endTemplate = "9999-12-31T23:59:59.999Z";
+                if (end.length() < endTemplate.length()) {
+                    end = end + endTemplate.substring(end.length());
+                }
+                try {
+                    endDate = new AtomDate(end).getDate();
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException(
+                            "Could not parse end date: " + end);
+                }
             }
         }
 
