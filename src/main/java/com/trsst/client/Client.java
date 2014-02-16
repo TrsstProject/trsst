@@ -41,7 +41,6 @@ import javax.xml.namespace.QName;
 import org.apache.abdera.Abdera;
 import org.apache.abdera.i18n.iri.IRI;
 import org.apache.abdera.model.Content;
-import org.apache.abdera.model.Content.Type;
 import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
