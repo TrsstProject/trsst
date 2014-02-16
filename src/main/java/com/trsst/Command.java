@@ -395,8 +395,8 @@ public class Command {
             if (signingKeys != null) {
                 encryptionKeys = readEncryptionKeyPair(id, keyFile, password);
                 if (encryptionKeys == null) {
-                    decryptionKeys = new PrivateKey[] {
-                            signingKeys.getPrivate() };
+                    decryptionKeys = new PrivateKey[] { signingKeys
+                            .getPrivate() };
                 } else {
                     decryptionKeys = new PrivateKey[] {
                             encryptionKeys.getPrivate(),
@@ -407,11 +407,7 @@ public class Command {
 
         List<String> ids = new LinkedList<String>();
         for (String arg : arguments) {
-            if (Common.isAccountId(arg) || Common.isExternalId(arg)) {
-                ids.add(arg);
-            } else {
-                System.err.println("Ignoring invalid id: " + arg);
-            }
+            ids.add(arg);
         }
 
         for (String feedId : ids) {
@@ -850,8 +846,8 @@ public class Command {
                         + Common.SIGN, file, pwd);
     }
 
-    public static final void writeEncryptionKeyPair(KeyPair keyPair,
-            String id, File file, char[] pwd) {
+    public static final void writeEncryptionKeyPair(KeyPair keyPair, String id,
+            File file, char[] pwd) {
         writeKeyPairToFile(keyPair,
                 createCertificate(keyPair, "SHA1withECDSA"), id + '-'
                         + Common.ENCRYPT, file, pwd);

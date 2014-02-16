@@ -20,10 +20,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -88,7 +86,7 @@ public class Client {
     public Client(URL url) {
         this.serving = url;
 
-        // allow anonymous SSL:
+        // FLAG: allow anonymous SSL:
         // trsst clients aren't vulnerable to MITM
         // because we don't trust the man anyway.
         Protocol anonhttps = new Protocol("https",
@@ -104,44 +102,17 @@ public class Client {
     }
 
     /**
-     * Returns a Feed for the specified feed id.
-     * 
-     * @param feedId
-     * @return a Feed containing the latest entries for this feed id.
-     */
-    public Feed pull(String feedId) {
-        return pull(feedId, 0);
-    }
-
-    /**
      * Returns a Feed for the specified feed id, and will attempt to decrypt any
      * encrypted content with the specified key.
      * 
-     * @param feedId
-     *            a feed id.
+     * @param urn
+     *            a feed or entry urn id.
      * @param decryptionKey
      *            one or more private keys used to attempt to decrypt content.
      * @return a Feed containing the latest entries for this feed id.
      */
-    public Feed pull(String feedId, PrivateKey[] decryptionKeys) {
-        return pull(feedId, 0, decryptionKeys);
-    }
-
-    /**
-     * Returns a Feed for the specified feed id that contains only the specified
-     * entry, and will attempt to decrypt any encrypted content with the
-     * specified key.
-     * 
-     * @param feedId
-     *            a feed id.
-     * @param entryId
-     *            an entry id.
-     * @param decryptionKeys
-     *            one or more private keys used to attempt to decrypt content.
-     * @return a Feed containing only the specified entry.
-     */
-    public Feed pull(String feedId, long entryId, PrivateKey[] decryptionKeys) {
-        Feed feed = pull(feedId, entryId);
+    public Feed pull(String urn, PrivateKey[] decryptionKeys) {
+        Feed feed = pull(urn);
         Content content;
         MimeType contentType;
         for (Entry entry : feed.getEntries()) {
@@ -183,8 +154,17 @@ public class Client {
                                                             + entry.getId(), t);
                                         }
                                     }
+                                } else {
+                                    log.warn("No cipher text for entry: "
+                                            + entry.getId());
                                 }
+                            } else {
+                                log.warn("No cipher value for entry: "
+                                        + entry.getId());
                             }
+                        } else {
+                            log.warn("No cipher data for entry: "
+                                    + entry.getId());
                         }
                     }
                 }
@@ -195,32 +175,31 @@ public class Client {
     }
 
     /**
-     * Returns a Feed for the specified feed id that contains only the specified
-     * entry.
+     * Returns a Feed for the specified urn. Filters may be applied as url
+     * parameters on the urn, e.g. "?tag=birthday&tag=happy"
      * 
-     * @param feedId
-     *            a feed id.
-     * @param entryId
-     *            an entry id.
-     * @return a Feed containing only the specified entry.
+     * @param urn
+     *            a feed or entry urn id.
+     * @return a Feed containing the latest entries for this feed id.
      */
-    public Feed pull(String feedId, long entryId) {
+    public Feed pull(String urn) {
         AbderaClient client = new AbderaClient(Abdera.getInstance());
-        if (!Common.isAccountId(feedId)) {
-            try {
-                // see if this is a url to an external resource
-                new URL(feedId);
-                // the url of the external feed becomes our feed id
-                feedId = URLEncoder.encode(feedId, "UTF-8");
-            } catch (MalformedURLException e) {
-                System.err.println("Invalid feed id: " + feedId);
-                return null;
-            } catch (UnsupportedEncodingException e) {
-                System.err.println("Could not encode id: " + feedId);
-                return null;
-            }
+
+        if (urn.startsWith("urn:feed:")) {
+            urn = urn.substring("urn:feed:".length());
+        } else if (urn.startsWith("urn:entry:")) {
+            urn = urn.substring("urn:entry:".length());
+            urn = urn.replaceFirst(":", "/");
         }
-        URL url = getURL(serving, feedId, entryId);
+        
+        URL url = null;
+        try {
+            url = new URL(serving + "/" + urn);
+        } catch (MalformedURLException e) {
+            System.err.println("Invalid urn: " + serving + "/" + urn);
+            return null;
+        }
+
         ClientResponse response = client.get(url.toString());
         if (response.getType() == ResponseType.SUCCESS) {
             Document<Feed> document = response.getDocument();
@@ -252,27 +231,7 @@ public class Client {
      *         null if unsuccessful.
      */
     public Feed push(String feedId, URL url) {
-        return push(feedId, 0, url);
-    }
-
-    /**
-     * Pushes a specified entry from the specified feed id on the home service
-     * to the remote services hosted at the specified URL.
-     * 
-     * Pushing an entry is used to notify a service of a particular entry
-     * directed to a user whose home is that service.
-     * 
-     * @param feedId
-     *            a feed id.
-     * @param entryId
-     *            a feed id.
-     * @param url
-     *            a URL to a remote trsst service
-     * @return a Feed returned by the server successfully accepting the feed, or
-     *         null if unsuccessful.
-     */
-    public Feed push(String feedId, long entryId, URL url) {
-        return push(pull(feedId, entryId), url);
+        return push(pull(feedId), url);
     }
 
     private Feed push(Feed feed, String[] contentId, String[] contentType,
@@ -704,24 +663,6 @@ public class Client {
                     options.getContentData(), serving);
         }
         return push(feed, serving);
-    }
-
-    private static final URL getURL(URL base, String feedId, long entryId) {
-        URL url;
-        try {
-            String s = base.toString();
-            if (s.endsWith("/")) {
-                s = s.substring(0, s.length() - 1);
-            }
-            url = new URL(s + "/" + feedId);
-            if (entryId != 0) {
-                url = new URL(url.toString() + "/" + Long.toHexString(entryId));
-            }
-        } catch (MalformedURLException e) {
-            throw new IllegalArgumentException("Invalid input: " + feedId
-                    + " : " + entryId);
-        }
-        return url;
     }
 
     private final static SignatureOptions getSignatureOptions(Signature signer,
