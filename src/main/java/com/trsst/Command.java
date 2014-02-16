@@ -170,6 +170,10 @@ public class Command {
                 .withArgName("url").withLongOpt("host")
                 .withDescription("Set host server for this operation")
                 .create('h'));
+        pullOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
+                .withArgName("id").withLongOpt("decrypt")
+                .withDescription("Decrypt entries as specified recipient id")
+                .create('d'));
 
         postOptions = new Options();
         postOptions.addOption(OptionBuilder
@@ -335,6 +339,72 @@ public class Command {
             return 127; // "command not found"
         }
 
+        // decryption option
+        String id = commands.getOptionValue("d");
+        PrivateKey[] decryptionKeys = null;
+
+        if (id != null) {
+            // obtain password
+            char[] password = null;
+            String pass = commands.getOptionValue("p");
+            if (pass != null) {
+                password = pass.toCharArray();
+            } else {
+                try {
+                    Console console = System.console();
+                    if (console != null) {
+                        password = console.readPassword("Password: ");
+                    } else {
+                        log.info("No console detected for password input.");
+                    }
+                } catch (Throwable t) {
+                    log.error("Unexpected error while reading password", t);
+                }
+            }
+            if (password == null) {
+                log.error("Password is required to decrypt.");
+                return 127; // "command not found"
+            }
+            if (password.length < 6) {
+                System.err
+                        .println("Password must be at least six characters in length.");
+                return 127; // "command not found"
+            }
+
+            // obtain keys
+            KeyPair signingKeys = null;
+            KeyPair encryptionKeys = null;
+            String keyPath = commands.getOptionValue("k");
+
+            File keyFile;
+            if (keyPath != null) {
+                keyFile = new File(ROOT, keyPath);
+            } else {
+                keyFile = new File(ROOT, id + KEY_EXTENSION);
+            }
+
+            if (keyFile.exists()) {
+                System.err.println("Using existing account id: " + id);
+
+            } else {
+                System.err.println("Cannot locate keys for account id: " + id);
+                return 78; // "configuration error"
+            }
+
+            signingKeys = readSigningKeyPair(id, keyFile, password);
+            if (signingKeys != null) {
+                encryptionKeys = readEncryptionKeyPair(id, keyFile, password);
+                if (encryptionKeys == null) {
+                    decryptionKeys = new PrivateKey[] {
+                            signingKeys.getPrivate() };
+                } else {
+                    decryptionKeys = new PrivateKey[] {
+                            encryptionKeys.getPrivate(),
+                            signingKeys.getPrivate() };
+                }
+            }
+        }
+
         List<String> ids = new LinkedList<String>();
         for (String arg : arguments) {
             if (Common.isAccountId(arg) || Common.isExternalId(arg)) {
@@ -344,9 +414,14 @@ public class Command {
             }
         }
 
-        for (String id : ids) {
+        for (String feedId : ids) {
             try {
-                Object feed = client.pull(id);
+                Object feed;
+                if (decryptionKeys != null) {
+                    feed = client.pull(feedId, decryptionKeys);
+                } else {
+                    feed = client.pull(feedId);
+                }
                 if (feed != null) {
                     if (format) {
                         out.println(Common.formatXML(feed.toString()));
@@ -354,7 +429,7 @@ public class Command {
                         out.println(feed.toString());
                     }
                 } else {
-                    System.err.println("Could not fetch: " + id + " : "
+                    System.err.println("Could not fetch: " + feedId + " : "
                             + client);
                 }
             } catch (Throwable t) {
@@ -603,6 +678,9 @@ public class Command {
             signingKeys = readSigningKeyPair(id, keyFile, password);
             if (signingKeys != null) {
                 encryptionKeys = readEncryptionKeyPair(id, keyFile, password);
+                if (encryptionKeys == null) {
+                    encryptionKeys = signingKeys;
+                }
             }
         }
 
@@ -618,7 +696,12 @@ public class Command {
         PublicKey recipientKey = null;
         if (recipient != null) {
             try {
-                recipientKey = Common.toPublicKeyFromX509(recipient);
+                if ("-".equals(recipient)) {
+                    // "-" is shorthand for self-encrypt
+                    recipientKey = encryptionKeys.getPublic();
+                } else {
+                    recipientKey = Common.toPublicKeyFromX509(recipient);
+                }
             } catch (GeneralSecurityException e) {
                 log.error("Could not parse recipient key: " + recipient);
                 return 73; // "can't create output error"
@@ -635,13 +718,14 @@ public class Command {
                     input = new BufferedInputStream(in);
                 } else {
                     File file = new File(attach);
+                    input = new BufferedInputStream(new FileInputStream(file));
                     System.err.println("Attaching: " + file.getCanonicalPath());
                 }
                 attachment = Common.readFully(input);
                 mimetype = new Tika().detect(attachment);
                 System.err.println("Detected type: " + mimetype);
             } catch (Throwable t) {
-                log.error("Could not read attachment: " + attach);
+                log.error("Could not read attachment: " + attach, t);
                 return 73; // "can't create output error"
             } finally {
                 try {
@@ -689,6 +773,9 @@ public class Command {
             }
             result = client.post(signingKeys, encryptionKeys.getPublic(),
                     options, feedOptions);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid request: " + id + " : " + e.getMessage(), e);
+            return 76; // "remote error"
         } catch (IOException e) {
             log.error("Error connecting to service for id: " + id, e);
             return 76; // "remote error"
@@ -746,31 +833,31 @@ public class Command {
                 postOptions);
     }
 
-    private static final KeyPair readSigningKeyPair(String id, File file,
+    public static final KeyPair readSigningKeyPair(String id, File file,
             char[] pwd) {
         return readKeyPairFromFile(id + '-' + Common.SIGN, file, pwd);
     }
 
-    private static final KeyPair readEncryptionKeyPair(String id, File file,
+    public static final KeyPair readEncryptionKeyPair(String id, File file,
             char[] pwd) {
         return readKeyPairFromFile(id + '-' + Common.ENCRYPT, file, pwd);
     }
 
-    private static final void writeSigningKeyPair(KeyPair keyPair, String id,
+    public static final void writeSigningKeyPair(KeyPair keyPair, String id,
             File file, char[] pwd) {
         writeKeyPairToFile(keyPair,
                 createCertificate(keyPair, "SHA1withECDSA"), id + '-'
                         + Common.SIGN, file, pwd);
     }
 
-    private static final void writeEncryptionKeyPair(KeyPair keyPair,
+    public static final void writeEncryptionKeyPair(KeyPair keyPair,
             String id, File file, char[] pwd) {
         writeKeyPairToFile(keyPair,
                 createCertificate(keyPair, "SHA1withECDSA"), id + '-'
                         + Common.ENCRYPT, file, pwd);
     }
 
-    private static final KeyPair readKeyPairFromFile(String alias, File file,
+    public static final KeyPair readKeyPairFromFile(String alias, File file,
             char[] pwd) {
         FileInputStream input = null;
         try {
@@ -799,7 +886,7 @@ public class Command {
         return null;
     }
 
-    private static final void writeKeyPairToFile(KeyPair keyPair,
+    public static final void writeKeyPairToFile(KeyPair keyPair,
             X509Certificate cert, String alias, File file, char[] pwd) {
         FileInputStream input = null;
         FileOutputStream output = null;
