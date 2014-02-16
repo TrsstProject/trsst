@@ -85,15 +85,15 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
         resolver.setPattern("/service", TargetType.TYPE_SERVICE)
                 .setPattern("/(http[^#?]*)",
                         TargetType.TYPE_COLLECTION, "collection")
+                .setPattern("/([^/#?]+)/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
+                        TargetType.TYPE_MEDIA, "collection", "entry",
+                        "resource")
+                .setPattern("/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
+                        TargetType.TYPE_ENTRY, "collection", "entry")
                 .setPattern("/([^/#?]+);categories",
                         TargetType.TYPE_CATEGORIES, "collection")
                 .setPattern("/([^/#?;]+)(\\?[^#]*)?",
-                        TargetType.TYPE_COLLECTION, "collection")
-                .setPattern("/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
-                        TargetType.TYPE_ENTRY, "collection", "entry")
-                .setPattern("/([^/#?]+)/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
-                        TargetType.TYPE_MEDIA, "collection", "entry",
-                        "resource");
+                        TargetType.TYPE_COLLECTION, "collection");
 
         super.setTargetResolver(resolver);
 
@@ -301,9 +301,9 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
                         "image/gif", "image/svg+xml", "video/mp4");
                 result.add(info);
             } catch (ParseException e) {
-                log.warn("Could not parse collection info for feed: " + id, e);
+                log.warn("Could not parse collection info for feed: " + id + " : " + e.toString());
             } catch (IOException e) {
-                log.warn("Could not read collection info for feed: " + id, e);
+                log.warn("Could not read collection info for feed: " + id + " : " + e.toString());
             }
         }
         return result;
@@ -344,7 +344,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
             // note: now first matching pattern wins
             for (Pattern pattern : orderedPatterns.keySet()) {
                 Matcher matcher = pattern.matcher(uri);
-                if (matcher.matches()) {
+                if (matcher.lookingAt()) {
                     TargetType type = this.orderedPatterns.get(pattern);
                     String[] fields = this.fields.get(pattern);
                     return getTarget(type, context, matcher, fields);
