@@ -76,6 +76,23 @@ public class Common {
     public static final String ATTACHMENT_DIGEST = "digest";
     public static final String PREDECESSOR_ID = "id";
 
+    /**
+     * Default public rights are like CC ND BY but with added right of
+     * revocation. This lets you delete an entry and require takedown of that
+     * entry whereever it has been distributed.
+     */
+    public static final String RIGHTS_NDBY_REVOCABLE = "ATTRIBUTION, NO DERIVATIVES, REVOCABLE";
+    // "You may copy, distribute, display and perform only verbatim copies of
+    // the work, not derivative works based on it, and only if fully attributed
+    // to the author. Your license to the work is revoked worldwide if the
+    // author publicly deletes the original work.";
+
+    /**
+     * Default public rights are are explicity ARR if only to clearly
+     * differentiate private posts from public ones.
+     */
+    public static final String RIGHTS_RESERVED = "ALL RESERVED";
+
     private final static org.slf4j.Logger log;
 
     static {

@@ -191,7 +191,7 @@ public class Client {
             urn = urn.substring("urn:entry:".length());
             urn = urn.replaceFirst(":", "/");
         }
-        
+
         URL url = null;
         try {
             url = new URL(serving + "/" + urn);
@@ -504,7 +504,12 @@ public class Client {
                 }
             }
 
-            if (options.recipientKey != null) {
+            if (options.recipientKey == null) {
+                // public post
+                entry.setRights(Common.RIGHTS_NDBY_REVOCABLE);
+            } else {
+                // private post
+                entry.setRights(Common.RIGHTS_RESERVED);
                 try {
                     byte[] bytes = encryptElement(entry, options.recipientKey);
                     String encoded = new Base64(0, null, true)
