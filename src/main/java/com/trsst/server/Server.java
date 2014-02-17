@@ -259,6 +259,12 @@ public class Server {
             context.setContextPath("/");
             server.setHandler(context);
             configureContext(context);
+            
+            //FIXME: does not work: still getting session cookie
+            // see http://stackoverflow.com/questions/20373461
+//            ((org.eclipse.jetty.server.session.HashSessionManager) context
+//                    .getSessionHandler().getSessionManager())
+//                    .setUsingCookies(false);
         }
         return server;
     }
