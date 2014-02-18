@@ -153,10 +153,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         if (feed != null) {
             // ensure it's a naked feed:
             // entries matching query params will get added later
-            for ( Entry e : feed.getEntries() ) {
+            for (Entry e : feed.getEntries()) {
                 e.discard();
             }
-            
+
             // store in request context
             wrapper.setAttribute(Scope.REQUEST, "com.trsst.Feed", feed);
             return feed;
@@ -193,7 +193,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      */
     protected void fetchLaterFromRelay(final String feedId,
             final RequestContext request) {
-        new Thread(new Runnable() {
+        doLater(new Runnable() {
             public void run() {
                 log.debug("fetchLaterFromRelay: starting: "
                         + request.getResolvedUri());
@@ -207,7 +207,16 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                     fetchFromRelay(request);
                 }
             }
-        }).start();
+        });
+    }
+
+    /**
+     * Hook for subclasses to control new process creation.
+     * 
+     * @param runnable
+     */
+    protected void doLater(Runnable runnable) {
+        new Thread(runnable).start();
     }
 
     /**
@@ -322,7 +331,22 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
             if (result != null) {
                 // process and persist external feed
-                ingestExternalFeed(feedId, result);
+                final String id = feedId;
+                final Feed copy = (Feed) result.clone();
+                // process one immediately
+                ingestExternalFeed(id, copy, 1);
+                // process remained concurrently so we can return to user
+                doLater(new Runnable() {
+                    public void run() {
+                        try {
+                            ingestExternalFeed(id, copy, 100);
+                        } catch (Exception e) {
+                            log.error("Could not process external feed: " + id,
+                                    e);
+                        }
+                    }
+
+                });
             }
 
         } catch (FileNotFoundException fnfe) {
@@ -571,7 +595,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         } catch (Exception pe) {
             log.error("postMedia: ", pe);
             return ProviderHelper.badrequest(request,
-                    "Could not process multipart request: " + pe.getMessage() );
+                    "Could not process multipart request: " + pe.getMessage());
         }
         return ProviderHelper.badrequest(request,
                 "Could not process multipart request");
@@ -720,7 +744,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @throws Exception
      *             any other problem
      */
-    protected void ingestExternalFeed(String feedId, Feed feed)
+    protected void ingestExternalFeed(String feedId, Feed feed, int limit)
             throws XMLSignatureException, IllegalArgumentException, Exception {
 
         // clone a copy so we can manipulate
@@ -732,6 +756,11 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // validate, persist, and remove each entry
         List<Entry> entries = new LinkedList<Entry>();
         entries.addAll(feed.getEntries()); // make a copy
+
+        // restrict to limit count
+        entries = entries.subList(0, Math.min(limit, entries.size()));
+
+        int count = 0;
         for (Entry entry : feed.getEntries()) {
 
             // convert existing entry id to a trsst timestamp-based id
@@ -755,6 +784,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
             // remove from feed parent
             entry.discard();
+
+            if (++count > limit) {
+                break;
+            }
         }
 
         if (entries.isEmpty()) {
@@ -763,7 +796,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             return;
         }
 
-        // remove all navigation links before signing
+        // remove all navigation links before persisting
         for (Link link : feed.getLinks()) {
             if (Link.REL_FIRST.equals(link.getRel())
                     || Link.REL_LAST.equals(link.getRel())
@@ -1092,7 +1125,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         if (after != null) {
             try {
                 // try to parse an entry id timestamp
-                beginDate = new Date(Long.parseLong(after,16));
+                beginDate = new Date(Long.parseLong(after, 16));
             } catch (NumberFormatException nfe) {
                 // try to parse as ISO date
                 String begin = after;
@@ -1114,7 +1147,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         if (before != null) {
             try {
                 // try to parse an entry id timestamp
-                endDate = new Date(Long.parseLong(before,16));
+                endDate = new Date(Long.parseLong(before, 16));
             } catch (NumberFormatException nfe) {
                 // try to parse as ISO date
                 String end = before;

@@ -261,35 +261,56 @@ public class TrsstTest extends TestCase {
             // test to work
             // assertEquals("Feed lists most recent entry first",
             // "Second Post!", entry.getTitle() );
-            /*
-             * // make sure we're retaining all entries for (int i = 0; i < 15;
-             * i++) { feed = client.post( signingKeys,
-             * encryptionKeys.getPublic(), new EntryOptions()
-             * .setStatus("Multipost!") .setVerb("post")
-             * .setBody("This is the body") .setMentions( new String[] {
-             * idsToCleanup.iterator().next(), feedId }) .setTags( new String[]
-             * { "fitter", "happier", "more productive" }), new FeedOptions());
-             * entry = feed.getEntries().get(0);
-             * entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
-             * feedId, Common.toEntryId(entry.getId()))); } feed =
-             * client.pull(Common.fromFeedUrn(feed.getId()));
-             * assertTrue("Feed has all entries", (17 ==
-             * feed.getEntries().size()));
-             * 
-             * // make sure server is paginating (in this case at 25 by default)
-             * for (int i = 0; i < 15; i++) { feed = client.post( signingKeys,
-             * encryptionKeys.getPublic(), new EntryOptions()
-             * .setStatus("Multipost!") .setVerb("post")
-             * .setBody("This is the body") .setMentions( new String[] {
-             * idsToCleanup.iterator().next(), feedId }) .setTags( new String[]
-             * { "fitter", "happier", "more productive" }), new FeedOptions());
-             * entry = feed.getEntries().get(0);
-             * entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
-             * feedId, Common.toEntryId(entry.getId()))); } feed =
-             * client.pull(Common.fromFeedUrn(feed.getId()));
-             * assertTrue("Feed has only first page of entries", (25 == feed
-             * .getEntries().size()));
-             */
+
+            // make sure we're retaining all entries
+            for (int i = 0; i < 15; i++) {
+                feed = client.post(
+                        signingKeys,
+                        encryptionKeys.getPublic(),
+                        new EntryOptions()
+                                .setStatus("Multipost!")
+                                .setVerb("post")
+                                .setBody("This is the body")
+                                .setMentions(
+                                        new String[] {
+                                                idsToCleanup.iterator().next(),
+                                                feedId })
+                                .setTags(
+                                        new String[] { "fitter", "happier",
+                                                "more productive" }),
+                        new FeedOptions());
+                entry = feed.getEntries().get(0);
+                entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
+                        feedId, Common.toEntryId(entry.getId())));
+            }
+            feed = client.pull(Common.fromFeedUrn(feed.getId()));
+            assertTrue("Feed has all entries", (17 == feed.getEntries().size()));
+
+            // make sure server is paginating (in this case at 25 by default)
+            for (int i = 0; i < 15; i++) {
+                feed = client.post(
+                        signingKeys,
+                        encryptionKeys.getPublic(),
+                        new EntryOptions()
+                                .setStatus("Multipost!")
+                                .setVerb("post")
+                                .setBody("This is the body")
+                                .setMentions(
+                                        new String[] {
+                                                idsToCleanup.iterator().next(),
+                                                feedId })
+                                .setTags(
+                                        new String[] { "fitter", "happier",
+                                                "more productive" }),
+                        new FeedOptions());
+                entry = feed.getEntries().get(0);
+                entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
+                        feedId, Common.toEntryId(entry.getId())));
+            }
+            feed = client.pull(Common.fromFeedUrn(feed.getId()));
+            assertTrue("Feed has only first page of entries", (25 == feed
+                    .getEntries().size()));
+
             // generate recipient keys
             KeyPair recipientKeys = Common.generateEncryptionKeyPair();
 
@@ -317,7 +338,7 @@ public class TrsstTest extends TestCase {
                                                             "Unencrypted title with encrypted entry")),
                             new FeedOptions());
             entry = feed.getEntries().get(0);
-            feed = client.pull(feedId, Common.toEntryId(entry.getId()));
+            feed = client.pull(entry.getId().toString());
             assertNotNull("Generating encrypted entry", feed);
             entry = feed.getEntries().get(0);
             entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
@@ -363,7 +384,7 @@ public class TrsstTest extends TestCase {
 
             // test pull of a single entry
             long existingId = Common.toEntryId(entry.getId());
-            feed = client.pull(feedId, existingId);
+            feed = client.pull(entry.getId().toString());
             assertNotNull("Single entry feed result", feed);
             assertEquals("Single entry feed retains id", feedId,
                     Common.fromFeedUrn(feed.getId()));
