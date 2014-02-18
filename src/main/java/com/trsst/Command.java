@@ -101,24 +101,11 @@ import com.trsst.server.Server;
  */
 @SuppressWarnings("deprecation")
 public class Command {
-    private static final String KEY_EXTENSION = ".p12";
-    private static File ROOT;
 
     static {
         if (System.getProperty("org.slf4j.simpleLogger.defaultLogLevel") == null) {
             // if unspecified, default to error-level logging for jetty
             System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "warn");
-        }
-        String path = System.getProperty("user.home", ".");
-        ROOT = new File(path, "trsstd");
-        path = System.getProperty("com.trsst.client.storage");
-        if (path != null) {
-            try {
-                ROOT = new File(path);
-            } catch (Throwable t) {
-                System.err.println("Invalid path: " + path + " : "
-                        + t.getMessage());
-            }
         }
     }
 
@@ -378,9 +365,9 @@ public class Command {
 
             File keyFile;
             if (keyPath != null) {
-                keyFile = new File(ROOT, keyPath);
+                keyFile = new File(Common.getClientRoot(), keyPath);
             } else {
-                keyFile = new File(ROOT, id + KEY_EXTENSION);
+                keyFile = new File(Common.getClientRoot(), id + Common.KEY_EXTENSION);
             }
 
             if (keyFile.exists()) {
@@ -645,9 +632,9 @@ public class Command {
 
             File keyFile;
             if (keyPath != null) {
-                keyFile = new File(ROOT, keyPath);
+                keyFile = new File(Common.getClientRoot(), keyPath);
             } else {
-                keyFile = new File(ROOT, id + KEY_EXTENSION);
+                keyFile = new File(Common.getClientRoot(), id + Common.KEY_EXTENSION);
             }
 
             // persist to keystore
@@ -658,9 +645,9 @@ public class Command {
 
             File keyFile;
             if (keyPath != null) {
-                keyFile = new File(ROOT, keyPath);
+                keyFile = new File(Common.getClientRoot(), keyPath);
             } else {
-                keyFile = new File(ROOT, id + KEY_EXTENSION);
+                keyFile = new File(Common.getClientRoot(), id + Common.KEY_EXTENSION);
             }
 
             if (keyFile.exists()) {

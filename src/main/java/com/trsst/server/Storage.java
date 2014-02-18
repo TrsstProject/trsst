@@ -62,17 +62,88 @@ public interface Storage {
     String[] getCategories(int start, int length);
 
     /**
+     * Returns the total number of entries for the specified optional filters,
+     * or -1 if count is unavailable or unsupported.
+     * 
+     * @param after
+     *            (optional) restricts results to those entries posted after the
+     *            specified date, or null if no restriction.
+     * @param before
+     *            (optional) restricts results to those entries posted before
+     *            the specified date, or null if no restriction.
+     * @param query
+     *            (optional) a space-delimited string of query terms, or null if
+     *            for no query; query language is implementation-dependent, but
+     *            at minimum a single-term search returns only results that
+     *            contain the specified term.
+     * @param mentions
+     *            (optional) restricts results to those entries that contain all
+     *            of the specified mentions
+     * @param tags
+     *            (optional) restricts results to those entries that contain all
+     *            of the specified tags
+     * @param verb
+     *            (optional) restricts results to those entries that contain the
+     *            specified verb
+     * @return the total number of entries for the specified feed, or -1 if not
+     *         supported or unavailable.
+     */
+    int getEntryCount(Date after, Date before, String query, String[] mentions,
+            String[] tags, String verb);
+
+    /**
+     * Return a string array containing entry ids within the specified range,
+     * and matching the specified query, ordered with most recent entries first.
+     * The query is a space-delimited string of words to be matched against an
+     * entries' tags, mentions, title, and summary, and only entries matching
+     * all terms are returned.
+     * 
+     * @param offset
+     *            the number of entries to skip starting with the most recent
+     *            entry.
+     * @param length
+     *            the number of entries to return after skipping the offset
+     *            entries.
+     * @param after
+     *            (optional) restricts results to those entries posted after the
+     *            specified date, or null if no restriction.
+     * @param before
+     *            (optional) restricts results to those entries posted before
+     *            the specified date, or null if no restriction.
+     * @param query
+     *            (optional) a space-delimited string of query terms, or null if
+     *            for no query; query language is implementation-dependent, but
+     *            at minimum a single-term search returns only results that
+     *            contain the specified term.
+     * @param mentions
+     *            (optional) restricts results to those entries that contain all
+     *            of the specified mentions
+     * @param tags
+     *            (optional) restricts results to those entries that contain all
+     *            of the specified tags
+     * @param verb
+     *            (optional) restricts results to those entries that contain the
+     *            specified verb
+     * @return an array containing the matching entry ids; will contain no more
+     *         entries than the specified length, but may contain fewer entries,
+     *         or zero entries; null if operation not supported on this server.
+     */
+    String[] getEntryIds(int start, int length, Date after,
+            Date before, String query, String[] mentions, String[] tags,
+            String verb);
+
+    /**
      * Returns the total number of entries for the specified feed id, with the
      * optional filters, or -1 if the feed id is unrecognized.
      * 
      * @param feedId
      *            the specified feed.
      * @param after
-     *            (optional) restricts results to those entries posted 
-     *            after the specified date, or null if no restriction.
+     *            (optional) restricts results to those entries posted after the
+     *            specified date, or null if no restriction.
      * @param before
-     *            (optional) restricts results to those entries posted 
-     *            before the specified date, or null if no restriction.
+     *            (optional) restricts results to those entries posted before
+     *            the specified date, or null if no restriction.
      * @param query
      *            (optional) a space-delimited string of query terms, or null if
      *            for no query; query language is implementation-dependent, but
@@ -109,11 +180,11 @@ public interface Storage {
      *            the number of entries to return after skipping the offset
      *            entries.
      * @param after
-     *            (optional) restricts results to those entries posted 
-     *            after the specified date, or null if no restriction.
+     *            (optional) restricts results to those entries posted after the
+     *            specified date, or null if no restriction.
      * @param before
-     *            (optional) restricts results to those entries posted 
-     *            before the specified date, or null if no restriction.
+     *            (optional) restricts results to those entries posted before
+     *            the specified date, or null if no restriction.
      * @param query
      *            (optional) a space-delimited string of query terms, or null if
      *            for no query; query language is implementation-dependent, but
@@ -268,8 +339,8 @@ public interface Storage {
             String resourceId) throws FileNotFoundException, IOException;
 
     /**
-     * Stores a binary resource for the specified feed and entry for later retrieval by
-     * readFeedEntryResource(). 
+     * Stores a binary resource for the specified feed and entry for later
+     * retrieval by readFeedEntryResource().
      * 
      * @param feedId
      *            the specified feed.
@@ -288,8 +359,8 @@ public interface Storage {
      *             if a error occurs persisting the resource data.
      */
     void updateFeedEntryResource(String feedId, long entryId,
-            String resourceId, String mimeType, Date publishDate,
-            byte[] data) throws IOException;
+            String resourceId, String mimeType, Date publishDate, byte[] data)
+            throws IOException;
 
     /**
      * Delete an existing resource for the specified feed and entry.

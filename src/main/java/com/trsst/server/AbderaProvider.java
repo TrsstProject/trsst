@@ -55,6 +55,8 @@ import org.apache.abdera.protocol.server.impl.RegexTargetResolver;
 import org.apache.abdera.protocol.server.impl.SimpleCollectionInfo;
 import org.apache.abdera.protocol.server.impl.TemplateTargetBuilder;
 
+import com.trsst.Common;
+
 /**
  * Abdera-specific configuration of mapping targets and servlet filters.
  * 
@@ -83,8 +85,8 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
         // map paths to handlers
         RegexTargetResolver resolver = new OrderedRegexTargetResolver();
         resolver.setPattern("/service", TargetType.TYPE_SERVICE)
-                .setPattern("/(http[^#?]*)",
-                        TargetType.TYPE_COLLECTION, "collection")
+                .setPattern("/(http[^#?]*)", TargetType.TYPE_COLLECTION,
+                        "collection")
                 .setPattern("/([^/#?]+)/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
                         TargetType.TYPE_MEDIA, "collection", "entry",
                         "resource")
@@ -199,7 +201,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
 
     /**
      * Override to return a custom storage instance. This implementation
-     * defaults to a single shared FileStorage instance.
+     * defaults to a single shared LuceneStorage instance.
      * 
      * @param feedId
      *            a hint for implementors
@@ -208,7 +210,9 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
     protected Storage getStorage(RequestContext request) {
         if (sharedStorage == null) {
             try {
-                sharedStorage = new LuceneStorage();
+                Storage clientStorage = new FileStorage(Common.getClientRoot());
+                Storage cacheStorage = new FileStorage(Common.getServerRoot());
+                sharedStorage = new LuceneStorage(cacheStorage, clientStorage);
             } catch (IOException e) {
                 log.error("Could not initialize storage", e);
             }
@@ -264,7 +268,6 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
     private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(this
             .getClass());
 
-    @Override
     public String getTitle(RequestContext requsest) {
         // workspace info title
         return hostname;
@@ -280,7 +283,6 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
         return getStorage(request).getFeedIds(0, 100);
     }
 
-    @Override
     public Collection<CollectionInfo> getCollections(RequestContext request) {
         LinkedList<CollectionInfo> result = new LinkedList<CollectionInfo>();
         Feed feed;
@@ -301,15 +303,16 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
                         "image/gif", "image/svg+xml", "video/mp4");
                 result.add(info);
             } catch (ParseException e) {
-                log.warn("Could not parse collection info for feed: " + id + " : " + e.toString());
+                log.warn("Could not parse collection info for feed: " + id
+                        + " : " + e.toString());
             } catch (IOException e) {
-                log.warn("Could not read collection info for feed: " + id + " : " + e.toString());
+                log.warn("Could not read collection info for feed: " + id
+                        + " : " + e.toString());
             }
         }
         return result;
     }
 
-    @Override
     public Workspace asWorkspaceElement(RequestContext request) {
         Workspace workspace = request.getAbdera().getFactory().newWorkspace();
         workspace.setTitle(getTitle(request));

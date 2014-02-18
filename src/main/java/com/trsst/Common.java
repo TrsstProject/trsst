@@ -17,6 +17,7 @@ package com.trsst;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -75,6 +76,7 @@ public class Common {
     public static final String PREDECESSOR = "predecessor";
     public static final String ATTACHMENT_DIGEST = "digest";
     public static final String PREDECESSOR_ID = "id";
+    public static final String KEY_EXTENSION = ".p12";
 
     /**
      * Default public rights are like CC ND BY but with added right of
@@ -123,6 +125,35 @@ public class Common {
         byte[] check = hash(addressBytes, 0, keyDigest.length);
         System.arraycopy(check, 0, addressBytes, keyDigest.length, 4);
         return toBase58(addressBytes);
+    }
+
+    public static File getClientRoot() {
+        String path = System.getProperty("user.home", ".");
+        File root = new File(path, "trsstd");
+        path = System.getProperty("com.trsst.client.storage");
+        if (path != null) {
+            try {
+                root = new File(path);
+            } catch (Throwable t) {
+                System.err.println("Invalid path: " + path + " : "
+                        + t.getMessage());
+            }
+        }
+        return root;
+    }
+
+    public static File getServerRoot() {
+        String path = System.getProperty("com.trsst.server.storage");
+        if (path != null) {
+            try {
+                return new File(path);
+            } catch (Throwable t) {
+                System.err.println("Invalid path: " + path + " : "
+                        + t.getMessage());
+            }
+        }
+        path = System.getProperty("user.home", ".");
+        return new File(path, "trsstd");
     }
 
     public static final String toEntryIdString(Object entryUrn) {

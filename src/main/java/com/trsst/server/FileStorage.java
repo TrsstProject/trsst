@@ -57,41 +57,24 @@ public class FileStorage implements Storage {
     private File root;
 
     public FileStorage() {
-        root = getRoot();
+        this(Common.getServerRoot());
+    }
+
+    public FileStorage(File root) {
+        this.root = root;
         System.err.println("Default file persistence serving from: " + root);
-    }
-
-    public static File getRoot() {
-        String path = System.getProperty("com.trsst.server.storage");
-        if (path != null) {
-            try {
-                return new File(path);
-            } catch (Throwable t) {
-                System.err.println("Invalid path: " + path + " : "
-                        + t.getMessage());
-            }
-        }
-        path = System.getProperty("user.home", ".");
-        return new File(path, "trsstd");
-    }
-
-    public int getEntryCountForFeedId(String feedId, Date after, Date before,
-            String query, String[] mentions, String[] tags, String verb) {
-        File[] files = new File(root, feedId).listFiles(new FileFilter() {
-            public boolean accept(File file) {
-                return file.getName().toLowerCase().endsWith(ENTRY_SUFFIX);
-            }
-        });
-        return files.length;
     }
 
     public String[] getFeedIds(int start, int length) {
         /* Returns feeds for which we have a keystore. */
         File[] files = root.listFiles();
+        if (files == null) {
+            return new String[0];
+        }
         List<String> result = new LinkedList<String>();
         int i;
         for (File f : files) {
-            i = f.getName().indexOf(".p12");
+            i = f.getName().indexOf(Common.KEY_EXTENSION);
             if (i != -1) {
                 result.add(Common.unescapeHTML(f.getName().substring(0, i)));
             }
@@ -104,6 +87,28 @@ public class FileStorage implements Storage {
         // TODO: implement category trackers
 
         return new String[0];
+    }
+
+    public int getEntryCount(Date after, Date before, String query,
+            String[] mentions, String[] tags, String verb) {
+        // not supported
+        return -1;
+    }
+
+    public String[] getEntryIds(int start, int length, Date after, Date before,
+            String query, String[] mentions, String[] tags, String verb) {
+        // not supported
+        return null;
+    }
+
+    public int getEntryCountForFeedId(String feedId, Date after, Date before,
+            String query, String[] mentions, String[] tags, String verb) {
+        File[] files = new File(root, feedId).listFiles(new FileFilter() {
+            public boolean accept(File file) {
+                return file.getName().toLowerCase().endsWith(ENTRY_SUFFIX);
+            }
+        });
+        return files.length;
     }
 
     public long[] getEntryIdsForFeedId(String feedId, int start, int length,
@@ -289,20 +294,20 @@ public class FileStorage implements Storage {
 
     public static File getFeedFileForFeedId(String feedId) {
         feedId = Common.encodeURL(feedId);
-        return new File(new File(getRoot(), feedId), FEED_XML);
+        return new File(new File(Common.getServerRoot(), feedId), FEED_XML);
     }
 
     public static File getEntryFileForFeedEntry(String feedId, long entryId) {
         feedId = Common.encodeURL(feedId);
-        return new File(new File(getRoot(), feedId), Long.toHexString(entryId)
-                + ENTRY_SUFFIX);
+        return new File(new File(Common.getServerRoot(), feedId),
+                Long.toHexString(entryId) + ENTRY_SUFFIX);
     }
 
     public static File getResourceFileForFeedEntry(String feedId, long entryId,
             String resourceid) {
         feedId = Common.encodeURL(feedId);
-        return new File(new File(getRoot(), feedId), Long.toHexString(entryId)
-                + '-' + resourceid);
+        return new File(new File(Common.getServerRoot(), feedId),
+                Long.toHexString(entryId) + '-' + resourceid);
     }
 
 }

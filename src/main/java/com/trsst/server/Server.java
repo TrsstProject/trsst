@@ -209,11 +209,16 @@ public class Server {
         server.destroy();
     }
 
-    protected void configureContext(ServletContextHandler context) {
+    protected ServletHolder createProvidingServletHolder() {
         ServletHolder servletHolder = new ServletHolder(new AbderaServlet());
         servletHolder.setInitParameter(
                 "org.apache.abdera.protocol.server.Provider",
                 "com.trsst.server.AbderaProvider");
+        return servletHolder;
+    }
+
+    protected void configureContext(ServletContextHandler context) {
+        ServletHolder servletHolder = createProvidingServletHolder();
         context.addServlet(servletHolder, path + "/*");
 
         HttpConfiguration http_config = new HttpConfiguration();
@@ -259,12 +264,12 @@ public class Server {
             context.setContextPath("/");
             server.setHandler(context);
             configureContext(context);
-            
-            //FIXME: does not work: still getting session cookie
+
+            // FIXME: does not work: still getting session cookie
             // see http://stackoverflow.com/questions/20373461
-//            ((org.eclipse.jetty.server.session.HashSessionManager) context
-//                    .getSessionHandler().getSessionManager())
-//                    .setUsingCookies(false);
+            // ((org.eclipse.jetty.server.session.HashSessionManager) context
+            // .getSessionHandler().getSessionManager())
+            // .setUsingCookies(false);
         }
         return server;
     }

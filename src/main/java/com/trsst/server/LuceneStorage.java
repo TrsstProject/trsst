@@ -69,9 +69,16 @@ public class LuceneStorage implements Storage {
     private Abdera abdera;
 
     /**
-     * Storage delegate.
+     * Deletable storage delegate: used for caching feeds fetched from other servers.
+     * Basically, if this storage went away, it would be no big deal.
      */
-    private Storage storage;
+    private Storage cacheStorage;
+    
+    /**
+     * Persistent storage delegate: used for feeds managed by this server.
+     * This is basically the user's primary backup of all entries created.
+     */
+    private Storage persistentStorage;
 
     /*
      * Lucene readers/writers are thread-safe and shared instances are
@@ -100,9 +107,22 @@ public class LuceneStorage implements Storage {
      * @throws IOException
      */
     public LuceneStorage(Storage delegate) throws IOException {
-        storage = delegate;
+        this(delegate, null);
+    }
+    /**
+     * Manages index and calls to the specified storage delegate to handle
+     * individual feed, entry, and resource persistence.
+     * Any feeds managed by this server will call to persistent storage 
+     * rather than cache storage.
+     * 
+     * @param delegate
+     * @throws IOException
+     */
+    public LuceneStorage(Storage cache, Storage persistent) throws IOException {
+        cacheStorage = cache;
+        persistentStorage = persistent;
         abdera = Abdera.getInstance();
-        Directory dir = FSDirectory.open(new File(FileStorage.getRoot(),
+        Directory dir = FSDirectory.open(new File(Common.getServerRoot(),
                 "entry.idx"));
         analyzer = new StandardAnalyzer(Version.LUCENE_46);
 
@@ -131,7 +151,27 @@ public class LuceneStorage implements Storage {
      * @return the specified feed ids hosted on this server.
      */
     public String[] getFeedIds(int start, int length) {
-        return storage.getFeedIds(start, length);
+        return persistentStorage.getFeedIds(start, length);
+    }
+    
+    private boolean isManaged(String feedId) {
+        String[] feedIds = getFeedIds(0, 100);
+        for ( String id : feedIds ) {
+            if ( id.equals(feedId) ) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    private Storage getStorage(String feedId) {
+        if ( persistentStorage == null ) {
+            return cacheStorage;
+        }
+        if ( isManaged(feedId) ) {
+            return persistentStorage;
+        }
+        return cacheStorage;
     }
 
     /**
@@ -153,14 +193,12 @@ public class LuceneStorage implements Storage {
         return new String[0];
     }
 
-    /**
-     * Returns the total number of entries for the specified feed id, or -1 if
-     * the feed id is unrecognized or unsupported.
-     * 
-     * @param feedId
-     *            the specified feed.
-     * @return the total number of entries for the specified feed.
-     */
+    public int getEntryCount(Date after, Date before, String query,
+            String[] mentions, String[] tags, String verb) {
+        return getEntryCountForFeedId(null, after, before, query, mentions,
+                tags, verb);
+    }
+
     public int getEntryCountForFeedId(String feedId, Date after, Date before,
             String search, String[] mentions, String[] tags, String verb) {
         try {
@@ -179,24 +217,44 @@ public class LuceneStorage implements Storage {
         return -1;
     }
 
+    public String[] getEntryIds(int start, int length, Date after, Date before,
+            String query, String[] mentions, String[] tags, String verb) {
+        return _getEntryIdsForFeedId(null, start, length, after, before, query,
+                mentions, tags, verb);
+    }
+
     public long[] getEntryIdsForFeedId(String feedId, int start, int length,
-            Date after, Date before, String search, String[] mentions,
+            Date after, Date before, String query, String[] mentions,
             String[] tags, String verb) {
+        String[] ids = _getEntryIdsForFeedId(feedId, start, length, after,
+                before, query, mentions, tags, verb);
+        long[] result = null;
+        if (ids != null) {
+            result = new long[ids.length];
+            int i = 0;
+            int offset = feedId.length() + 1; // entry keys contain feed id
+            for (String id : ids) {
+                result[i++] = Long.parseLong(id.substring(offset), 16);
+            }
+        }
+        return result;
+    }
+
+    private String[] _getEntryIdsForFeedId(String feedId, int start,
+            int length, Date after, Date before, String search,
+            String[] mentions, String[] tags, String verb) {
         try {
             Filter filter = buildRangeFilter(after, before);
             Query query = buildTextQuery(feedId, search, mentions, tags, verb);
             TopDocs hits = new IndexSearcher(reader).search(query, filter,
                     start + length, new Sort(new SortField("updated",
                             SortField.Type.LONG, true)));
-            long[] result = new long[Math.min(length, hits.totalHits)];
+            String[] result = new String[Math.min(length, hits.totalHits)];
             int i = 0;
-            int offset = feedId.length() + 1; // entry keys contain feed id
             Set<String> fields = new HashSet<String>();
             fields.add("entry"); // we only need the entry field
             for (ScoreDoc e : hits.scoreDocs) {
-                result[i++] = Long.parseLong(
-                        new IndexSearcher(reader).doc(e.doc).get("entry")
-                                .substring(offset), 16);
+                result[i++] = new IndexSearcher(reader).doc(e.doc).get("entry");
             }
             return result;
         } catch (IOException e) {
@@ -204,7 +262,6 @@ public class LuceneStorage implements Storage {
         } catch (QueryNodeException e) {
             log.error("Unexpected error executing query for feed: " + feedId, e);
         }
-
         return null;
     }
 
@@ -291,7 +348,7 @@ public class LuceneStorage implements Storage {
      */
     public String readFeed(String feedId) throws FileNotFoundException,
             IOException {
-        return storage.readFeed(feedId);
+        return getStorage(feedId).readFeed(feedId);
     }
 
     /**
@@ -338,7 +395,7 @@ public class LuceneStorage implements Storage {
             // }
             // }
             //
-            storage.updateFeed(feedId, lastUpdated, content);
+            getStorage(feedId).updateFeed(feedId, lastUpdated, content);
             // feedWriter.updateDocument(new Term("feed", feedId), document);
             // }
 
@@ -367,7 +424,7 @@ public class LuceneStorage implements Storage {
      */
     public String readEntry(String feedId, long entryId)
             throws FileNotFoundException, IOException {
-        return storage.readEntry(feedId, entryId);
+        return getStorage(feedId).readEntry(feedId, entryId);
     }
 
     /**
@@ -471,12 +528,12 @@ public class LuceneStorage implements Storage {
 
             if (entry.getTitle() != null) {
                 String title = entry.getTitle().toLowerCase();
-                document.add(new TextField("title", title,
-                        Field.Store.NO));
+                document.add(new TextField("title", title, Field.Store.NO));
                 text.append(title).append(' ');
             }
             if (entry.getSummary() != null) {
-                String summary = extractTextFromHtml(entry.getSummary()).toLowerCase();
+                String summary = extractTextFromHtml(entry.getSummary())
+                        .toLowerCase();
                 // System.out.println("extracting: " + summary);
                 document.add(new TextField("summary", summary, Field.Store.NO));
                 text.append(summary).append(' ');
@@ -490,7 +547,7 @@ public class LuceneStorage implements Storage {
             document.add(new TextField("text", text.toString(), Field.Store.NO));
 
             // persist the document
-            storage.updateEntry(feedId, entryId, publishDate, content);
+            getStorage(feedId).updateEntry(feedId, entryId, publishDate, content);
             writer.updateDocument(
                     new Term("entry", getEntryKeyString(feedId, entryId)),
                     document);
@@ -558,7 +615,7 @@ public class LuceneStorage implements Storage {
                     + getEntryKeyString(feedId, entryId) + " : "
                     + t.getMessage());
         }
-        storage.deleteEntry(feedId, entryId);
+        getStorage(feedId).deleteEntry(feedId, entryId);
     }
 
     private static final String getEntryKeyString(String feedId, long entityId) {
@@ -584,7 +641,7 @@ public class LuceneStorage implements Storage {
      */
     public String readFeedEntryResourceType(String feedId, long entryId,
             String resourceId) throws FileNotFoundException, IOException {
-        return storage.readFeedEntryResourceType(feedId, entryId, resourceId);
+        return getStorage(feedId).readFeedEntryResourceType(feedId, entryId, resourceId);
     }
 
     /**
@@ -606,7 +663,7 @@ public class LuceneStorage implements Storage {
      */
     public InputStream readFeedEntryResource(String feedId, long entryId,
             String resourceId) throws FileNotFoundException, IOException {
-        return storage.readFeedEntryResource(feedId, entryId, resourceId);
+        return getStorage(feedId).readFeedEntryResource(feedId, entryId, resourceId);
     }
 
     /**
@@ -634,7 +691,7 @@ public class LuceneStorage implements Storage {
     public void updateFeedEntryResource(String feedId, long entryId,
             String resourceId, String mimeType, Date publishDate, byte[] data)
             throws IOException {
-        storage.updateFeedEntryResource(feedId, entryId, resourceId, mimeType,
+        getStorage(feedId).updateFeedEntryResource(feedId, entryId, resourceId, mimeType,
                 publishDate, data);
     }
 
@@ -652,7 +709,7 @@ public class LuceneStorage implements Storage {
      */
     public void deleteFeedEntryResource(String feedId, long entryId,
             String resourceId) throws IOException {
-        storage.deleteFeedEntryResource(feedId, entryId, resourceId);
+        getStorage(feedId).deleteFeedEntryResource(feedId, entryId, resourceId);
     }
 
     private final static org.slf4j.Logger log = org.slf4j.LoggerFactory

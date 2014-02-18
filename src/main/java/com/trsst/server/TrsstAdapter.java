@@ -151,6 +151,12 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
 
         if (feed != null) {
+            // ensure it's a naked feed:
+            // entries matching query params will get added later
+            for ( Entry e : feed.getEntries() ) {
+                e.discard();
+            }
+            
             // store in request context
             wrapper.setAttribute(Scope.REQUEST, "com.trsst.Feed", feed);
             return feed;
