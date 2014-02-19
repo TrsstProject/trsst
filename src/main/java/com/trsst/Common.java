@@ -240,7 +240,7 @@ public class Common {
         // "external id" a.k.a. URL
         try {
             // test for valid url
-            new URL(id);
+            new URL(decodeURL(id));
             return true;
         } catch (MalformedURLException e) {
             return false;

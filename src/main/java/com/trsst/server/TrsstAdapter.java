@@ -127,9 +127,14 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // fetch from request context
         feed = (Feed) wrapper.getAttribute(Scope.REQUEST, "com.trsst.Feed");
+        if (feed != null) {
+            // shortcut for very common case
+            return feed;
+        }
 
-        if (feed == null) {
-            // fetch from storage
+        // if async fetch is allowed
+        if (wrapper.getParameter("sync") == null) {
+            // return latest from local storage
             feed = fetchFeedFromStorage(feedId);
             if (feed != null) {
                 // trigger async fetch in case we're stale
@@ -137,6 +142,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
         }
 
+        // otherwise fetch synchronously
         if (feed == null) {
             // fetch from network
             if (!Common.isAccountId(feedId)) {
@@ -197,7 +203,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             public void run() {
                 log.debug("fetchLaterFromRelay: starting: "
                         + request.getResolvedUri());
-                if (!Common.isAccountId(feedId)) {
+                if (Common.isExternalId(feedId)) {
                     // external feeds don't relay:
                     // because they're unsigned,
                     // we fetch directly from source
@@ -246,6 +252,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         if (relays == null || relays.size() <= limit) {
             URL relayPeer = getRelayPeer();
             if (relayPeer != null) {
+                log.trace("Using relay peer: " + relayPeer);
                 fetchFromServiceUrl(request, getRelayPeer());
             } else {
                 log.debug("No relay peer available for request: "
@@ -259,10 +266,15 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * Returns a relay peer to use to fetch contents. Implementors should return
      * a url chosen from an evenly or randomly distributed mix of known trsst
      * servers based on the home urls of this servers hosted content. This
-     * implementation returns null.
+     * implementation currently returns the trsst.com feed service.
      */
     protected URL getRelayPeer() {
-        return null;
+        try {
+            return new URL("http://home.trsst.com/feed");
+        } catch (MalformedURLException e) {
+            log.error("getRelayPeer: should never happen", e);
+            return null;
+        }
     }
 
     /**
@@ -280,6 +292,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
         if (queryString.indexOf("relay=" + hostName) != -1) {
             // if we're alerady in the list of relay peers
+            // TODO: FLAG: should use a hash so peers can't be identified
             log.error("Unexpected relay loopback: ignoring request");
             return result;
         }
@@ -322,6 +335,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             feedId = Common.decodeURL(feedId);
             URL url = new URL(feedId);
             InputStream input = url.openStream();
+            // byte[] content = Common.readFully(input);
+            // System.out.println(new String(content, "UTF-8"));
+            // input = new ByteArrayInputStream(content);
             result = (Feed) Abdera.getInstance().getParser().parse(input)
                     .getRoot();
 
@@ -331,22 +347,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
             if (result != null) {
                 // process and persist external feed
-                final String id = feedId;
-                final Feed copy = (Feed) result.clone();
-                // process one immediately
-                ingestExternalFeed(id, copy, 1);
-                // process remained concurrently so we can return to user
-                doLater(new Runnable() {
-                    public void run() {
-                        try {
-                            ingestExternalFeed(id, copy, 100);
-                        } catch (Exception e) {
-                            log.error("Could not process external feed: " + id,
-                                    e);
-                        }
-                    }
-
-                });
+                ingestExternalFeed(feedId, result, 25); 
+                // no more than default page size
             }
 
         } catch (FileNotFoundException fnfe) {
