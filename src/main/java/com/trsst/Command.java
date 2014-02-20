@@ -111,8 +111,13 @@ public class Command {
 
     public static void main(String[] argv) {
 
-        Console console = System.console();
+        if (System.getProperty("com.trsst.server.relays") == null) {
+            // if unspecified, default relay to home.trsst.com
+            System.setProperty("com.trsst.server.relays",
+                    "http://home.trsst.com/feed");
+        }
 
+        Console console = System.console();
         int result;
         try {
             if (console == null && argv.length == 0) {
@@ -367,7 +372,8 @@ public class Command {
             if (keyPath != null) {
                 keyFile = new File(Common.getClientRoot(), keyPath);
             } else {
-                keyFile = new File(Common.getClientRoot(), id + Common.KEY_EXTENSION);
+                keyFile = new File(Common.getClientRoot(), id
+                        + Common.KEY_EXTENSION);
             }
 
             if (keyFile.exists()) {
@@ -634,7 +640,8 @@ public class Command {
             if (keyPath != null) {
                 keyFile = new File(Common.getClientRoot(), keyPath);
             } else {
-                keyFile = new File(Common.getClientRoot(), id + Common.KEY_EXTENSION);
+                keyFile = new File(Common.getClientRoot(), id
+                        + Common.KEY_EXTENSION);
             }
 
             // persist to keystore
@@ -647,7 +654,8 @@ public class Command {
             if (keyPath != null) {
                 keyFile = new File(Common.getClientRoot(), keyPath);
             } else {
-                keyFile = new File(Common.getClientRoot(), id + Common.KEY_EXTENSION);
+                keyFile = new File(Common.getClientRoot(), id
+                        + Common.KEY_EXTENSION);
             }
 
             if (keyFile.exists()) {
