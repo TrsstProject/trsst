@@ -77,6 +77,8 @@ public class Common {
     public static final String ATTACHMENT_DIGEST = "digest";
     public static final String PREDECESSOR_ID = "id";
     public static final String KEY_EXTENSION = ".p12";
+    public static final String VERB_DELETE = "delete";
+    public static final String VERB_DELETED = "deleted";
 
     /**
      * Default public rights are like CC ND BY but with added right of
@@ -90,7 +92,7 @@ public class Common {
     // author publicly deletes the original work.";
 
     /**
-     * Default public rights are are explicity ARR if only to clearly
+     * Default private rights are are explicity ARR if only to clearly
      * differentiate private posts from public ones.
      */
     public static final String RIGHTS_RESERVED = "ALL RESERVED";
