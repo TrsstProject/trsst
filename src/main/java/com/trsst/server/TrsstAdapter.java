@@ -745,6 +745,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
 
         // persist feed
+        if (feed.getEntries().size() > 0) {
+            System.out.println(feed.toString());
+        }
         persistence.updateFeed(feedId, feed.getUpdated(), feed.toString());
         // only now persist each entry
         for (Entry entry : entries) {
@@ -823,31 +826,29 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         int count = 0;
         for (Entry entry : feed.getEntries()) {
 
-            // convert existing entry id to a trsst timestamp-based id
-            String existing = entry.getId().toString();
-            long timestamp = entry.getUpdated().getTime();
+            if (count++ < limit) {
+                // convert existing entry id to a trsst timestamp-based id
+                String existing = entry.getId().toString();
+                long timestamp = entry.getUpdated().getTime();
 
-            // RSS feeds don't have millisecond precision
-            // so we need to add it to avoid duplicate ids
-            if (timestamp % 1000 == 0) {
-                timestamp = timestamp + existing.hashCode() % 1000;
-            }
+                // RSS feeds don't have millisecond precision
+                // so we need to add it to avoid duplicate ids
+                if (timestamp % 1000 == 0) {
+                    timestamp = timestamp + existing.hashCode() % 1000;
+                }
 
-            try {
-                // see if this file already exists
-                persistence.readEntry(feedId, timestamp);
-                // this file exists; remove from processing
-                entries.remove(entry);
-            } catch (FileNotFoundException e) {
-                // we don't already have it:
-                entry.setId(Common.toEntryUrn(feedId, timestamp));
+                try {
+                    // see if this file already exists
+                    persistence.readEntry(feedId, timestamp);
+                    // this file exists; remove from processing
+                    entries.remove(entry);
+                } catch (FileNotFoundException e) {
+                    // we don't already have it:
+                    entry.setId(Common.toEntryUrn(feedId, timestamp));
+                }
             }
             // remove from feed parent
             entry.discard();
-
-            if (++count > limit) {
-                break;
-            }
         }
 
         if (entries.isEmpty()) {
@@ -873,6 +874,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
 
         // persist feed
+        if (feed.getEntries().size() > 0) {
+            System.out.println(feed.toString());
+        }
         persistence.updateFeed(feedId, feed.getUpdated(), feed.toString());
         // only now persist each entry
         for (Entry entry : entries) {
