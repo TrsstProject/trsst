@@ -20,7 +20,7 @@ public class EntryOptions {
     String url;
     String[] mentions;
     String[] tags;
-    PublicKey recipientKey;
+    PublicKey[] recipientKeys;
     PrivateKey[] decryptionKeys;
     EntryOptions publicOptions;
     private List<String> mimetype = new LinkedList<String>();
@@ -47,7 +47,8 @@ public class EntryOptions {
         tags = null;
         mimetype = null;
         content = null;
-        recipientKey = null;
+        recipientKeys = null;
+        decryptionKeys = null;
         publicOptions = null;
     }
 
@@ -212,8 +213,8 @@ public class EntryOptions {
     /**
      * @return the recipientKey
      */
-    public PublicKey getRecipientKey() {
-        return recipientKey;
+    public PublicKey[] getRecipientKeys() {
+        return recipientKeys;
     }
 
     /**
@@ -224,10 +225,10 @@ public class EntryOptions {
      *            encrypts this entry using the specified public key so that
      *            only that key's owner can read it.
      */
-    public EntryOptions encryptWith(PublicKey recipientKey,
+    public EntryOptions encryptWith(PublicKey[] recipientKey,
             EntryOptions publicOptions) {
         this.publicOptions = publicOptions;
-        this.recipientKey = recipientKey;
+        this.recipientKeys = recipientKey;
         return this;
     }
 

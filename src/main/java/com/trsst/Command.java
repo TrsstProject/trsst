@@ -120,7 +120,8 @@ public class Command {
         Console console = System.console();
         int result;
         try {
-            if (console == null && argv.length == 0) {
+            if ((console == null && argv.length == 0)
+                    || (argv.length == 1 && argv[0].equals("ui"))) {
                 // attempt GUI mode
                 try {
                     Class<?> app = Command.class.getClassLoader().loadClass(
@@ -529,7 +530,7 @@ public class Command {
         if (attach == null && commands.hasOption("a")) {
             attach = "-";
         }
-        String recipient = commands.getOptionValue("e");
+        String[] recipients = commands.getOptionValues("e");
         String url = commands.getOptionValue("u");
         String vanity = commands.getOptionValue("vanity");
 
@@ -684,18 +685,22 @@ public class Command {
             return 73; // "can't create output error"
         }
 
-        PublicKey recipientKey = null;
-        if (recipient != null) {
-            try {
-                if ("-".equals(recipient)) {
-                    // "-" is shorthand for self-encrypt
-                    recipientKey = encryptionKeys.getPublic();
-                } else {
-                    recipientKey = Common.toPublicKeyFromX509(recipient);
+        PublicKey[] recipientKeys = null;
+        if (recipients != null) {
+            recipientKeys = new PublicKey[recipients.length];
+            for (int i = 0; i < recipients.length; i++) {
+                try {
+                    if ("-".equals(recipients[i])) {
+                        // "-" is shorthand for self-encrypt
+                        recipientKeys[i] = encryptionKeys.getPublic();
+                    } else {
+                        recipientKeys[i] = Common
+                                .toPublicKeyFromX509(recipients[i]);
+                    }
+                } catch (GeneralSecurityException e) {
+                    log.error("Could not parse recipient key: " + recipients[i]);
+                    return 73; // "can't create output error"
                 }
-            } catch (GeneralSecurityException e) {
-                log.error("Could not parse recipient key: " + recipient);
-                return 73; // "can't create output error"
             }
         }
 
@@ -758,8 +763,8 @@ public class Command {
                     feedOptions.setLogoURL(logo);
                 }
             }
-            if (recipientKey != null) {
-                options.encryptWith(recipientKey,
+            if (recipientKeys != null) {
+                options.encryptWith(recipientKeys,
                         new EntryOptions().setStatus("Encrypted content"));
             }
             result = client.post(signingKeys, encryptionKeys.getPublic(),

@@ -423,52 +423,58 @@ public class Client {
                 }
             }
 
-            for (int part = 0; part < contentIds.length; part++) {
-                byte[] currentContent = options.getContentData()[part];
-                String currentType = options.getMimetypes()[part];
+            PublicKey[] recipients = options.recipientKeys;
+            if (recipients == null) {
+                recipients = new PublicKey[] { null };
+            }
+            for (PublicKey recipient : recipients) {
+                for (int part = 0; part < contentIds.length; part++) {
+                    byte[] currentContent = options.getContentData()[part];
+                    String currentType = options.getMimetypes()[part];
 
-                // encrypt before hashing if necessary
-                if (options.recipientKey != null) {
-                    currentContent = encryptBytes(currentContent,
-                            options.recipientKey);
-                }
-
-                // calculate digest to determine content id
-                byte[] digest = Common.ripemd160(currentContent);
-                contentIds[part] = new Base64(0, null, true)
-                        .encodeToString(digest);
-
-                // add mime-type hint to content id (if not encrypted):
-                // (some readers like to see a file extension on enclosures)
-                if (currentType != null && options.recipientKey == null) {
-                    String extension = "";
-                    int i = currentType.lastIndexOf('/');
-                    if (i != -1) {
-                        extension = '.' + currentType.substring(i + 1);
+                    // encrypt before hashing if necessary
+                    if (recipient != null) {
+                        currentContent = encryptBytes(currentContent, recipient);
                     }
-                    contentIds[part] = contentIds[part] + extension;
+
+                    // calculate digest to determine content id
+                    byte[] digest = Common.ripemd160(currentContent);
+                    contentIds[part] = new Base64(0, null, true)
+                            .encodeToString(digest);
+
+                    // add mime-type hint to content id (if not encrypted):
+                    // (some readers like to see a file extension on enclosures)
+                    if (currentType != null && recipient == null) {
+                        String extension = "";
+                        int i = currentType.lastIndexOf('/');
+                        if (i != -1) {
+                            extension = '.' + currentType.substring(i + 1);
+                        }
+                        contentIds[part] = contentIds[part] + extension;
+                    }
+
+                    // set the content element
+                    if (entry.getContentSrc() == null) {
+                        // only point to the first attachment if multiple
+                        entry.setContent(new IRI(contentIds[part]), currentType);
+                    }
+
+                    // use a base uri so src attribute is simpler to process
+                    entry.getContentElement().setBaseUri(
+                            Common.toEntryIdString(entry.getId()) + '/');
+                    entry.getContentElement().setAttributeValue(
+                            new QName(Common.NS_URI, "hash", "trsst"),
+                            "ripemd160");
+
+                    // if not encrypted
+                    if (recipient == null) {
+                        // add an enclosure link
+                        entry.addLink(Common.toEntryIdString(entry.getId())
+                                + '/' + contentIds[part], Link.REL_ENCLOSURE,
+                                currentType, null, null, currentContent.length);
+                    }
+
                 }
-
-                // set the content element
-                if (entry.getContentSrc() == null) {
-                    // only point to the first attachment if multiple
-                    entry.setContent(new IRI(contentIds[part]), currentType);
-                }
-
-                // use a base uri so src attribute is simpler to process
-                entry.getContentElement().setBaseUri(
-                        Common.toEntryIdString(entry.getId()) + '/');
-                entry.getContentElement().setAttributeValue(
-                        new QName(Common.NS_URI, "hash", "trsst"), "ripemd160");
-
-                // if not encrypted
-                if (options.recipientKey == null) {
-                    // add an enclosure link
-                    entry.addLink(Common.toEntryIdString(entry.getId()) + '/'
-                            + contentIds[part], Link.REL_ENCLOSURE,
-                            currentType, null, null, currentContent.length);
-                }
-
             }
 
             if (contentIds.length == 0 && options.url != null) {
@@ -505,16 +511,13 @@ public class Client {
                 }
             }
 
-            if (options.recipientKey == null) {
+            if (options.recipientKeys == null) {
                 // public post
                 entry.setRights(Common.RIGHTS_NDBY_REVOCABLE);
             } else {
                 // private post
                 entry.setRights(Common.RIGHTS_RESERVED);
                 try {
-                    byte[] bytes = encryptElement(entry, options.recipientKey);
-                    String encoded = new Base64(0, null, true)
-                            .encodeToString(bytes);
                     StringWriter stringWriter = new StringWriter();
                     StreamWriter writer = Abdera.getInstance()
                             .getWriterFactory().newStreamWriter();
@@ -561,20 +564,26 @@ public class Client {
                         writer.writeTitle("Encrypted message"); // arbitrary
                     }
                     writer.startContent("application/xenc+xml");
-                    writer.startElement("EncryptedData",
-                            "http://www.w3.org/2001/04/xmlenc#");
-                    writer.startElement("CipherData",
-                            "http://www.w3.org/2001/04/xmlenc#");
-                    writer.startElement("CipherValue",
-                            "http://www.w3.org/2001/04/xmlenc#");
-                    writer.writeElementText(encoded);
-                    writer.endElement();
-                    writer.endElement();
-                    writer.endElement();
+                    for (PublicKey recipient : options.recipientKeys) {
+                        byte[] bytes = encryptElement(entry, recipient);
+                        String encoded = new Base64(0, null, true)
+                                .encodeToString(bytes);
+                        writer.startElement("EncryptedData",
+                                "http://www.w3.org/2001/04/xmlenc#");
+                        writer.startElement("CipherData",
+                                "http://www.w3.org/2001/04/xmlenc#");
+                        writer.startElement("CipherValue",
+                                "http://www.w3.org/2001/04/xmlenc#");
+                        writer.writeElementText(encoded);
+                        writer.endElement();
+                        writer.endElement();
+                        writer.endElement();
+                    }
                     writer.endContent();
                     writer.endEntry();
                     writer.flush();
-                    // this constructed entry now replaces the encrypted entry
+                    // this constructed entry now replaces the encrypted
+                    // entry
                     entry = (Entry) Abdera.getInstance().getParserFactory()
                             .getParser()
                             .parse(new StringReader(stringWriter.toString()))
@@ -582,7 +591,7 @@ public class Client {
                     // System.out.println(stringWriter.toString());
                 } catch (Throwable t) {
                     log.error("Unexpected error while encrypting, exiting: "
-                            + options.recipientKey, t);
+                            + options.recipientKeys, t);
                     t.printStackTrace();
                     throw new IllegalArgumentException("Unexpected error: " + t);
                 }
