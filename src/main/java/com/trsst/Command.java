@@ -129,7 +129,7 @@ public class Command {
                     app.getMethod("main", new String[0].getClass()).invoke(
                             null, (Object) argv);
                 } catch (Throwable t) {
-                    log.debug("Could not launch GUI client", t);
+                    log.error("Could not launch UI client", t);
                 }
                 result = 0;
             } else {
