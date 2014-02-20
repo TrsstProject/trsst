@@ -745,9 +745,6 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
 
         // persist feed
-        if (feed.getEntries().size() > 0) {
-            System.out.println(feed.toString());
-        }
         persistence.updateFeed(feedId, feed.getUpdated(), feed.toString());
         // only now persist each entry
         for (Entry entry : entries) {
@@ -874,9 +871,6 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
 
         // persist feed
-        if (feed.getEntries().size() > 0) {
-            System.out.println(feed.toString());
-        }
         persistence.updateFeed(feedId, feed.getUpdated(), feed.toString());
         // only now persist each entry
         for (Entry entry : entries) {
