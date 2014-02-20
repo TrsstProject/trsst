@@ -384,9 +384,10 @@ public class Client {
         // holds any attachments (can be used for logo and icons)
         String[] contentIds = new String[options.getContentCount()];
 
-        // subject or attachment is required to create an entry
+        // subject or verb or attachment is required to create an entry
         Entry entry = null;
-        if (options.status != null || contentIds.length > 0) {
+        if (options.status != null || options.verb != null
+                || contentIds.length > 0) {
 
             // create the new entry
             entry = Abdera.getInstance().newEntry();
@@ -599,6 +600,8 @@ public class Client {
                 keyInfo.discard();
             }
             entry.addExtension(signatureElement);
+        } else {
+            log.info("No valid entries detected; updating feed.");
         }
 
         // remove existing feed signature element if any
@@ -640,7 +643,15 @@ public class Client {
 
         // set base
         if (feedOptions.base != null) {
-            feed.setBaseUri(feedOptions.base);
+            String uri = feedOptions.base;
+            if (!uri.endsWith("/")) {
+                uri = uri + '/';
+            }
+            uri = uri + feedId;
+            feed.setBaseUri(uri);
+        } else {
+            // otherwise default to home.trsst.com
+            feed.setBaseUri("https://home.trsst.com/feed/" + feedId);
         }
 
         // sign the feed
