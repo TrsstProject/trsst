@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.xml.crypto.dsig.XMLSignatureException;
 import javax.xml.namespace.QName;
@@ -51,7 +52,6 @@ import org.apache.abdera.protocol.server.ProviderHelper;
 import org.apache.abdera.protocol.server.RequestContext;
 import org.apache.abdera.protocol.server.RequestContext.Scope;
 import org.apache.abdera.protocol.server.ResponseContext;
-import org.apache.abdera.protocol.server.Target;
 import org.apache.abdera.protocol.server.TargetType;
 import org.apache.abdera.protocol.server.context.MediaResponseContext;
 import org.apache.abdera.protocol.server.context.RequestContextWrapper;
@@ -253,7 +253,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             URL relayPeer = getRelayPeer();
             if (relayPeer != null) {
                 log.trace("Using relay peer: " + relayPeer);
-                fetchFromServiceUrl(request, getRelayPeer());
+                result = fetchFromServiceUrl(request, getRelayPeer());
             } else {
                 log.debug("No relay peer available for request: "
                         + request.getResolvedUri());
@@ -266,16 +266,34 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * Returns a relay peer to use to fetch contents. Implementors should return
      * a url chosen from an evenly or randomly distributed mix of known trsst
      * servers based on the home urls of this servers hosted content. This
-     * implementation currently returns the trsst.com feed service.
+     * implementation currently returns a relay from the
+     * com.trsst.client.storage property, or null if the property does not
+     * exist.
      */
     protected URL getRelayPeer() {
+        if (RELAYS == null) {
+            String property = System.getProperty("com.trsst.server.relays");
+            if (property == null) {
+                RELAYS = new String[0];
+            } else {
+                RELAYS = property.split(",");
+            }
+        }
         try {
-            return new URL("http://home.trsst.com/feed");
+            if (RELAYS.length == 0) {
+                return null;
+            } else if (RELAYS.length == 1) {
+                return new URL(RELAYS[0]);
+            }
+            return new URL(RELAYS[RELAY_RANDOM.nextInt(RELAYS.length)]);
         } catch (MalformedURLException e) {
             log.error("getRelayPeer: should never happen", e);
             return null;
         }
     }
+
+    private static final Random RELAY_RANDOM = new Random();
+    private static String[] RELAYS;
 
     /**
      * Fetch from the specified trsst service url, validate it, ingest it, and
@@ -286,13 +304,24 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         log.info("fetchFromServiceUrl: uri: " + request.getResolvedUri());
         IRI uri = request.getResolvedUri();
         String hostName = uri.getHost();
+        // FLAG: hash name for a bit of extra obscurity
+        String hashName = Integer.toHexString(hostName.hashCode());
+        // is this overkill? #paranoid
+        // byte[] hostBytes;
+        // try {
+        // hostBytes = hostName.getBytes("UTF-8");
+        // hashName = Base64.encodeBase64String(Common.hash(hostBytes, 0,
+        // hostBytes.length));
+        // } catch (UnsupportedEncodingException e1) {
+        // log.error("Should never happen", e1);
+        // hashName = hostName;
+        // }
         String queryString = uri.getQuery();
         if (queryString == null) {
             queryString = "";
         }
-        if (queryString.indexOf("relay=" + hostName) != -1) {
+        if (queryString.indexOf("relay=" + hashName) != -1) {
             // if we're alerady in the list of relay peers
-            // TODO: FLAG: should use a hash so peers can't be identified
             log.error("Unexpected relay loopback: ignoring request");
             return result;
         }
@@ -300,10 +329,14 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             queryString = queryString + '&';
         }
         // add self as relay
-        queryString = queryString + "relay=" + hostName;
+        queryString = queryString + "relay=" + hashName;
+
+        // calculate target path
+        String path = request.getTargetPath().substring(
+                request.getTargetBasePath().length());
 
         try {
-            URL url = new URL(serviceUrl.toString() + '?' + queryString);
+            URL url = new URL(serviceUrl.toString() + path + '?' + queryString);
             log.info("fetchFromServiceUrl: " + url);
             InputStream input = url.openStream();
             result = (Feed) Abdera.getInstance().getParser().parse(input)
@@ -347,7 +380,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
             if (result != null) {
                 // process and persist external feed
-                ingestExternalFeed(feedId, result, 25); 
+                ingestExternalFeed(feedId, result, 25);
                 // no more than default page size
             }
 
@@ -460,7 +493,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             result = currentFeed(request);
             // add requested entry
             String entryId = request.getTarget().getParameter("entry");
-            Document<Entry> entry = getEntry(request, Common.toEntryId(entryId));
+            Document<Entry> entry = getEntry(Common.toEntryId(entryId));
             if (entry != null) {
                 result.addEntry(entry.getRoot());
             } else {
@@ -480,15 +513,15 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
     }
 
-    private Document<Entry> getEntry(RequestContext context, long entryId) {
+    private Document<Entry> getEntry(long entryId) {
         try {
             // NOTE: by this point currentFeed() will have fetched
             // the requested entry via relay if needed
             // FIXME: this is not currently working; need a test case
 
             // fetch from local storage
-            return context
-                    .getAbdera()
+            return Abdera
+                    .getInstance()
                     .getParser()
                     .parse(new StringReader(persistence.readEntry(feedId,
                             entryId)));
@@ -722,6 +755,31 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
             persistence.updateEntry(feedId, Common.toEntryId(entry.getId()),
                     date, entry.toString());
+
+            // check for delete operation
+            String verb = entry.getSimpleExtension(new QName(
+                    "http://activitystrea.ms/spec/1.0/", "verb", "activity"));
+            if ("delete".equals(verb)) {
+                // get mentions
+                List<Element> mentions = entry.getExtensions(new QName(
+                        Common.NS_URI, Common.REFERENCE));
+                for (Element mention : mentions) {
+                    Entry deleted = null;
+                    try {
+                        deleted = deleteEntry(
+                                Common.toEntryId(mention.getText()),
+                                Common.toEntryId(entry.getId()));
+                    } catch (IOException exc) {
+                        log.error("Could not delete entry: " + entry.getId(),
+                                exc);
+                    }
+                    if (deleted != null) {
+                        log.debug("Deleted entry: " + entry.getId());
+                    } else {
+                        log.error("Failed to delete entry: " + entry.getId());
+                    }
+                }
+            }
         }
     }
 
@@ -1032,14 +1090,15 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 // com.ctc.wstx.io.UTF32Reader.reportInvalid(UTF32Reader.java:197)
                 // Feed incomingFeed = (Feed) request.getDocument().getRoot();
 
-                // WORKAROUND: loading the stream and making our own parser
-                // works
+                // WORKAROUND:
+                // loading the stream and making our own parser works
                 byte[] bytes = Common.readFully(request.getInputStream());
                 Feed incomingFeed = (Feed) Abdera.getInstance().getParser()
                         .parse(new ByteArrayInputStream(bytes)).getRoot();
 
                 // we require a feed entity (not solo entries like atompub)
                 ingestFeed(incomingFeed);
+
                 return ProviderHelper.returnBase(incomingFeed, 201, null);
             } catch (XMLSignatureException xmle) {
                 log.error("Could not verify signature: ", xmle);
@@ -1065,20 +1124,74 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     }
 
     /**
-     * DELETE operations should instead replace the entry is a placeholder
-     * expiration notice to maintain blogchain integrity. NOTE: this is a
-     * deviation from atompub.
+     * Replaces the mentioned entry with a new entry that retains only the
+     * following elements: id, updated, published, predecessor, signature;
+     * adding only the verb 'deleted' and a single mention of the 'delete'
+     * entry.
+     * 
+     * @param deletedId
+     *            the id to be deleted
+     * @param deletingId
+     *            the id to be mentioned
+     */
+    private Entry deleteEntry(long deletedId, long deletingId)
+            throws IOException {
+        Document<Entry> document = getEntry(deletedId);
+        Element element;
+        if (document != null) {
+
+            // copy with only minimum of elements
+            Entry existing = document.getRoot();
+            Entry replacement = Abdera.getInstance().newEntry();
+            replacement.setId(existing.getId().toString());
+            replacement.setUpdated(existing.getUpdated());
+            replacement.setPublished(existing.getPublished());
+            element = existing.getFirstChild(new QName(
+                    "http://www.w3.org/2000/09/xmldsig#", "Signature"));
+            replacement.addExtension(element);
+            element = existing.getFirstChild(new QName(Common.NS_URI,
+                    Common.PREDECESSOR));
+            // might not have predecessor if genesis entry
+            if (element != null) {
+                replacement.addExtension(element);
+            }
+
+            // add verb 'deleted'
+            replacement.addSimpleExtension(new QName(
+                    "http://activitystrea.ms/spec/1.0/", "verb", "activity"),
+                    "deleted");
+
+            // add reference to deleting id
+            replacement.addSimpleExtension(new QName(Common.NS_URI,
+                    Common.REFERENCE), Common.toEntryUrn(feedId, deletingId));
+
+            // write the entry
+            persistence.updateEntry(feedId, deletedId,
+                    replacement.getUpdated(), replacement.toString());
+            return replacement;
+        }
+        return null;
+    }
+
+    /**
+     * DELETE operations are not permitted.
+     * 
+     * Instead: post an entry with verb "delete" and mentioning one or more
+     * entries. The act of deleting an entry in this way is a revocation by the
+     * author of publication and distribution rights to the specified entry.
+     * 
+     * Trsst servers that receive "delete" entries must immediately replace
+     * their stored copies of the mentioned entries with new entries that retain
+     * only the following elements: id, updated, published, predecessor,
+     * signature; adding only the verb 'deleted' and a single mention of the
+     * 'delete' entry.
+     * 
+     * The signature will no longer validate, but is required for blockchain
+     * integrity, and relays can verify the referenced "delete" entry to allow
+     * redistribution of the deleted entry.
      */
     public ResponseContext deleteEntry(RequestContext request) {
-        // TODO: post revocation entry referencing the specified entry
-        Target target = request.getTarget();
-        String entryId = target.getParameter("entry");
-        try {
-            persistence.deleteEntry(feedId, Common.toEntryId(entryId));
-        } catch (IOException ioe) {
-            return ProviderHelper.servererror(request, ioe);
-        }
-        return ProviderHelper.nocontent();
+        return ProviderHelper.notallowed(request);
     }
 
     public ResponseContext extensionRequest(RequestContext request) {
@@ -1181,7 +1294,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         int end = Math.min(entryIds.length, start + length);
         Document<Entry> document;
         for (int i = start; i < end; i++) {
-            document = getEntry(context, entryIds[i]);
+            document = getEntry(entryIds[i]);
             if (document != null) {
                 feed.addEntry((Entry) document.getRoot().clone());
             } else {
