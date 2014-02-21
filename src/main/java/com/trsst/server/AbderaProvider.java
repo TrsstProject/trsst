@@ -71,6 +71,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
     public AbderaProvider() {
         try {
             hostname = InetAddress.getLocalHost().getHostName();
+            getStorage(); // force storage to load if necessary
         } catch (Throwable t) {
             log.info("Could not obtain hostname: defaulting to 'localhost'");
             hostname = "localhost";
@@ -207,7 +208,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
      *            a hint for implementors
      * @return a Storage for the specified feed id
      */
-    protected Storage getStorage(RequestContext request) {
+    protected Storage getStorage() {
         if (sharedStorage == null) {
             try {
                 Storage clientStorage = new FileStorage(Common.getClientRoot());
@@ -231,7 +232,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
      */
     protected TrsstAdapter getAdapterForFeedId(RequestContext request)
             throws IOException {
-        return new TrsstAdapter(request, getStorage(request));
+        return new TrsstAdapter(request, getStorage());
     }
 
     private static Storage sharedStorage;
@@ -280,7 +281,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
      */
     protected String[] getFeedIds(RequestContext request) {
         // arbitrary cap: get up to most active hundred.
-        return getStorage(request).getFeedIds(0, 100);
+        return getStorage().getFeedIds(0, 100);
     }
 
     public Collection<CollectionInfo> getCollections(RequestContext request) {
@@ -288,7 +289,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
         Feed feed;
         Parser parser = Abdera.getInstance().getParser();
         CollectionInfo info;
-        Storage storage = getStorage(request);
+        Storage storage = getStorage();
         for (String id : getFeedIds(request)) {
             try {
                 feed = (Feed) parser.parse(
