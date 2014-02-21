@@ -144,16 +144,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // otherwise fetch synchronously
         if (feed == null) {
-            // fetch from network
-            if (!Common.isAccountId(feedId)) {
-                // external feeds don't relay:
-                // because they're unsigned,
-                // we fetch directly from source
-                feed = fetchFromExternalSource(feedId);
-            } else {
-                // attempt to fetch from relay peer
-                feed = fetchFromRelay(request);
-            }
+            // attempt to fetch from relay peer
+            feed = fetchFromRelay(request);
         }
 
         if (feed != null) {
@@ -203,15 +195,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             public void run() {
                 log.debug("fetchLaterFromRelay: starting: "
                         + request.getResolvedUri());
-                if (Common.isExternalId(feedId)) {
-                    // external feeds don't relay:
-                    // because they're unsigned,
-                    // we fetch directly from source
-                    fetchFromExternalSource(feedId);
-                } else {
-                    // attempt to fetch from relay peer
-                    fetchFromRelay(request);
-                }
+                fetchFromRelay(request);
             }
         });
     }
@@ -253,10 +237,37 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             URL relayPeer = getRelayPeer();
             if (relayPeer != null) {
                 log.trace("Using relay peer: " + relayPeer);
-                result = fetchFromServiceUrl(request, getRelayPeer());
+                result = fetchFromServiceUrl(request, relayPeer);
             } else {
-                log.debug("No relay peer available for request: "
+                log.debug("Fetching direct: no relay peer available for request: "
                         + request.getResolvedUri());
+                if (Common.isExternalId(feedId)) {
+                    // attempt to fetch directly
+                    fetchFromExternalSource(feedId);
+                }
+            }
+
+            // if we got a result
+            if (result != null) {
+                try {
+                    if (Common.isExternalId(feedId)) {
+                        // convert from rss if needed
+                        if (result.getClass().getName().indexOf("RssFeed") != -1) {
+                            result = convertFromRSS(feedId, result);
+                        }
+                        if (result != null) {
+                            // process and persist external feed
+                            ingestExternalFeed(feedId, result, 25);
+                            // no more than default page size
+                        }
+                    } else {
+                        // ingest the native feed
+                        ingestFeed(result);
+                    }
+                } catch (Throwable t) {
+                    log.error("Could not ingest feed: " + feedId, t);
+                    ;
+                }
             }
         }
         return result;
@@ -334,6 +345,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // calculate target path
         String path = request.getTargetPath().substring(
                 request.getTargetBasePath().length());
+        int index = path.indexOf('?');
+        if (index != -1) {
+            path = path.substring(0, index);
+        }
 
         try {
             URL url = new URL(serviceUrl.toString() + path + '?' + queryString);
@@ -341,7 +356,6 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             InputStream input = url.openStream();
             result = (Feed) Abdera.getInstance().getParser().parse(input)
                     .getRoot();
-            ingestFeed(result);
         } catch (FileNotFoundException fnfe) {
             log.warn("Could not fetch from relay: " + feedId);
         } catch (MalformedURLException urle) {
@@ -373,17 +387,6 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             // input = new ByteArrayInputStream(content);
             result = (Feed) Abdera.getInstance().getParser().parse(input)
                     .getRoot();
-
-            // convert from rss if needed
-            if (result.getClass().getName().indexOf("RssFeed") != -1) {
-                result = convertFromRSS(feedId, result);
-            }
-            if (result != null) {
-                // process and persist external feed
-                ingestExternalFeed(feedId, result, 25);
-                // no more than default page size
-            }
-
         } catch (FileNotFoundException fnfe) {
             log.warn("Could not fetch from external source: " + feedId);
         } catch (MalformedURLException urle) {
