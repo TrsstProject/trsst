@@ -62,7 +62,7 @@ public class FileStorage implements Storage {
 
     public FileStorage(File root) {
         this.root = root;
-        System.err.println("Default file persistence serving from: " + root);
+        System.err.println("File storage serving from: " + root);
     }
 
     public String[] getFeedIds(int start, int length) {
