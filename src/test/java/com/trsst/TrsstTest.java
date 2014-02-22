@@ -5,8 +5,6 @@ import java.io.StringReader;
 import java.net.URL;
 import java.security.KeyPair;
 import java.security.PublicKey;
-import java.util.LinkedList;
-import java.util.List;
 
 import javax.xml.namespace.QName;
 
@@ -20,7 +18,6 @@ import com.google.common.io.Files;
 import com.trsst.client.Client;
 import com.trsst.client.EntryOptions;
 import com.trsst.client.FeedOptions;
-import com.trsst.server.FileStorage;
 import com.trsst.server.Server;
 
 import junit.framework.Test;
@@ -58,8 +55,6 @@ public class TrsstTest extends TestCase {
 
             Feed feed;
             Entry entry;
-            List<String> idsToCleanup = new LinkedList<String>();
-            List<File> entriesToCleanup = new LinkedList<File>();
 
             // write test files to temp directory
             File tmp = Files.createTempDir();
@@ -92,7 +87,6 @@ public class TrsstTest extends TestCase {
             encryptionKeys = Common.generateEncryptionKeyPair();
             assertNotNull("Generating encryption keys", encryptionKeys);
             feedId = Common.toFeedId(signingKeys.getPublic());
-            idsToCleanup.add(feedId);
 
             // public key serialization
             publicKey = signingKeys.getPublic();
@@ -140,7 +134,6 @@ public class TrsstTest extends TestCase {
             encryptionKeys = Common.generateEncryptionKeyPair();
             assertNotNull("Generating encryption keys", encryptionKeys);
             feedId = Common.toFeedId(signingKeys.getPublic());
-            idsToCleanup.add(feedId);
 
             // generate feed with entry
             feed = client.post(signingKeys, encryptionKeys.getPublic(),
@@ -154,8 +147,6 @@ public class TrsstTest extends TestCase {
                     "http://www.w3.org/2000/09/xmldsig#", "Signature"));
             assertNotNull("Feed has signature", signatureElement);
             entry = feed.getEntries().get(0);
-            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
-                    Common.toEntryId(entry.getId())));
             assertEquals("Entry retains title", "First Post!", entry.getTitle());
 
             // verify string serialization with-entry roundtrip
@@ -214,10 +205,7 @@ public class TrsstTest extends TestCase {
                             .setStatus("Second Post!")
                             .setVerb("post")
                             .setBody("This is the body")
-                            .setMentions(
-                                    new String[] {
-                                            idsToCleanup.iterator().next(),
-                                            feedId })
+                            .setMentions(new String[] { feedId, feedId })
                             .setTags(
                                     new String[] { "fitter", "happier",
                                             "more productive" }),
@@ -225,8 +213,6 @@ public class TrsstTest extends TestCase {
             assertNotNull("Generating second entry", feed);
             assertEquals("Feed contains one entry", 1, feed.getEntries().size());
             entry = feed.getEntries().get(0);
-            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
-                    Common.toEntryId(entry.getId())));
             assertEquals("Entry retains title", "Second Post!",
                     entry.getTitle());
             assertEquals("Entry contains verb", "post",
@@ -257,6 +243,32 @@ public class TrsstTest extends TestCase {
                     .size());
             entry = feed.getEntries().get(0);
 
+            // mark both entries as deleted
+            String firstIdToDelete = feed.getEntries().get(0).getId()
+                    .toString();
+            String secondIdToDelete = feed.getEntries().get(1).getId()
+                    .toString();
+            feed = client
+                    .post(signingKeys,
+                            encryptionKeys.getPublic(),
+                            new EntryOptions().setVerb("delete").setMentions(
+                                    new String[] { firstIdToDelete,
+                                            secondIdToDelete }),
+                            new FeedOptions());
+            assertNotNull("Delete operation succeeded", feed);
+            entry = feed.getEntries().get(0);
+
+            feed = client.pull(firstIdToDelete);
+            entry = feed.getEntries().get(0);
+            assertEquals("First entry was deleted", "deleted",
+                    entry.getSimpleExtension(new QName(
+                            "http://activitystrea.ms/spec/1.0/", "verb")));
+            feed = client.pull(secondIdToDelete);
+            entry = feed.getEntries().get(0);
+            assertEquals("First entry was deleted", "deleted",
+                    entry.getSimpleExtension(new QName(
+                            "http://activitystrea.ms/spec/1.0/", "verb")));
+
             // file storage date granularity is currently too large for this
             // test to work
             // assertEquals("Feed lists most recent entry first",
@@ -271,20 +283,15 @@ public class TrsstTest extends TestCase {
                                 .setStatus("Multipost!")
                                 .setVerb("post")
                                 .setBody("This is the body")
-                                .setMentions(
-                                        new String[] {
-                                                idsToCleanup.iterator().next(),
-                                                feedId })
+                                .setMentions(new String[] { feedId })
                                 .setTags(
                                         new String[] { "fitter", "happier",
                                                 "more productive" }),
                         new FeedOptions());
                 entry = feed.getEntries().get(0);
-                entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
-                        feedId, Common.toEntryId(entry.getId())));
             }
             feed = client.pull(Common.fromFeedUrn(feed.getId()));
-            assertTrue("Feed has all entries", (17 == feed.getEntries().size()));
+            assertTrue("Feed has all entries", (18 == feed.getEntries().size()));
 
             // make sure server is paginating (in this case at 25 by default)
             for (int i = 0; i < 15; i++) {
@@ -295,17 +302,12 @@ public class TrsstTest extends TestCase {
                                 .setStatus("Multipost!")
                                 .setVerb("post")
                                 .setBody("This is the body")
-                                .setMentions(
-                                        new String[] {
-                                                idsToCleanup.iterator().next(),
-                                                feedId })
+                                .setMentions(new String[] { feedId })
                                 .setTags(
                                         new String[] { "fitter", "happier",
                                                 "more productive" }),
                         new FeedOptions());
                 entry = feed.getEntries().get(0);
-                entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(
-                        feedId, Common.toEntryId(entry.getId())));
             }
             feed = client.pull(Common.fromFeedUrn(feed.getId()));
             assertTrue("Feed has only first page of entries", (25 == feed
@@ -323,7 +325,9 @@ public class TrsstTest extends TestCase {
                                     .setBody("This is the encrypted body")
                                     .setContentUrl("http://www.trsst.com")
                                     .encryptWith(
-                                            recipientKeys.getPublic(),
+                                            new PublicKey[] {
+                                                    recipientKeys.getPublic(),
+                                                    encryptionKeys.getPublic() },
                                             new EntryOptions()
                                                     .setMentions(
                                                             new String[] {
@@ -341,8 +345,6 @@ public class TrsstTest extends TestCase {
             feed = client.pull(entry.getId().toString());
             assertNotNull("Generating encrypted entry", feed);
             entry = feed.getEntries().get(0);
-            entriesToCleanup.add(FileStorage.getEntryFileForFeedEntry(feedId,
-                    Common.toEntryId(entry.getId())));
             assertFalse("Entry does not retain status",
                     "This is the encrypted entry".equals(entry.getTitle()));
             assertFalse("Entry does not retain body",
@@ -401,24 +403,6 @@ public class TrsstTest extends TestCase {
             Server alternateServer = new Server();
             URL alternateUrl = alternateServer.getServiceURL();
             assertNotNull(client.push(feedId, alternateUrl));
-
-            // clean up
-            for (File file : entriesToCleanup) {
-                assertTrue(file.getAbsolutePath(), file.exists());
-                file.delete();
-                assertFalse(file.getAbsolutePath(), file.exists());
-            }
-            File file;
-            for (String id : idsToCleanup) {
-                file = FileStorage.getFeedFileForFeedId(id);
-                assertTrue(file.toString(), file.exists());
-                file.delete();
-                assertFalse(file.toString(), file.exists());
-                file = file.getParentFile();
-                assertTrue(file.toString(), file.exists());
-                file.delete();
-                assertFalse(file.toString(), file.exists());
-            }
 
         } catch (Throwable t) {
             t.printStackTrace();
