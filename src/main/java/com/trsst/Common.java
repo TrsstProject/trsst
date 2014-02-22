@@ -136,6 +136,7 @@ public class Common {
         if (path != null) {
             try {
                 root = new File(path);
+                root.mkdirs();
             } catch (Throwable t) {
                 System.err.println("Invalid path: " + path + " : "
                         + t.getMessage());
@@ -145,17 +146,27 @@ public class Common {
     }
 
     public static File getServerRoot() {
-        String path = System.getProperty("com.trsst.server.storage");
+        String path = System.getProperty("user.home", ".");
+        File root = new File(path, "trsstd");
+        path = System.getProperty("com.trsst.server.storage");
         if (path != null) {
             try {
-                return new File(path);
+                root = new File(path);
+                root.mkdirs();
             } catch (Throwable t) {
                 System.err.println("Invalid path: " + path + " : "
                         + t.getMessage());
             }
         }
-        path = System.getProperty("user.home", ".");
-        return new File(path, "trsstd");
+        return root;
+    }
+
+    public static final String toFeedIdString(Object feedUrn) {
+        String feedId = feedUrn.toString();
+        if (feedId.startsWith(FEED_URN_PREFIX)) {
+            feedId = feedId.substring(FEED_URN_PREFIX.length());
+        }
+        return feedId;
     }
 
     public static final String toEntryIdString(Object entryUrn) {
