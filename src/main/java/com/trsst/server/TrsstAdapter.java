@@ -25,10 +25,13 @@ import java.net.URL;
 import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.xml.crypto.dsig.XMLSignatureException;
 import javax.xml.namespace.QName;
@@ -184,30 +187,31 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     /**
      * Called to trigger an asynchronous fetch, usually after we have returned
      * possibly stale data and we want to make sure it's refreshed on the next
-     * pull. This implementation spawns a new thread, but others should
-     * implement a heuristic to queue this task for later based on the
+     * pull. This implementation uses a short fuse timer task queue, but others
+     * should implement a heuristic to queue this task for later based on the
      * likelihood that a refetch is needed, e.g. factoring in time since last
      * update and frequency of updates, etc.
      */
     protected void fetchLaterFromRelay(final String feedId,
             final RequestContext request) {
-        doLater(new Runnable() {
-            public void run() {
-                log.debug("fetchLaterFromRelay: starting: "
-                        + request.getResolvedUri());
-                fetchFromRelay(request);
-            }
-        });
+        final String uri = request.getResolvedUri().toString();
+        log.debug("fetchLaterFromRelay: queuing: " + uri);
+        if (!COALESCING_TIMERS.containsKey(uri)) {
+            log.debug("fetchLaterFromRelay: creating: " + uri);
+            TimerTask task = new TimerTask() {
+                public void run() {
+                    log.debug("fetchLaterFromRelay: starting: " + uri);
+                    fetchFromRelay(request);
+                    COALESCING_TIMERS.remove(uri);
+                }
+            };
+            COALESCING_TIMERS.put(uri, task);
+            TASK_QUEUE.schedule(task, 6000); // six seconds
+        }
     }
 
-    /**
-     * Hook for subclasses to control new process creation.
-     * 
-     * @param runnable
-     */
-    protected void doLater(Runnable runnable) {
-        new Thread(runnable).start();
-    }
+    private static Timer TASK_QUEUE = new Timer();
+    private static Map<String, TimerTask> COALESCING_TIMERS = new Hashtable<String, TimerTask>();
 
     /**
      * 
@@ -236,7 +240,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         if (relays == null || relays.size() <= limit) {
             URL relayPeer = getRelayPeer();
             if (relayPeer != null) {
-                log.trace("Using relay peer: " + relayPeer);
+                log.debug("Using relay peer: " + relayPeer);
                 result = fetchFromServiceUrl(request, relayPeer);
             } else {
                 log.debug("Fetching direct: no relay peer available for request: "
@@ -312,7 +316,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      */
     private Feed fetchFromServiceUrl(RequestContext request, URL serviceUrl) {
         Feed result = null;
-        log.info("fetchFromServiceUrl: uri: " + request.getResolvedUri());
+        log.trace("fetchFromServiceUrl: uri: " + request.getResolvedUri());
         IRI uri = request.getResolvedUri();
         String hostName = uri.getHost();
         // FLAG: hash name for a bit of extra obscurity
@@ -344,7 +348,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // calculate target path
         String path = request.getTargetPath().substring(
-                request.getTargetBasePath().length());
+                request.getTargetBasePath().length()+1);
         int index = path.indexOf('?');
         if (index != -1) {
             path = path.substring(0, index);
