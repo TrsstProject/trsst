@@ -658,10 +658,7 @@ public class Client {
             }
             uri = uri + feedId;
             feed.setBaseUri(uri);
-        } else {
-            // otherwise default to home.trsst.com
-            feed.setBaseUri("https://home.trsst.com/feed/" + feedId);
-        }
+        } 
 
         // sign the feed
         signedNode = signer
