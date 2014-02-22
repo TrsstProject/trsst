@@ -292,21 +292,21 @@ public class FileStorage implements Storage {
         }
     }
 
-    public static File getFeedFileForFeedId(String feedId) {
+    public File getFeedFileForFeedId(String feedId) {
         feedId = Common.encodeURL(feedId);
-        return new File(new File(Common.getServerRoot(), feedId), FEED_XML);
+        return new File(new File(root, feedId), FEED_XML);
     }
 
-    public static File getEntryFileForFeedEntry(String feedId, long entryId) {
+    public File getEntryFileForFeedEntry(String feedId, long entryId) {
         feedId = Common.encodeURL(feedId);
-        return new File(new File(Common.getServerRoot(), feedId),
+        return new File(new File(root, feedId),
                 Long.toHexString(entryId) + ENTRY_SUFFIX);
     }
 
-    public static File getResourceFileForFeedEntry(String feedId, long entryId,
+    public File getResourceFileForFeedEntry(String feedId, long entryId,
             String resourceid) {
         feedId = Common.encodeURL(feedId);
-        return new File(new File(Common.getServerRoot(), feedId),
+        return new File(new File(root, feedId),
                 Long.toHexString(entryId) + '-' + resourceid);
     }
 

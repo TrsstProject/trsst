@@ -69,14 +69,14 @@ public class LuceneStorage implements Storage {
     private Abdera abdera;
 
     /**
-     * Deletable storage delegate: used for caching feeds fetched from other servers.
-     * Basically, if this storage went away, it would be no big deal.
+     * Deletable storage delegate: used for caching feeds fetched from other
+     * servers. Basically, if this storage went away, it would be no big deal.
      */
     private Storage cacheStorage;
-    
+
     /**
-     * Persistent storage delegate: used for feeds managed by this server.
-     * This is basically the user's primary backup of all entries created.
+     * Persistent storage delegate: used for feeds managed by this server. This
+     * is basically the user's primary backup of all entries created.
      */
     private Storage persistentStorage;
 
@@ -109,11 +109,11 @@ public class LuceneStorage implements Storage {
     public LuceneStorage(Storage delegate) throws IOException {
         this(delegate, null);
     }
+
     /**
      * Manages index and calls to the specified storage delegate to handle
-     * individual feed, entry, and resource persistence.
-     * Any feeds managed by this server will call to persistent storage 
-     * rather than cache storage.
+     * individual feed, entry, and resource persistence. Any feeds managed by
+     * this server will call to persistent storage rather than cache storage.
      * 
      * @param delegate
      * @throws IOException
@@ -153,22 +153,22 @@ public class LuceneStorage implements Storage {
     public String[] getFeedIds(int start, int length) {
         return persistentStorage.getFeedIds(start, length);
     }
-    
+
     private boolean isManaged(String feedId) {
         String[] feedIds = getFeedIds(0, 100);
-        for ( String id : feedIds ) {
-            if ( id.equals(feedId) ) {
+        for (String id : feedIds) {
+            if (id.equals(feedId)) {
                 return true;
             }
         }
         return false;
     }
-    
+
     private Storage getStorage(String feedId) {
-        if ( persistentStorage == null ) {
+        if (persistentStorage == null) {
             return cacheStorage;
         }
-        if ( isManaged(feedId) ) {
+        if (isManaged(feedId)) {
             return persistentStorage;
         }
         return cacheStorage;
@@ -547,7 +547,8 @@ public class LuceneStorage implements Storage {
             document.add(new TextField("text", text.toString(), Field.Store.NO));
 
             // persist the document
-            getStorage(feedId).updateEntry(feedId, entryId, publishDate, content);
+            getStorage(feedId).updateEntry(feedId, entryId, publishDate,
+                    content);
             writer.updateDocument(
                     new Term("entry", getEntryKeyString(feedId, entryId)),
                     document);
@@ -641,7 +642,8 @@ public class LuceneStorage implements Storage {
      */
     public String readFeedEntryResourceType(String feedId, long entryId,
             String resourceId) throws FileNotFoundException, IOException {
-        return getStorage(feedId).readFeedEntryResourceType(feedId, entryId, resourceId);
+        return getStorage(feedId).readFeedEntryResourceType(feedId, entryId,
+                resourceId);
     }
 
     /**
@@ -663,7 +665,8 @@ public class LuceneStorage implements Storage {
      */
     public InputStream readFeedEntryResource(String feedId, long entryId,
             String resourceId) throws FileNotFoundException, IOException {
-        return getStorage(feedId).readFeedEntryResource(feedId, entryId, resourceId);
+        return getStorage(feedId).readFeedEntryResource(feedId, entryId,
+                resourceId);
     }
 
     /**
@@ -691,8 +694,8 @@ public class LuceneStorage implements Storage {
     public void updateFeedEntryResource(String feedId, long entryId,
             String resourceId, String mimeType, Date publishDate, byte[] data)
             throws IOException {
-        getStorage(feedId).updateFeedEntryResource(feedId, entryId, resourceId, mimeType,
-                publishDate, data);
+        getStorage(feedId).updateFeedEntryResource(feedId, entryId, resourceId,
+                mimeType, publishDate, data);
     }
 
     /**
