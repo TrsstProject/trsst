@@ -111,12 +111,6 @@ public class Command {
 
     public static void main(String[] argv) {
 
-        if (System.getProperty("com.trsst.server.relays") == null) {
-            // if unspecified, default relay to home.trsst.com
-            System.setProperty("com.trsst.server.relays",
-                    "http://home.trsst.com/feed");
-        }
-
         Console console = System.console();
         int result;
         try {
@@ -204,6 +198,12 @@ public class Command {
                 .withDescription(
                         "Specify an activitystreams verb for this entry")
                 .create('v'));
+        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
+                .withArgName("id").withLongOpt("mention")
+                .withDescription("Add a mention (aka reference)").create('r'));
+        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
+                .withArgName("text").withLongOpt("tag")
+                .withDescription("Add a tag (aka category)").create('g'));
         postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
                 .withArgName("text").withLongOpt("content")
                 .withDescription("Specify entry content on command line")
@@ -532,6 +532,8 @@ public class Command {
             attach = "-";
         }
         String[] recipients = commands.getOptionValues("e");
+        String[] mentions = commands.getOptionValues("r");
+        String[] tags = commands.getOptionValues("g");
         String url = commands.getOptionValue("u");
         String vanity = commands.getOptionValue("vanity");
 
@@ -738,6 +740,12 @@ public class Command {
             EntryOptions options = new EntryOptions();
             options.setStatus(subject);
             options.setVerb(verb);
+            if (mentions != null) {
+                options.setMentions(mentions);
+            }
+            if (tags != null) {
+                options.setTags(tags);
+            }
             options.setBody(body);
             if (attachment != null) {
                 options.addContentData(attachment, mimetype);
@@ -868,8 +876,11 @@ public class Command {
             PrivateKey privateKey = pkEntry.getPrivateKey();
             PublicKey publicKey = pkEntry.getCertificate().getPublicKey();
             return new KeyPair(publicKey, privateKey);
-        } catch (Exception e) {
-            log.error("Error while reading key: " + e.getMessage(), e);
+        } catch (/* javax.crypto.BadPaddingException */IOException bpe) {
+            log.error("Passphrase could not decrypt key: " + bpe.getMessage());
+        } catch (Throwable e) {
+            log.error("Unexpected error while reading key: " + e.getMessage(),
+                    e);
         } finally {
             if (input != null) {
                 try {
