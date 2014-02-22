@@ -348,10 +348,13 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // calculate target path
         String path = request.getTargetPath().substring(
-                request.getTargetBasePath().length()+1);
+                request.getTargetBasePath().length() + 1);
         int index = path.indexOf('?');
         if (index != -1) {
             path = path.substring(0, index);
+        }
+        if (!path.startsWith("/")) {
+            path = "/" + path;
         }
 
         try {
