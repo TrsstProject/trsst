@@ -338,6 +338,7 @@ public class Command {
 
         if (id != null) {
             // obtain password
+            id = Common.toFeedIdString(id);
             char[] password = null;
             String pass = commands.getOptionValue("p");
             if (pass != null) {
@@ -371,7 +372,7 @@ public class Command {
 
             File keyFile;
             if (keyPath != null) {
-                keyFile = new File(Common.getClientRoot(), keyPath);
+                keyFile = new File(keyPath, id + Common.KEY_EXTENSION);
             } else {
                 keyFile = new File(Common.getClientRoot(), id
                         + Common.KEY_EXTENSION);
@@ -639,7 +640,7 @@ public class Command {
 
             File keyFile;
             if (keyPath != null) {
-                keyFile = new File(Common.getClientRoot(), keyPath);
+                keyFile = new File(keyPath, id + Common.KEY_EXTENSION);
             } else {
                 keyFile = new File(Common.getClientRoot(), id
                         + Common.KEY_EXTENSION);
