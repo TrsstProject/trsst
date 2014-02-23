@@ -787,7 +787,7 @@ public class Command {
         } catch (org.apache.abdera.security.SecurityException e) {
             log.error("Error generating signatures for id: " + id, e);
             return 73; // "can't create output error"
-        } catch (GeneralSecurityException e) {
+        } catch (Exception e) {
             log.error("General security error for id: " + id, e);
             return 74; // "general io error"
         }

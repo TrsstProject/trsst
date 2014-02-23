@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.StringReader;
 import java.net.URL;
 import java.security.KeyPair;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 
 import javax.xml.namespace.QName;
@@ -12,7 +13,6 @@ import org.apache.abdera.Abdera;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
 import org.apache.abdera.model.Feed;
-import org.apache.commons.codec.binary.Base64;
 
 import com.google.common.io.Files;
 import com.trsst.client.Client;
@@ -181,9 +181,16 @@ public class TrsstTest extends TestCase {
             // encryption roundtrip
             String test = entry.toString();
             KeyPair b = Common.generateEncryptionKeyPair();
-            byte[] bytes = Client.encryptElement(entry, b.getPublic());
-            Element element = Client.decryptElement(bytes, b.getPrivate());
-            assertEquals("Encryption round trip test", test, element.toString());
+            byte[] bytes = Client.encryptElementIES(entry, b.getPublic());
+            Element element = Client.decryptElementIES(bytes, b.getPrivate());
+            assertEquals("IES Encryption round trip test", test,
+                    element.toString());
+
+            byte[] key = Crypto.generateAESKey();
+            bytes = Client.encryptElementAES(entry, key);
+            element = Client.decryptElementAES(bytes, key);
+            assertEquals("AES Encryption round trip test", test,
+                    element.toString());
 
             // grab signature
             signatureElement = entry.getFirstChild(new QName(
@@ -313,6 +320,21 @@ public class TrsstTest extends TestCase {
             assertTrue("Feed has only first page of entries", (25 == feed
                     .getEntries().size()));
 
+            // test pull of a single entry
+            long existingId = Common.toEntryId(entry.getId());
+            feed = client.pull(entry.getId().toString());
+            assertNotNull("Single entry feed result", feed);
+            assertEquals("Single entry feed retains id", feedId,
+                    Common.fromFeedUrn(feed.getId()));
+            assertEquals("Single entry feed contains one entry", 1, feed
+                    .getEntries().size());
+            signatureElement = feed.getFirstChild(new QName(
+                    "http://www.w3.org/2000/09/xmldsig#", "Signature"));
+            assertNotNull("Single entry feed has signature", signatureElement);
+            entry = feed.getEntries().get(0);
+            assertEquals("Single entry retains id", existingId,
+                    Common.toEntryId(entry.getId()));
+
             // generate recipient keys
             KeyPair recipientKeys = Common.generateEncryptionKeyPair();
 
@@ -342,8 +364,10 @@ public class TrsstTest extends TestCase {
                                                             "Unencrypted title with encrypted entry")),
                             new FeedOptions());
             entry = feed.getEntries().get(0);
-            feed = client.pull(entry.getId().toString());
-            assertNotNull("Generating encrypted entry", feed);
+            // pull and decrypt the entry
+            feed = client.pull(entry.getId().toString(),
+                    new PrivateKey[] { encryptionKeys.getPrivate() });
+            assertNotNull("Generated encrypted entry", feed);
             entry = feed.getEntries().get(0);
             assertFalse("Entry does not retain status",
                     "This is the encrypted entry".equals(entry.getTitle()));
@@ -357,25 +381,10 @@ public class TrsstTest extends TestCase {
                             new QName(Common.NS_URI, "mention", "trsst"))
                             .size());
 
-            // write and read the keypair
-            Command.writeEncryptionKeyPair(recipientKeys, "tmp", new File(tmp,
-                    "keytest.p12"), new char[] { 'p' });
-            recipientKeys = Command.readEncryptionKeyPair("tmp", new File(tmp,
-                    "keytest.p12"), new char[] { 'p' });
-            assertNotNull("Write and read keys from keystore", recipientKeys);
-
-            // decrypt the entry
             Element contentElement = entry.getContentElement();
-            signatureElement = contentElement.getFirstChild(new QName(
-                    "http://www.w3.org/2001/04/xmlenc#", "EncryptedData"));
-            assertNotNull("Entry is encrypted", signatureElement);
-            signatureElement = signatureElement.getFirstChild(new QName(
-                    "http://www.w3.org/2001/04/xmlenc#", "CipherData"));
-            signatureElement = signatureElement.getFirstChild(new QName(
-                    "http://www.w3.org/2001/04/xmlenc#", "CipherValue"));
-            String encoded = signatureElement.getText();
-            Entry decoded = (Entry) Client.decryptElement(
-                    new Base64().decode(encoded), recipientKeys.getPrivate());
+            assertTrue("Decoded element is an Entry",
+                    contentElement.getFirstChild() instanceof Entry);
+            Entry decoded = (Entry) contentElement.getFirstChild();
             assertTrue("Decoded entry retains status",
                     "This is the encrypted entry".equals(decoded.getTitle()));
             assertTrue("Decoded entry retains body",
@@ -384,25 +393,18 @@ public class TrsstTest extends TestCase {
                     "http://www.trsst.com".equals(decoded.getContentSrc()
                             .toString()));
 
-            // test pull of a single entry
-            long existingId = Common.toEntryId(entry.getId());
-            feed = client.pull(entry.getId().toString());
-            assertNotNull("Single entry feed result", feed);
-            assertEquals("Single entry feed retains id", feedId,
-                    Common.fromFeedUrn(feed.getId()));
-            assertEquals("Single entry feed contains one entry", 1, feed
-                    .getEntries().size());
-            signatureElement = feed.getFirstChild(new QName(
-                    "http://www.w3.org/2000/09/xmldsig#", "Signature"));
-            assertNotNull("Single entry feed has signature", signatureElement);
-            entry = feed.getEntries().get(0);
-            assertEquals("Single entry retains id", existingId,
-                    Common.toEntryId(entry.getId()));
+            // write and read the keypair
+            Command.writeEncryptionKeyPair(recipientKeys, "tmp", new File(tmp,
+                    "keytest.p12"), new char[] { 'p' });
+            recipientKeys = Command.readEncryptionKeyPair("tmp", new File(tmp,
+                    "keytest.p12"), new char[] { 'p' });
+            assertNotNull("Write and read keys from keystore", recipientKeys);
 
             // test push to second server
-            Server alternateServer = new Server();
-            URL alternateUrl = alternateServer.getServiceURL();
-            assertNotNull(client.push(feedId, alternateUrl));
+            // TODO: need to implement server sync test here
+            // Server alternateServer = new Server();
+            // URL alternateUrl = alternateServer.getServiceURL();
+            // assertNotNull(client.push(feedId, alternateUrl));
 
         } catch (Throwable t) {
             t.printStackTrace();

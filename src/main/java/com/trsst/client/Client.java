@@ -26,14 +26,12 @@ import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.SecureRandom;
-import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.ECPublicKey;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 
 import javax.activation.MimeType;
-import javax.crypto.Cipher;
 import javax.xml.namespace.QName;
 
 import org.apache.abdera.Abdera;
@@ -56,19 +54,9 @@ import org.apache.abdera.writer.StreamWriter;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.httpclient.protocol.Protocol;
 import org.apache.commons.httpclient.protocol.ProtocolSocketFactory;
-import org.bouncycastle.crypto.agreement.ECDHBasicAgreement;
-import org.bouncycastle.crypto.digests.SHA1Digest;
-import org.bouncycastle.crypto.digests.SHA256Digest;
-import org.bouncycastle.crypto.engines.AESEngine;
-import org.bouncycastle.crypto.engines.IESEngine;
-import org.bouncycastle.crypto.generators.KDF2BytesGenerator;
-import org.bouncycastle.crypto.macs.HMac;
-import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
-import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey;
-import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
-import org.bouncycastle.jcajce.provider.asymmetric.ec.IESCipher;
 
 import com.trsst.Common;
+import com.trsst.Crypto;
 
 /**
  * Implements the protocol-level features of the Trsst platform: creating Feeds
@@ -120,33 +108,80 @@ public class Client {
             if (content != null
                     && (contentType = content.getMimeType()) != null
                     && "application/xenc+xml".equals(contentType.toString())) {
+
+                // if this message was intended for us, we will be able to
+                // decrypt one of the elements into an AES key to decrypt the
+                // encrypted entry itself
+
                 QName encryptedDataName = new QName(
                         "http://www.w3.org/2001/04/xmlenc#", "EncryptedData");
                 QName cipherDataName = new QName(
                         "http://www.w3.org/2001/04/xmlenc#", "CipherData");
                 QName cipherValueName = new QName(
                         "http://www.w3.org/2001/04/xmlenc#", "CipherValue");
+                String encodedBytes;
+                byte[] decodedBytes;
                 Element cipherData, cipherValue, result;
-                for (Element element : content.getElements()) {
+                List<Element> encryptedElements = content.getElements();
+                int lastIndex = encryptedElements.size() - 1;
+                Element element;
+                byte[] decryptedKey = null;
+
+                // TODO: if we're the author, we can start loop at (lastIndex-1)
+
+                for (int i = 0; i < encryptedElements.size(); i++) {
+                    element = encryptedElements.get(i);
                     if (encryptedDataName.equals(element.getQName())) {
                         cipherData = element.getFirstChild(cipherDataName);
                         if (cipherData != null) {
                             cipherValue = cipherData
                                     .getFirstChild(cipherValueName);
                             if (cipherValue != null) {
-                                String encodedBytes = cipherValue.getText();
+                                encodedBytes = cipherValue.getText();
                                 if (encodedBytes != null) {
-                                    for (PrivateKey decryptionKey : decryptionKeys) {
+                                    decodedBytes = new Base64()
+                                            .decode(encodedBytes);
+                                    if (i != lastIndex) {
+                                        // if we're not at the last index
+                                        // (the payload) so we should attempt
+                                        // to decrypt this AES key
+                                        for (PrivateKey decryptionKey : decryptionKeys) {
+                                            try {
+                                                decryptedKey = Crypto
+                                                        .decryptIES(
+                                                                decodedBytes,
+                                                                decryptionKey);
+                                                // success:
+                                                // skip to lastIndex
+                                                i = lastIndex - 1;
+                                            } catch (SecurityException e) {
+                                                // key did not fit
+                                                log.trace(
+                                                        "Could not decrypt key: "
+                                                                + entry.getId(),
+                                                        e);
+                                            } catch (Throwable t) {
+                                                log.warn(
+                                                        "Error while decrypting key on entry: "
+                                                                + entry.getId(),
+                                                        t);
+                                            }
+                                        }
+                                    } else if (decryptedKey != null) {
+                                        // if we're at the last index
+                                        // (the payload) and we have an
+                                        // AES key: attempt to decrypt
                                         try {
-                                            result = decryptElement(
-                                                    new Base64()
-                                                            .decode(encodedBytes),
-                                                    decryptionKey);
+                                            result = decryptElementAES(
+                                                    decodedBytes, decryptedKey);
+                                            for (Element ee : encryptedElements) {
+                                                ee.discard();
+                                            }
                                             content.setValueElement(result);
                                             break;
                                         } catch (SecurityException e) {
                                             log.error(
-                                                    "Error while decrypting: "
+                                                    "Key did not decrypt element: "
                                                             + entry.getId(), e);
                                         } catch (Throwable t) {
                                             log.warn(
@@ -170,7 +205,6 @@ public class Client {
                 }
             }
         }
-
         return feed;
     }
 
@@ -303,10 +337,11 @@ public class Client {
      * @throws IOException
      * @throws SecurityException
      * @throws GeneralSecurityException
+     * @throws contentKey
      */
     public Feed post(KeyPair signingKeys, PublicKey encryptionKey,
             EntryOptions options, FeedOptions feedOptions) throws IOException,
-            SecurityException, GeneralSecurityException {
+            SecurityException, GeneralSecurityException, Exception {
         // inlining all the steps to help implementors and porters (and
         // debuggers)
 
@@ -423,58 +458,58 @@ public class Client {
                 }
             }
 
-            PublicKey[] recipients = options.recipientKeys;
-            if (recipients == null) {
-                recipients = new PublicKey[] { null };
+            // generate an AES256 key and encrypt
+            byte[] contentKey = null;
+            if (options.recipientKeys != null) {
+                contentKey = Crypto.generateAESKey();
             }
-            for (PublicKey recipient : recipients) {
-                for (int part = 0; part < contentIds.length; part++) {
-                    byte[] currentContent = options.getContentData()[part];
-                    String currentType = options.getMimetypes()[part];
 
-                    // encrypt before hashing if necessary
-                    if (recipient != null) {
-                        currentContent = encryptBytes(currentContent, recipient);
-                    }
+            for (int part = 0; part < contentIds.length; part++) {
+                byte[] currentContent = options.getContentData()[part];
+                String currentType = options.getMimetypes()[part];
 
-                    // calculate digest to determine content id
-                    byte[] digest = Common.ripemd160(currentContent);
-                    contentIds[part] = new Base64(0, null, true)
-                            .encodeToString(digest);
-
-                    // add mime-type hint to content id (if not encrypted):
-                    // (some readers like to see a file extension on enclosures)
-                    if (currentType != null && recipient == null) {
-                        String extension = "";
-                        int i = currentType.lastIndexOf('/');
-                        if (i != -1) {
-                            extension = '.' + currentType.substring(i + 1);
-                        }
-                        contentIds[part] = contentIds[part] + extension;
-                    }
-
-                    // set the content element
-                    if (entry.getContentSrc() == null) {
-                        // only point to the first attachment if multiple
-                        entry.setContent(new IRI(contentIds[part]), currentType);
-                    }
-
-                    // use a base uri so src attribute is simpler to process
-                    entry.getContentElement().setBaseUri(
-                            Common.toEntryIdString(entry.getId()) + '/');
-                    entry.getContentElement().setAttributeValue(
-                            new QName(Common.NS_URI, "hash", "trsst"),
-                            "ripemd160");
-
-                    // if not encrypted
-                    if (recipient == null) {
-                        // add an enclosure link
-                        entry.addLink(Common.toEntryIdString(entry.getId())
-                                + '/' + contentIds[part], Link.REL_ENCLOSURE,
-                                currentType, null, null, currentContent.length);
-                    }
-
+                // encrypt before hashing if necessary
+                if (contentKey != null) {
+                    currentContent = Crypto.encryptAES(currentContent,
+                            contentKey);
                 }
+
+                // calculate digest to determine content id
+                byte[] digest = Common.ripemd160(currentContent);
+                contentIds[part] = new Base64(0, null, true)
+                        .encodeToString(digest);
+
+                // add mime-type hint to content id (if not encrypted):
+                // (some readers like to see a file extension on enclosures)
+                if (currentType != null && contentKey == null) {
+                    String extension = "";
+                    int i = currentType.lastIndexOf('/');
+                    if (i != -1) {
+                        extension = '.' + currentType.substring(i + 1);
+                    }
+                    contentIds[part] = contentIds[part] + extension;
+                }
+
+                // set the content element
+                if (entry.getContentSrc() == null) {
+                    // only point to the first attachment if multiple
+                    entry.setContent(new IRI(contentIds[part]), currentType);
+                }
+
+                // use a base uri so src attribute is simpler to process
+                entry.getContentElement().setBaseUri(
+                        Common.toEntryIdString(entry.getId()) + '/');
+                entry.getContentElement().setAttributeValue(
+                        new QName(Common.NS_URI, "hash", "trsst"), "ripemd160");
+
+                // if not encrypted
+                if (contentKey == null) {
+                    // add an enclosure link
+                    entry.addLink(Common.toEntryIdString(entry.getId()) + '/'
+                            + contentIds[part], Link.REL_ENCLOSURE,
+                            currentType, null, null, currentContent.length);
+                }
+
             }
 
             if (contentIds.length == 0 && options.url != null) {
@@ -536,7 +571,7 @@ public class Client {
                         if (options.publicOptions.status != null) {
                             writer.writeTitle(options.publicOptions.status);
                         } else {
-                            writer.writeTitle("Encrypted message"); // arbitrary
+                            writer.writeTitle(""); // empty title
                         }
                         if (options.publicOptions.body != null) {
                             writer.writeSummary(options.publicOptions.body);
@@ -561,11 +596,28 @@ public class Client {
                             }
                         }
                     } else {
-                        writer.writeTitle("Encrypted message"); // arbitrary
+                        writer.writeTitle(""); // empty title
                     }
+
                     writer.startContent("application/xenc+xml");
+
+                    List<PublicKey> keys = new LinkedList<PublicKey>();
+                    keys.addAll(Arrays.asList(options.recipientKeys));
+
+                    // enforce the convention:
+                    // last encrypted key is for ourself
+
+                    keys.remove(encryptionKey); // move to end if exists
+                    keys.add(encryptionKey);
+                    // if we're the only key in the list
+                    if (keys.size() == 1) {
+                        // add ourself again to hide that fact
+                        keys.add(encryptionKey);
+                    }
+
+                    // encrypt content key separately for each recipient
                     for (PublicKey recipient : options.recipientKeys) {
-                        byte[] bytes = encryptElement(entry, recipient);
+                        byte[] bytes = Crypto.encryptIES(contentKey, recipient);
                         String encoded = new Base64(0, null, true)
                                 .encodeToString(bytes);
                         writer.startElement("EncryptedData",
@@ -579,6 +631,23 @@ public class Client {
                         writer.endElement();
                         writer.endElement();
                     }
+
+                    // now: encrypt the payload with content key
+                    byte[] bytes = encryptElementAES(entry, contentKey);
+                    String encoded = new Base64(0, null, true)
+                            .encodeToString(bytes);
+                    writer.startElement("EncryptedData",
+                            "http://www.w3.org/2001/04/xmlenc#");
+                    writer.startElement("CipherData",
+                            "http://www.w3.org/2001/04/xmlenc#");
+                    writer.startElement("CipherValue",
+                            "http://www.w3.org/2001/04/xmlenc#");
+                    writer.writeElementText(encoded);
+                    writer.endElement();
+                    writer.endElement();
+                    writer.endElement();
+
+                    // done with encrypted elements
                     writer.endContent();
                     writer.endEntry();
                     writer.flush();
@@ -658,7 +727,7 @@ public class Client {
             }
             uri = uri + feedId;
             feed.setBaseUri(uri);
-        } 
+        }
 
         // sign the feed
         signedNode = signer
@@ -697,14 +766,14 @@ public class Client {
         return options;
     }
 
-    public static byte[] encryptElement(Element element, PublicKey publicKey)
+    public static byte[] encryptElementIES(Element element, PublicKey publicKey)
             throws SecurityException {
         byte[] after = null;
         try {
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             element.writeTo(output);
             byte[] before = output.toByteArray();
-            after = encryptBytes(before, publicKey);
+            after = Crypto.encryptIES(before, publicKey);
         } catch (Exception e) {
             log.error("Error while encrypting element", e);
             throw new SecurityException(e);
@@ -712,38 +781,12 @@ public class Client {
         return after;
     }
 
-    private static byte[] encryptBytes(byte[] before, PublicKey publicKey)
-            throws SecurityException {
-        byte[] after = null;
-        try {
-            IESCipher cipher = new IESCipher(new IESEngine(
-                    new ECDHBasicAgreement(), new KDF2BytesGenerator(
-                            new SHA1Digest()), new HMac(new SHA256Digest()),
-                    new PaddedBufferedBlockCipher(new AESEngine())));
-
-            // BC appears to be happier with BCECPublicKeys:
-            // see BC's IESCipher.engineInit's check for ECPublicKey
-            publicKey = new BCECPublicKey((ECPublicKey) publicKey, null);
-
-            cipher.engineInit(Cipher.ENCRYPT_MODE, publicKey,
-                    new SecureRandom());
-            after = cipher.engineDoFinal(before, 0, before.length);
-        } catch (Exception e) {
-            log.error("Error while encrypting element", e);
-            throw new SecurityException(e);
-        }
-        return after;
-    }
-
-    public static Element decryptElement(byte[] data, PrivateKey privateKey)
+    public static Element decryptElementIES(byte[] data, PrivateKey privateKey)
             throws SecurityException {
         Element result;
 
-        // BC appears to be happier with BCECPrivateKey:
-        privateKey = new BCECPrivateKey((ECPrivateKey) privateKey, null);
-
         try {
-            byte[] after = decryptBytes(data, privateKey);
+            byte[] after = Crypto.decryptIES(data, privateKey);
             ByteArrayInputStream input = new ByteArrayInputStream(after);
             result = Abdera.getInstance().getParser().parse(input).getRoot();
         } catch (Exception e) {
@@ -753,20 +796,34 @@ public class Client {
         return result;
     }
 
-    private static byte[] decryptBytes(byte[] data, PrivateKey privateKey)
+    public static byte[] encryptElementAES(Element element, byte[] secretKey)
             throws SecurityException {
+        byte[] after = null;
         try {
-            IESCipher cipher = new IESCipher(new IESEngine(
-                    new ECDHBasicAgreement(), new KDF2BytesGenerator(
-                            new SHA1Digest()), new HMac(new SHA256Digest()),
-                    new PaddedBufferedBlockCipher(new AESEngine())));
-            cipher.engineInit(Cipher.DECRYPT_MODE, privateKey,
-                    new SecureRandom());
-            return cipher.engineDoFinal(data, 0, data.length);
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            element.writeTo(output);
+            byte[] before = output.toByteArray();
+            after = Crypto.encryptAES(before, secretKey);
         } catch (Exception e) {
-            log.error("Error while decrypting: ");
+            log.error("Error while encrypting element", e);
             throw new SecurityException(e);
         }
+        return after;
+    }
+
+    public static Element decryptElementAES(byte[] data, byte[] secretKey)
+            throws SecurityException {
+        Element result;
+
+        try {
+            byte[] after = Crypto.decryptAES(data, secretKey);
+            ByteArrayInputStream input = new ByteArrayInputStream(after);
+            result = Abdera.getInstance().getParser().parse(input).getRoot();
+        } catch (Exception e) {
+            log.error("Error while decrypting: ", e);
+            throw new SecurityException(e);
+        }
+        return result;
     }
 
     private final static org.slf4j.Logger log = org.slf4j.LoggerFactory
