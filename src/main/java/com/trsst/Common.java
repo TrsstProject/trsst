@@ -85,7 +85,7 @@ public class Common {
      * revocation. This lets you delete an entry and require takedown of that
      * entry whereever it has been distributed.
      */
-    public static final String RIGHTS_NDBY_REVOCABLE = "ATTRIBUTION, NO DERIVATIVES, REVOCABLE";
+    public static final String RIGHTS_NDBY_REVOCABLE = "attribution, no derivatives, revoked if deleted";
     // "You may copy, distribute, display and perform only verbatim copies of
     // the work, not derivative works based on it, and only if fully attributed
     // to the author. Your license to the work is revoked worldwide if the
@@ -95,7 +95,7 @@ public class Common {
      * Default private rights are are explicity ARR if only to clearly
      * differentiate private posts from public ones.
      */
-    public static final String RIGHTS_RESERVED = "ALL RESERVED";
+    public static final String RIGHTS_RESERVED = "all reserved";
 
     private final static org.slf4j.Logger log;
 
