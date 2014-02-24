@@ -223,7 +223,6 @@ public class Client {
             urn = urn.substring("urn:feed:".length());
         } else if (urn.startsWith("urn:entry:")) {
             urn = urn.substring("urn:entry:".length());
-            urn = urn.replaceFirst(":", "/");
         }
 
         URL url = null;

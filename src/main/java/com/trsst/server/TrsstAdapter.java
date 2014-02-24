@@ -194,6 +194,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      */
     protected void fetchLaterFromRelay(final String feedId,
             final RequestContext request) {
+        if (TASK_QUEUE == null) {
+            TASK_QUEUE = new Timer();
+        }
         final String uri = request.getResolvedUri().toString();
         log.debug("fetchLaterFromRelay: queuing: " + uri);
         if (!COALESCING_TIMERS.containsKey(uri)) {
@@ -210,7 +213,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
     }
 
-    private static Timer TASK_QUEUE = new Timer();
+    private static Timer TASK_QUEUE;
     private static Map<String, TimerTask> COALESCING_TIMERS = new Hashtable<String, TimerTask>();
 
     /**
@@ -237,7 +240,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // if relay peer count is less than search limit
         List<String> relays = wrapper.getParameters("relay");
-        if (relays != null && relays.size() <= limit) {
+        if (relays == null || relays.size() <= limit) {
             URL relayPeer = getRelayPeer();
             if (relayPeer != null) {
                 log.debug("Using relay peer: " + relayPeer);
