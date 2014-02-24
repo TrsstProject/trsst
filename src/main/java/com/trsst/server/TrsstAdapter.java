@@ -248,10 +248,12 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
         }
 
-        if (Common.isExternalId(feedId)) {
-            // attempt to fetch directly
-            log.debug("Fetching direct: " + feedId);
-            result = fetchFromExternalSource(feedId);
+        if (result == null) {
+            if (Common.isExternalId(feedId)) {
+                // attempt to fetch directly
+                log.debug("Fetching direct: " + feedId);
+                result = fetchFromExternalSource(feedId);
+            }
         }
 
         // if we got a result
