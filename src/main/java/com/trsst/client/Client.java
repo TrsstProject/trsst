@@ -515,6 +515,10 @@ public class Client {
             if (contentIds.length == 0 && options.url != null) {
                 Content content = Abdera.getInstance().getFactory()
                         .newContent();
+                if (options.url.startsWith("urn:feed:")
+                        || options.url.startsWith("urn:entry:")) {
+                    content.setMimeType("application/atom+xml");
+                }
                 content.setSrc(options.url);
                 entry.setContentElement(content);
             }
