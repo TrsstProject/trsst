@@ -237,43 +237,45 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // if relay peer count is less than search limit
         List<String> relays = wrapper.getParameters("relay");
-        if (relays == null || relays.size() <= limit) {
+        if (relays != null && relays.size() <= limit) {
             URL relayPeer = getRelayPeer();
             if (relayPeer != null) {
                 log.debug("Using relay peer: " + relayPeer);
                 result = fetchFromServiceUrl(request, relayPeer);
             } else {
-                log.debug("Fetching direct: no relay peer available for request: "
+                log.debug("No relay peer available for request: "
                         + request.getResolvedUri());
-                if (Common.isExternalId(feedId)) {
-                    // attempt to fetch directly
-                    fetchFromExternalSource(feedId);
-                }
-            }
-
-            // if we got a result
-            if (result != null) {
-                try {
-                    if (Common.isExternalId(feedId)) {
-                        // convert from rss if needed
-                        if (result.getClass().getName().indexOf("RssFeed") != -1) {
-                            result = convertFromRSS(feedId, result);
-                        }
-                        if (result != null) {
-                            // process and persist external feed
-                            ingestExternalFeed(feedId, result, 25);
-                            // no more than default page size
-                        }
-                    } else {
-                        // ingest the native feed
-                        ingestFeed(result);
-                    }
-                } catch (Throwable t) {
-                    log.error("Could not ingest feed: " + feedId, t);
-                    ;
-                }
             }
         }
+
+        if (Common.isExternalId(feedId)) {
+            // attempt to fetch directly
+            log.debug("Fetching direct: " + feedId);
+            result = fetchFromExternalSource(feedId);
+        }
+
+        // if we got a result
+        if (result != null) {
+            try {
+                if (Common.isExternalId(feedId)) {
+                    // convert from rss if needed
+                    if (result.getClass().getName().indexOf("RssFeed") != -1) {
+                        result = convertFromRSS(feedId, result);
+                    }
+                    if (result != null) {
+                        // process and persist external feed
+                        ingestExternalFeed(feedId, result, 25);
+                        // no more than default page size
+                    }
+                } else {
+                    // ingest the native feed
+                    ingestFeed(result);
+                }
+            } catch (Throwable t) {
+                log.error("Could not ingest feed: " + feedId, t);
+            }
+        }
+
         return result;
     }
 
