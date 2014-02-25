@@ -213,7 +213,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
     }
 
-    private static Timer TASK_QUEUE;
+    public static Timer TASK_QUEUE;
     private static Map<String, TimerTask> COALESCING_TIMERS = new Hashtable<String, TimerTask>();
 
     /**
