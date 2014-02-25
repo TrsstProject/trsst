@@ -724,7 +724,7 @@ public class Client {
                 feed.setIcon(url);
             }
             if (feedOptions.asLogo) {
-                feed.setIcon(url);
+                feed.setLogo(url);
             }
         }
 

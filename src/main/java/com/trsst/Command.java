@@ -440,10 +440,11 @@ public class Command {
         }
         URL url;
         String host = arguments.removeFirst().toString();
+        Client destinationClient;
         try {
             url = new URL(host);
             // this argument is a server url
-            client = new Client(url);
+            destinationClient = new Client(url);
             System.err.println("Using service: " + host);
         } catch (MalformedURLException e) {
             printPushUsage();
@@ -452,7 +453,7 @@ public class Command {
 
         for (String id : arguments) {
             if (Common.isAccountId(id)) {
-                client.push(id, url);
+                System.out.println( destinationClient.push(client.pull(id), url) );
                 // Feed feed = client.pull(id);
                 // if ( feed != null ) {
                 // feed = client.push(feed, url);

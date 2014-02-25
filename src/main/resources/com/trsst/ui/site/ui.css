@@ -1,0 +1,1455 @@
+/*
+ * Copyright 2014 mpowers
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* @override 
+https://localhost:8181/ui.css
+http://localhost:8181/ui.css */
+
+body {
+	background-color: #ddd;
+	font-size: 14px;
+	line-height: 16px;
+}
+
+section {
+	overflow: hidden;
+}
+
+a {
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+}
+
+textarea, input[type=text], input[type=password] {
+	font-size: 14px;
+	padding: 6px;
+	font-family: sans-serif;
+}
+
+/* @group Public/Private Input Areas */
+
+article {
+	position: relative;
+	padding-bottom: 24px;
+}
+
+article>.composer:before
+{
+	position: absolute;
+	border-bottom: 1px solid #ddd;
+	content: 'Say Something';
+	font-weight: bold;
+	font-size: 20px;
+	top: 0px;
+	left: 0px;
+	right: 0px;
+	padding: 16px 16px;
+	padding-top: 18px;
+}
+
+article>.composer
+{
+	padding: 18px 18px;
+	padding-top: 64px;
+	background: #fff;
+	border-radius:8px;
+	margin-bottom: 16px;
+}
+article>.composer textarea {
+	height: 48px;
+	margin-bottom: 8px;
+}
+
+.public.composer {
+	display: none;	
+}
+.page-home .public.composer {
+	display: inherit;
+}
+
+.private.messaging {
+	display: none;
+}
+.page-feed .private.messaging {
+	display: inherit;
+}
+
+/* @end */
+
+/* @group Private Messaging */
+
+aside .private.messaging
+{
+	position: relative;
+	padding: 0px 18px;
+	padding-bottom: 36px;
+	background: #fff;
+	border-radius:8px;
+	margin-top: 16px;
+	color: black;
+}
+aside .private.messaging:before
+{
+	padding: 18px 18px;
+	position: absolute;
+	border-bottom: 1px solid #ddd;
+	content: 'Conversation';
+	font-weight: bold;
+	font-size: 20px;
+	top: 0px;
+	left: 0px;
+	right: 0px;
+}
+aside .private.messaging:after
+{
+	padding: 12px 18px;
+	position: absolute;
+	border-top: 1px solid #ddd;
+	content: ' ';
+	font-weight: bold;
+	bottom: 0px;
+	left: 0px;
+	right: 0px;
+}
+
+aside> .private.messaging .composer {
+	padding-top: 64px;
+}
+
+
+/* @end */
+
+/* @group Header Bar */
+
+body {
+	padding-top: 67px;
+}
+body .header-container {
+	position: fixed;
+	top: 0px;
+	left: 0px;
+	right: 0px;
+	height: 67px;
+	padding: 0px;
+	margin: 0px;
+	left: 0px;
+	z-index: 10;
+	border-bottom: 4px solid #ec5007;
+	-webkit-box-shadow: 0 1px 10px #333;
+    -moz-box-shadow: 0 1px 10px #333;
+    box-shadow: 0 1px 10px #444;
+}
+
+body aside {
+	background-color: inherit !important;
+	box-shadow: none !important;
+	border-radius: 8px;
+	border: none !important;
+}
+
+.header-container,
+.footer-container,
+.main aside .feed {
+    background: #444;
+}
+
+.header-container a {
+	padding: 5px;
+	vertical-align: bottom;
+	bottom: 0px;
+}
+
+nav a {
+    background: #777;
+}
+
+.header-container {
+	position: relative;
+	background-position: center;
+	background-size: 64px;
+	background-repeat: no-repeat;
+}
+
+h1.title {
+	position: absolute;
+	left: 50%;
+	margin-left: -32px;
+	width: 64px;
+	height: 64px;
+	margin-top: 1px;
+}
+
+h1.title span {
+	display: none;
+}
+
+/* @end */
+
+/* @group Article/Content area */
+
+#entryContainer {
+	position: relative;
+	background-color: #fff;
+	padding-top: 50px;
+	padding-bottom: 24px;
+	border-radius: 6px;
+}
+
+#entryContainer:before {
+	content: 'Recent Activity';
+	font-weight: bold;
+	font-size: 20px;
+	position: absolute;
+	left: 16px;
+	top: 18px;
+	color: black;
+}
+.page-home #entryContainer:before {
+	content: 'Followed Feeds';
+}
+
+body.pending #entryContainer:empty:before {
+	content: 'Loading...';
+}
+#entryContainer:empty:before {
+	top: 28px;
+	left: 24px;
+	content: 'No entries found';
+	color: #aaa;
+}
+.page-home.signed-in #entryContainer:empty {
+	/* don't show "Not Found" for new accounts */
+	display: none;
+}
+
+.pending #entryContainer:not(:empty):after {
+	display: block;
+	position: absolute;
+	bottom: 4px;
+	left: 50%;
+	width: 16px;
+	height: 16px;
+	margin-left: -8px;
+	content: ' ';
+	background-image: url('/loading-on-white.gif');
+	background-size: cover;
+}
+
+#feedContainer {
+	border-radius: 6px;
+}
+
+#feedContainer a {
+	color: #f98131;
+}
+
+/* @end */
+
+/* @group Feed */
+
+.feed {
+	position: relative;
+	padding: 36px;
+	padding-top: 4px;
+	min-height: 48px;
+	text-align: center;
+	border-radius: 6px;
+	margin-bottom: 12px;
+}
+
+.feed section {
+}
+
+.icon {
+	display: inline-block;
+	margin-bottom: 6px;
+	width: 64px;
+	height: 64px;
+	background-color: white;	
+	background-position: center;
+	background-size: cover;
+	overflow: hidden;	
+	border-radius: 8px;
+	/* fallback image */
+	background-image: url('icon-256.png');
+	background-color: #ddd;
+}
+
+.external .icon {
+	/* some external feeds use logos as icons eg nyt */
+	background-position-x: left;
+	background-position-y: center;
+}
+
+
+.feed .icon img {
+	width: 64px;
+	height: 64px;
+	background-position: center;
+	background-position-x: left;
+	background-position-y: center;
+	background-size: cover;
+	overflow: hidden;	
+	display: none;
+}
+
+.feed .title {
+	float: none;
+	font-weight: bold;
+	font-size: 150%;
+	line-height: 100%;
+	margin-bottom: 0px;
+}
+
+.feed .feed-id {
+	font-size: 85%;
+	color: #aaa;
+	margin-bottom: 12px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+
+.feed .subtitle {
+	font-size: 90%;
+}
+
+.feed .author-name {
+	display: inline;
+}
+
+.feed .author-email {
+	display: none;
+}
+
+.feed .author-uri {
+	display: inline-block;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.feed .follow {
+	position: absolute;
+	bottom: 16px;
+	left: 16px;
+	right: 16px;
+	display: none;
+}
+.signed-in .main .feed .follow {
+	display: inherit;
+}
+.page-home .feed .follow {
+/* everyone follows themselves implicitly */
+	display: none;
+}
+
+.feed .follow span:before {
+	content: "Start Following";
+}
+.feed .follow.following  span:before {
+	content: "Stop Following";
+}
+
+/* @end */
+
+/* @group Entry */
+
+.entry {
+	position: relative;
+	padding-bottom: 12px;
+	padding-left: 80px;
+	padding-right: 32px;
+	padding-top: 16px;
+	border-bottom: 1px solid #ddd;
+	cursor: pointer;
+	min-height: 56px;
+}
+
+.entry:first-child {
+	border-top: 1px solid #ddd;
+}
+
+.entry:last-child {
+	border-bottom: 1px solid #ddd;
+}
+
+.entry .title {
+	float: none;
+	color: black;
+	margin-top: 8px;
+	margin-bottom: 6px;
+}
+
+.entry iframe {
+	width: 95%;
+	height:  2000px;
+	margin-top: -4px;
+	margin-left: -8px;
+}
+
+.entry .icon {
+	position: absolute;
+	border-radius: 8px;
+	left: 16px;
+	width: 48px;
+	height: 48px;
+	background-color: white;	
+	background-size: cover;
+	overflow: hidden;	
+	/* fallback image */
+	background-image: url('icon-256.png');
+	background-color: #ddd;
+}
+
+.entry .icon img {
+	width: 48px;
+	height: 48px;
+	background-position: center;
+	background-size: cover;
+	overflow: hidden;	
+	display: none;
+}
+
+.entry .feed-title {
+	display: inline-block;
+	vertical-align: top;
+	font-weight: bold;
+	margin-right: 4px;
+}
+.entry .feed-title.empty-text {
+	display: none;
+}
+	
+.entry .feed-id {
+	display: inline-block;
+	color: #aaa;
+	font-size: 95%;
+	max-width: 320px;
+	padding-right: 64px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+.entry .feed-id span {
+}
+.entry .feed-id span:before {
+	content: '@';
+}
+.entry.external .feed-id span:before {
+	content: '';
+}
+
+.entry .summary {
+	position: relative;
+}
+
+.entry .overlay {
+	overflow: hidden;
+	position: relative;
+}
+
+.entry .summary .overlay {
+	height: 0px;
+	-webkit-transition: height .5s ease-in-out 0s;
+}
+.entry.expanded.summary .summary .overlay{
+	height: 200px;
+}
+
+.entry .content .overlay {
+	height: 0px;
+	-webkit-transition: height .5s ease-in-out 0s;
+}
+.entry.expanded.contented .content .overlay {
+	height: 200px;
+}
+.entry .overlay:before {
+	content: ' ';
+	position: absolute;
+	top: 0px;
+	right: 0px;
+	bottom: 0px;
+	left: 0px;
+	background: -webkit-linear-gradient(top,  rgba(255,255,255,0) 0%,rgba(255,255,255,0) 80%,rgba(255,255,255,1) 100%);
+}
+
+/* @group Expanded Comment Field */
+
+.composer button, .composer input, .composer select {
+	display: inline;
+	-webkit-appearance:none;
+	-moz-appearance:none;
+	appearance:none;
+	height: 22px;
+	border-radius: 5px;
+	border: 1px solid #aaa;
+	background-color: #ddd;
+	padding-left: 8px;
+	font-size: 11px;
+	line-height: 11px;
+	text-align: center;
+	width: 50px;
+	margin: 1px;
+	
+	background: -webkit-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(247,247,247,1) 50%,rgba(239,239,239,1) 100%); 
+}
+
+.composer button:active, .composer select:active {
+	background: -webkit-linear-gradient(top,  rgba(209,209,209,1) 0%,rgba(203,203,203,1) 50%,rgba(196,196,196,1) 100%); 
+}
+
+.composer select {
+	width: 65px;
+}
+.composer input[type=file] {
+	display: none;
+}
+
+.composer button {
+	float: left;
+	width: 55px;
+	margin-right: 4px;
+}
+.composer select {
+	float: right;	
+}
+.composer button {
+}
+
+.composer {
+	overflow: hidden;
+	clear: both;
+}
+.entry .composer {
+	display: inline-block;
+}
+.feed .composer {
+	display: inline-block;
+	left: 0px;
+}
+.feed .composer input {
+	display: none;
+}
+
+.composer textarea {
+	width: 94%;
+	margin-left: 0px;
+}
+
+.composer .submit span:after {
+	content: 'Send';
+}
+.composer .attach span:after {
+	content: 'Attach';
+}
+
+/* @group Entry Comment Slide-Out Reveal */
+
+.entry {
+	-webkit-transition: padding-bottom .4s ease-in-out 0s;
+	z-index: 1;
+}
+.entry .signed-in section {
+	/* adjust for composer */
+	margin-bottom: -20px;
+}
+.entry.commented,
+.entry.expanded {
+}
+.entry section>div {
+	z-index: 3;
+	/* needed for stacking context */
+	position: relative;
+}
+.entry .composer {
+	-webkit-transition: max-height .4s ease-in-out .0s, opacity .4s ease-in-out .0s ;
+	opacity: 0;
+	max-height: 0px;
+	pointer-events: none;
+	position: relative;
+	padding-top: 4px;;
+	padding-bottom: 16px;
+}
+.entry.expanded .composer,
+.entry.commented .composer
+{
+	max-height: 400px;
+	pointer-events: inherit;
+	opacity: 1;
+}
+/* @end */
+
+/* @end */
+
+.entry .updated {
+	position: absolute;
+	top: 12px;
+	font-size: 12px;
+	color: #aaa;
+	right: 0px;
+	width: 64px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+/* @group Entry Content */
+.entry .content {
+	position: relative;
+	margin-top: 8px;
+	margin-bottom: 12px;
+	display: none;
+}
+
+.entry.contented .content {
+	display: inherit;
+}
+
+.entry .content>a {
+	right: 0px;
+	left: 0px;
+	display: block;
+	padding: 8px;
+	font-size: 12px;
+	line-height: 18px;
+	height: 18px;
+	background-color: #ddd;
+	border-radius: 12px;
+	color: #333;
+	padding-left: 42px;
+	
+}
+.entry .content>a span {
+	position: relative;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	display: block;
+}
+
+.entry .content>a:before {
+	content: ' ';
+	display: block;
+	position: absolute;
+	left: 12px;
+	bottom: 5px;
+	width: 24px;
+	height: 24px;
+	background-image: url('/note.png');
+	background-size: 18px;
+	background-position: center;
+	background-repeat: no-repeat;
+	opacity: 0.8;
+}
+
+/* @end */
+
+/* @group Entry Actions */
+
+.action:hover {
+	text-decoration: underline;
+}
+
+.entry .action {
+	font-size: 90%;
+	margin: 0px 16px 0px 0px;
+	display: inline-block;
+	float: right;	
+}
+.entry.expanded .action {
+	margin-bottom: 4px
+}
+.entry .action.expand {
+	float: left;
+	display: none;
+}
+.contented .expand {
+	display: inherit;
+}
+.entry .action a {
+	color: #999;
+}
+
+.action.like {
+	margin-right: 4px;
+}
+.action.like span:after {
+	content: 'Like';
+}
+.liked .action.like span:after {
+	content: 'Liked';
+}
+
+.action.repost span:after {
+	content: 'Repost';
+}
+.reposted .action.repost span:after {
+	content: 'Reposted';
+}
+
+.action.expand span:after {
+	content: 'More';
+}
+.expanded .action.expand span:after {
+	content: 'Less';
+}
+
+.action.comment span:after {
+	content: 'Comment';
+}
+
+/* @end */
+
+/* @end */
+
+/* @group Verb Markers */
+
+.entry.verb-delete, 
+.entry.content-encrypted {
+	display: none;
+}
+.entry.verb-deleted {
+	opacity: 0.5;
+}
+.entry.verb-deleted .content:before {
+	content: 'Deleted';
+}
+.entry.verb-deleted .action {
+	display: none;
+}
+
+.entry.content-decrypted {
+	background-color: #f9f4f0;
+}
+
+.entry.content-signed {
+	//todo show some kind of marker
+}
+
+/* @end */
+
+/* @group Reposted entry within an entry */
+
+.entry.verb-repost,
+.entry.verb-follow 
+{
+	margin-top: 6px;
+	padding-bottom: 0px;
+	margin-bottom: 0px;
+	min-height: 0px;
+
+}
+.entry.verb-repost
+{
+	border-bottom: 0px;
+}
+.entry.verb-repost>section,
+.entry.verb-follow>section
+{
+	height: 36px;
+}
+.entry.verb-repost>section .feed-title, 
+.entry.verb-follow>section .feed-title 
+{
+	font-size: 90%
+}
+.entry.verb-repost>section .title,
+.entry.verb-repost>section .icon,
+.entry.verb-repost>section .feed-id, 
+.entry.verb-repost .action,
+.entry.verb-repost .composer,
+.entry.verb-follow>section .title,
+.entry.verb-follow>section .icon,
+.entry.verb-follow>section .feed-id,
+.entry.verb-follow .action,
+.entry.verb-follow .composer
+{
+	display: none;
+}
+
+.entry.verb-repost>.entry, 
+.entry.verb-follow>.feed 
+{
+	position: relative;
+	left: -80px;
+	width: 100%;
+	margin-bottom: 0px;
+	border-top: 1px solid #ddd;
+}
+.entry.verb-repost>section .feed-title:after
+{
+	content: 'reposted';
+	font-weight: normal;
+}
+.entry.verb-follow>section .feed-title:after 
+{
+	content: 'followed';
+	font-weight: normal;
+}
+
+div.entry.verb-follow>div.feed {
+	text-align: left;
+	padding: 0px;
+	border-radius: 0px;
+	left: 0px;
+	width: 100%;
+	border-top: 0px;
+}
+
+.entry .feed .title {
+	margin-left: 80px;
+	font-size: 110%;
+}
+.entry .feed .feed-id {
+	width: 100%;
+	font-size: 85%;
+	margin-left: 80px;
+}
+
+.entry .feed .follow {
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	text-align: right;
+}
+.entry .feed .logo {
+	display: none;
+}
+
+
+/* @end */
+
+/* @group AV Widgetry */
+
+audio, video {
+	display: block;
+	clear: both;
+	margin-top: 8px;
+	width: 100%;
+	background-color: #444;
+}
+
+/* @end */
+
+/* @group Timestamp Formatters */
+
+.updated {
+	text-align: right;
+	margin-right: 16px;
+}
+
+/* never display raw time */
+.updated .raw {
+	display: none;
+}
+
+/* display absolute if more than a day */
+.updated.seconds .absolute,
+.updated.minutes .absolute,
+.updated.hours .absolute
+{
+	display: none;
+}
+
+/* display relative if less than a day */
+.updated .relative {
+	display: none;
+}
+.updated.seconds .relative,
+.updated.minutes .relative,
+.updated.hours .relative
+{
+	display: inherit;
+}
+
+/* never display hh:mm:ss */
+.updated .hour,
+.updated .minute,
+.updated .second {
+	display: none;
+}
+
+/* only show current granularity */
+.updated .seconds,
+.updated .minutes,
+.updated .hours,
+.updated .days,
+.updated .months,
+.updated .years {
+	display: none;
+}
+.updated.seconds .seconds,
+.updated.minutes .minutes,
+.updated.hours .hours {
+	display: inherit;
+}
+
+/* localization for relative */
+.updated .seconds:after {
+	content: 's';
+}
+.updated .minutes:after {
+	content: 'm';
+}
+.updated .hours:after {
+	content: 'h';
+}
+.updated .days:after {
+	content: 'd';
+}
+.updated .months:after {
+	content: 'mon';
+}
+.updated .years:after {
+	content: 'yr';
+}
+
+/* don't display year unless over a year */
+.updated .year {
+	display: none;
+}
+.updated.years .year {
+	display: inherit;
+}
+
+/* hh:mm:ss formatting we don't actually use */
+.updated .hour:after {
+	content: ':';
+}
+.updated .minute:after {
+	content: ':';
+}
+.updated .second:after {
+	content: ' ';
+}
+.updated .day:after {
+	content: ' ';
+}
+.updated .month:after {
+	content: ' ';
+}
+.updated .year:after {
+	content: ' ';
+}
+
+/* localized month values */
+.updated .month span {
+	display: none;
+}
+.updated .month[value='1']:after {
+	content: 'Jan';
+}
+.updated .month[value='2']:after {
+	content: 'Feb';
+}
+.updated .month[value='3']:after {
+	content: 'Mar';
+}
+.updated .month[value='4']:after {
+	content: 'Apr';
+}
+.updated .month[value='5']:after {
+	content: 'May';
+}
+.updated .month[value='6']:after {
+	content: 'Jun';
+}
+.updated .month[value='7']:after {
+	content: 'Jul';
+}
+.updated .month[value='8']:after {
+	content: 'Aug';
+}
+.updated .month[value='9']:after {
+	content: 'Sep';
+}
+.updated .month[value='10']:after {
+	content: 'Oct';
+}
+.updated .month[value='11']:after {
+	content: 'Nov';
+}
+.updated .month[value='12']:after {
+	content: 'Dec';
+}
+
+/* @end */
+
+/* @group Account Selector */
+
+nav {
+	width: 40%;
+	float: right;
+}
+
+.menu {
+	height: 64px;
+	overflow: hidden;
+	border-radius: 4px;
+	-webkit-user-select: none;	
+}
+
+.menu-item {
+	min-height: 32px;
+	padding: 16px 32px;
+	padding-right: 32px;
+	margin: 0px;
+	text-align: right;
+	x-webkit-transition: background-color .15s ease-in-out 0s;
+	cursor: pointer;
+	border-radius: 0px;
+	
+}
+
+.menu-item section {
+	height: 32px;;
+}
+
+
+.menu-item .icon {
+	display: inherit;
+	height: 32px;
+	width: 32px;
+	float: right;
+	padding: 0px;
+	margin: 0px;
+	margin-left: 8px;
+}
+
+.menu-item .title {
+	display: inherit;
+	font-size: 90%;
+	vertical-align: middle;
+	margin: 0px;
+	padding: 0px;
+	margin-top: 2px;
+	line-height: 16px;
+	min-height: 15px;
+}
+
+.menu-item .feed-id {
+	display: inherit;
+	font-size: 90%;
+	color: #999;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	margin-bottom: 0px;
+	line-height: 15px;
+	min-height: 15px;
+}
+
+/* So we can reuse the feed template here. */
+nav .menu-item>section>*,
+nav .menu-item .composer,
+nav .menu-item a
+{
+	display: none;
+}
+
+/* @group Account Selector Expanded */
+
+.menu-showing nav .menu {
+	height: auto;
+	background: #eee;
+}
+
+.menu-showing nav .menu-item .title {
+	color: #555;
+}
+
+.menu-showing nav .menu .menu-item:hover {
+	background: #fff;
+}
+
+/* @end */
+
+/* @group Sign-in Sign-out Menu Item */
+
+.accounts-loading nav .menu {
+	display: none;
+}
+
+nav .menu-item.login .title,
+nav .menu-item.edit .title,
+nav .menu-item.logout .title,
+nav .menu-item.create .title {
+	line-height: 32px;
+	vertical-align: middle;	
+}
+
+nav .menu-item {
+	border-bottom: 1px solid #ddd;
+}
+
+.signed-in nav .menu-item.login {
+	display: none;
+}
+nav .menu-item.login .title:after {
+	content: "Sign In";
+}
+
+nav .menu-item.create .title:after {
+	content: "New Account";
+}
+.signed-in nav .menu-item.create {
+	display: none;
+}
+
+nav .menu-item.edit {
+	display: none;
+}
+nav .menu-item.edit .icon {
+	visibility: hidden;
+}
+.signed-in nav .menu-item.edit {
+	display: inherit;
+}
+nav .menu-item.edit .title:after {
+	content: "Edit Profile";
+}
+
+nav .menu-item.logout {
+	display: none;
+}
+nav .menu-item.logout .icon {
+	visibility: hidden;
+}
+.signed-in nav .menu-item.logout {
+	display: inherit;
+}
+nav .menu-item.logout .title:after {
+	content: "Sign Out";
+}
+
+.signed-in .accounts .feed {
+	display: none;
+}
+.signed-in .accounts .feed.selected-account {
+	display: inherit;
+}
+
+/* @end */
+
+/* @group Back Button */
+
+.back.menu-item {
+	position: absolute;
+	border: none;
+	display: none;
+	min-width: 80px;
+}
+.has-back .back.menu-item {
+	display: inherit;
+}
+
+.back.menu-item .icon {
+	position: relative;
+	float: left;
+	background: none;
+}
+.back.menu-item .icon:after {
+	position: absolute;
+	background-image: url("/icon-back.png");
+	background-size: 32px;
+	content: ' ';
+	color: white;
+	left: 0px;
+	top: 0px;
+	width: 32px;
+	height: 32px;
+	line-height: 32px;
+	font-size: 32px;
+}
+
+.back.menu-item .title {
+	height: 32px;
+	line-height: 32px;
+	vertical-align: middle;
+}
+.back.menu-item .title:after {
+	content: 'Back';
+}
+
+/* @end */
+
+/* @end */
+
+/* @group Popup Handling */
+
+.popup-layer {
+	display: none;
+	position: fixed;
+	left: 0px;
+	right: 0px;
+	top: 0px;
+	bottom: 0px;
+	x-background-color: rgba(255,255,255,0.2);
+	z-index: 20;
+}
+.popup-showing .popup-layer {
+	display: inherit;
+}
+
+.popup-container {
+	position: absolute;
+	top: 65px;
+	left: 50%;
+	margin-left: -160px;
+	width: 260px;
+	background-color: #eee;
+	padding: 20px 30px;
+	border: 8px solid #ddd;
+	border-radius: 8px;
+	color: black;
+	text-align: center;
+}
+
+.popup-container input,
+.popup-container textarea
+{
+	width: 245px !important;
+}
+
+.popup-container div {
+	display: block;
+	width: 100%;
+	margin-bottom: 8px;
+}
+
+.popup-container>button {
+	padding: 8px 18px;
+	font-size: 90%;
+}
+
+.popup-container button.confirm {
+	float: right;
+}
+.popup-container button.confirm span:after {
+	content: 'Confirm';
+}
+
+.popup-container button.cancel {
+	float: left;
+}
+.popup-container button.cancel span:after {
+	content: 'Cancel';
+}
+
+/* @end */
+
+/* @group Feed Edit */
+
+.feed-edit * {
+	width: 100%;
+}
+
+.feed-edit {
+	padding-bottom: 8px;
+}
+
+.feed-edit .icon img {
+	width: 64px;
+	height: 64px;
+}
+
+.feed-edit:before {
+	display: block;
+	position: absolute;
+	content: 'Account Info';
+	color: #777;
+	font-size: 120%;
+	top: 50px;
+}
+
+.feed-edit .icon {
+	width: 64px;
+	height: 64px;
+	float: right;
+}
+
+.feed-edit .logo {
+	display: none;
+}
+
+/* @end */
+
+/* @group Password */
+
+.password.password-verify:before {
+	display: block;
+	content: 'Enter your passphrase:';
+	margin-bottom: 4px;
+}
+.invalid-password .password.password-verify:before {
+	content: 'Wrong passphrase: try again!';
+}
+
+.password.password-create:before {
+	display: block;
+	content: 'Choose a passphrase:';
+	margin-bottom: 8px;
+}
+
+.invalid-password-match .password.password-repeat:before {
+	display: block;
+	content: "Passphrases didn't match.";
+	padding-bottom: 8px;
+}
+
+.invalid-password-length .password.password-repeat:before {
+	display: block;
+	content: "Passphrase must be at least 12 characters.";
+	padding-bottom: 8px;
+}
+
+.password.password-repeat:after {
+	display: block;
+	content: 'At least 12 characters; case sensitive.  Longer and easy-to-remember is better than short-and-cryptic.';
+	margin-top: 8px;
+	padding-bottom: 8px;
+}
+
+/* @end */
+
+/* @group Footer Utils */
+
+.footer-container {
+	position: fixed;
+	bottom: 0px;
+	left: 0px;
+	right: 0px;
+	height: 34px;
+	z-index: 10;
+	border-top: 4px solid #ec5007;
+}
+
+body .footer-container footer {
+	padding: 0px;
+}
+
+body .footer-container .wrapper {
+	position: relative;
+}
+
+.util-feed-navigator {
+	display: block;
+	float: left;
+	top: 0px;
+	width: 30%;
+}
+
+.util-feed-navigator {
+	display: block;
+	float: left;
+	top: 0px;
+	width: 30%;
+}
+
+.util-search {
+	display: block;
+	float: right;
+	top: 0px;
+	width: 30%;
+}
+
+.footer-container input {
+	font-size: 100%;
+	padding: 4px;
+	margin: 4px;
+	border: none;
+	border-radius: 2px;
+	width: 100%;
+}
+.footer-container .util-feed-navigator input:before {
+	position: absolute;
+	content: ' ';
+	width: 20px;
+	height: 20px;
+	background-size: 20px;
+	left: -19px;
+	top: 6px;
+	background-image: url('/icon-rss.png');
+}
+
+.footer-container .util-search form {
+	position: relative;
+	display: block;
+	height: 32px;
+	vertical-align: middle;
+}
+.footer-container .util-search form input {
+	position: absolute;
+	bottom: 2px;
+	height: 20px;
+}
+.footer-container .util-search input:after {
+	position: absolute;
+	content: ' ';
+	width: 28px;
+	height: 28px;
+	right: -32px;
+	top: -6px;
+	background-image: url('/loading-on-gray.gif');
+	background-size: 28px 28px;
+	-webkit-transition: opacity .5s ease-in-out 0s;
+	opacity: 0;
+}
+.pending .footer-container .util-search input:after {
+	opacity: 1;
+}
+
+.util-browser-launcher {
+	display: block;
+	position: absolute;
+	margin: 5px;
+	left: 33%;
+	right: 33%;
+	text-align: center;
+	font-size: 85%;
+}
+
+.util-browser-launcher span:before {
+	display: block;
+	line-height: 24px;
+	content: 'Open in Browser';
+	color: white;
+}
+
+/* @end */
+
+/* @group Not Signed In */
+
+.signed-out .composer {
+	display: none;
+}
+
+.signed-out .public.composer {
+	display: none;
+}
+
+.signed-out .private.messaging {
+	display: none;
+}
+
+.signed-out div.action {
+	display: none;
+}
+
+/* @end */
+

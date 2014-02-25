@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!-->
+<html class="no-js">
+<!--<![endif]-->
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<title>Trsst</title>
+<meta name="description" content="">
+<meta name="viewport" content="width=device-width">
+
+<link rel="stylesheet" href="/boiler.css">
+<link rel="stylesheet" href="/ui.css">
+
+</head>
+<body class="pending">
+	<div class="header-container">
+		<header class="wrapper clearfix">
+			<div class="menu-item back">
+				<div class="icon">
+					<img border="0"></img>
+				</div>
+				<div class="title">
+					<span></span>
+				</div>
+			</div>
+			<h1 id="homeButton" class="title">
+				<a href="/"><img width="64" height="64" src="/icon-256.png" /><span>trsst</span></a>
+			</h1>
+			<nav>
+				<div class="menu">
+					<div class="menu-item login feed">
+						<div class="icon">
+							<img border="0"></img>
+						</div>
+						<div class="title">
+							<span></span>
+						</div>
+					</div>
+					<div class="menu-item create feed">
+						<div class="icon">
+							<img border="0"></img>
+						</div>
+						<div class="title">
+							<span></span>
+						</div>
+					</div>
+					<div class="accounts"></div>
+					<div class="menu-item edit feed">
+						<div class="icon">
+							<img border="0"></img>
+						</div>
+						<div class="title">
+							<span></span>
+						</div>
+					</div>
+					<div class="menu-item logout feed">
+						<div class="icon">
+							<img border="0"></img>
+						</div>
+						<div class="title">
+							<span></span>
+						</div>
+					</div>
+				</div>
+			</nav>
+		</header>
+	</div>
+
+	<div id="popupBackdrop" class="popup-layer">
+		<div id="popupContainer" class="popup-container"></div>
+	</div>
+
+	<div class="main-container">
+		<div class="main wrapper clearfix">
+
+			<aside>
+				<div id="feedContainer"></div>
+				<div class="private messaging">
+					<form class="private composer">
+						<img />
+						<textarea name="status" placeholder="Send a message" rows="3"></textarea>
+						<button class="submit">
+							<span></span>
+						</button>
+						<input name="mention" type="hidden" /> <input name="attach"
+							hidden="true" type="file" />
+						<button class="attach">
+							<span></span>
+						</button>
+						<select name="encrypt" hidden="true" class="visibility">
+							<option selected class="private">&#8226; Private</option>
+						</select>
+					</form>
+					<div id="messageContainer"></div>
+				</div>
+			</aside>
+
+			<article>
+				<form class="public composer">
+					<img />
+					<textarea name="status" placeholder="Your comments" rows="2"></textarea>
+					<button class="submit">
+						<span></span>
+					</button>
+					<input name="attach" hidden="true" type="file" />
+					<button class="attach">
+						<span></span>
+					</button>
+					<select name="encrypt" class="visibility">
+						<option value="" selected class="public">&#8226; Public</option>
+						<option value="-" class="self">&#8226; Self</option>
+					</select>
+				</form>
+				<div id="entryContainer"></div>
+			</article>
+
+		</div>
+		<!-- #main -->
+	</div>
+	<!-- #main-container -->
+
+	<div class="footer-container">
+		<footer class="wrapper">
+			<div class="util-feed-navigator">
+				<form>
+					<input type="text" placeholder="Paste a feed ID or URL" />
+				</form>
+			</div>
+			<div class="util-browser-launcher">
+				<a><span></span></a>
+			</div>
+			<div class="util-search">
+				<form>
+					<input type="search" placeholder="Search entries" />
+				</form>
+			</div>
+		</footer>
+	</div>
+
+	<div id="templates" style="display: none">
+
+		<div id="feedTemplate" class="feed">
+			<section>
+				<div class="logo">
+					<img border="0"></img>
+				</div>
+				<div class="icon">
+					<img border="0"></img>
+				</div>
+				<div class="title">
+					<span></span>
+				</div>
+				<div class="feed-id">
+					<span></span>
+				</div>
+				<div class="subtitle">
+					<span></span>
+				</div>
+				<div class="author-name">
+					<span></span>
+				</div>
+				<div class="author-email">
+					<span></span>
+				</div>
+				<div class="author-uri">
+					<a target="_blank"><span></span></a>
+				</div>
+				<div class="updated">
+					<span></span>
+				</div>
+				<div class="follow">
+					<button><span></span></button>
+				</div>
+			</section>
+		</div>
+
+		<div id="entryTemplate" class="entry">
+			<section>
+				<div id="entryTemplate-icon" class="icon">
+					<a><img border="0"></img></a>
+				</div>
+				<div class="feed-title">
+					<a><span></span></a>
+				</div>
+				<div class="feed-id">
+					<a><span></span></a>
+				</div>
+				<div class="title">
+					<span></span>
+				</div>
+				<div class="summary">
+					<div class="overlay">
+						<iframe scrolling="no" seamless="seamless" sandbox=""></iframe>
+					</div>
+				</div>
+				<div class="updated">
+					<div class="raw">
+						<span></span>
+					</div>
+					<div class="absolute">
+						<span class="hour"><span></span></span><span class="minute"><span></span></span><span
+							class="second"><span></span></span><span class="day"><span></span></span><span
+							class="month"><span></span></span><span class="year"><span></span></span>
+					</div>
+					<div class="relative">
+						<span class="hours"><span></span></span><span class="minutes"><span></span></span><span
+							class="seconds"><span></span></span><span class="days"><span></span></span><span
+							class="months"><span></span></span><span class="years"><span></span></span>
+					</div>
+				</div>
+				<div class="content">
+					<span></span>
+				</div>
+				<div class="action like">
+					<a><span></span></a>
+				</div>
+				<div class="action repost">
+					<a><span></span></a>
+				</div>
+				<div class="action comment">
+					<a><span></span></a>
+				</div>
+				<div class="action expand">
+					<a><span></span></a>
+				</div>
+				<form class="reply composer">
+					<img />
+					<textarea name="status" placeholder="Your comments" rows="2"></textarea>
+					<button class="submit">
+						<span></span>
+					</button>
+					<input name="attach" hidden="true" type="file" />
+					<button class="attach">
+						<span></span>
+					</button>
+					<select name="encrypt" class="visibility">
+						<option value="" selected class="public">&#8226; Public</option>
+						<option class="private">&#8226; Private</option>
+						<option value="-" class="self">&#8226; Self</option>
+					</select>
+				</form>
+			</section>
+		</div>
+
+		<form id="feedEditTemplate" class="feed-edit">
+			<div class="logo">
+				<img border="0"></img> <input name="logo" hidden="true" type="file" />
+			</div>
+			<div class="icon">
+				<img border="0"></img> <input name="icon" hidden="true" type="file" />
+			</div>
+			<div class="title">
+				<input name="title" type="text" placeholder="Optional Name" />
+			</div>
+			<div class="subtitle">
+				<textarea name="subtitle" placeholder="Optional Description"></textarea>
+			</div>
+			<div class="base">
+				<input name="base" type="text" placeholder="Optional Home Base URL" />
+			</div>
+		</form>
+
+		<div id="passwordVerifyTemplate" class="password-verify">
+			<div class="password password-verify">
+				<input id="password-verify" type="password" />
+			</div>
+		</div>
+
+		<div id="passwordCreateTemplate" class="password-create">
+			<div class="password password-create">
+				<input id="password-create" type="password"
+					placeholder="Create your passphrase" />
+			</div>
+			<div class="password password-repeat">
+				<input id="password-repeat" type="password"
+					placeholder="Repeat your passphrase" />
+			</div>
+		</div>
+	</div>
+
+	<script src="/jquery-1.10.1.js"></script>
+	<script src="/model.js"></script>
+	<script src="/pollster.js"></script>
+	<script src="/composer.js"></script>
+	<script src="/controller.js"></script>
+</body>
+</html>
+
