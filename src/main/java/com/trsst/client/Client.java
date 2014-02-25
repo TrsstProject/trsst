@@ -223,6 +223,11 @@ public class Client {
             urn = urn.substring("urn:feed:".length());
         } else if (urn.startsWith("urn:entry:")) {
             urn = urn.substring("urn:entry:".length());
+            // convert from urn to a trsst url path
+            int sep = urn.lastIndexOf(':');
+            if (sep != -1) {
+                urn = urn.substring(0, sep) + '/' + urn.substring(sep + 1);
+            }
         }
 
         URL url = null;
@@ -448,7 +453,7 @@ public class Client {
             if (options.mentions != null) {
                 for (String s : options.mentions) {
                     entry.addSimpleExtension(new QName(Common.NS_URI,
-                            Common.REFERENCE, Common.NS_ABBR), s);
+                            Common.MENTION, Common.NS_ABBR), s);
                 }
             }
             if (options.tags != null) {
@@ -457,12 +462,13 @@ public class Client {
                 }
             }
 
-            // generate an AES256 key and encrypt
+            // generate an AES256 key for encrypting
             byte[] contentKey = null;
             if (options.recipientKeys != null) {
                 contentKey = Crypto.generateAESKey();
             }
 
+            // for each content part
             for (int part = 0; part < contentIds.length; part++) {
                 byte[] currentContent = options.getContentData()[part];
                 String currentType = options.getMimetypes()[part];
@@ -619,7 +625,7 @@ public class Client {
                     }
 
                     // encrypt content key separately for each recipient
-                    for (PublicKey recipient : options.recipientKeys) {
+                    for (PublicKey recipient : keys) {
                         byte[] bytes = Crypto.encryptIES(contentKey, recipient);
                         String encoded = new Base64(0, null, true)
                                 .encodeToString(bytes);
