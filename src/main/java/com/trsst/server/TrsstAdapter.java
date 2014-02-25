@@ -779,7 +779,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             if ("delete".equals(verb)) {
                 // get mentions
                 List<Element> mentions = entry.getExtensions(new QName(
-                        Common.NS_URI, Common.REFERENCE));
+                        Common.NS_URI, Common.MENTION));
                 for (Element mention : mentions) {
                     Entry deleted = null;
                     try {
@@ -1178,7 +1178,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
             // add reference to deleting id
             replacement.addSimpleExtension(new QName(Common.NS_URI,
-                    Common.REFERENCE), Common.toEntryUrn(feedId, deletingId));
+                    Common.MENTION), Common.toEntryUrn(feedId, deletingId));
 
             // write the entry
             persistence.updateEntry(feedId, deletedId,

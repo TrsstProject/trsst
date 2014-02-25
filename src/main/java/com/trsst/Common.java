@@ -72,7 +72,7 @@ public class Common {
     public static final String NS_ABBR = "trsst";
     public static final String SIGN = "sign";
     public static final String ENCRYPT = "encrypt";
-    public static final String REFERENCE = "reference";
+    public static final String MENTION = "mention";
     public static final String PREDECESSOR = "predecessor";
     public static final String ATTACHMENT_DIGEST = "digest";
     public static final String PREDECESSOR_ID = "id";
