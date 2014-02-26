@@ -1,3 +1,7 @@
+/* @override 
+http://localhost:8181/ui.css
+http://127.0.0.1:8181/ui.css */
+
 /*
  * Copyright 2014 mpowers
  *
@@ -13,9 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* @override 
-https://localhost:8181/ui.css
-http://localhost:8181/ui.css */
 
 body {
 	background-color: #ddd;
@@ -254,7 +255,7 @@ body.pending #entryContainer:empty:before {
 }
 
 #feedContainer a {
-	color: #f98131;
+	cursor: pointer;
 }
 
 /* @end */
@@ -806,10 +807,13 @@ body.pending #entryContainer:empty:before {
 div.entry.verb-follow>div.feed {
 	text-align: left;
 	padding: 0px;
+	top: -8px;
+	left: -80px;
 	border-radius: 0px;
-	left: 0px;
-	width: 100%;
 	border-top: 0px;
+}
+div.entry.verb-follow>div.feed .subtitle {
+	margin-left: 80px;
 }
 
 .entry .feed .title {
@@ -823,10 +827,10 @@ div.entry.verb-follow>div.feed {
 }
 
 .entry .feed .follow {
-	left: 0px;
-	right: 0px;
-	bottom: 0px;
+	right: -86px;
+	top: 4px;
 	text-align: right;
+	left: inherit;
 }
 .entry .feed .logo {
 	display: none;
