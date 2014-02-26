@@ -92,6 +92,26 @@
 			}
 		});
 
+		// enable clickable anchors
+		feedElement.find("a").click(function(event) {
+			var url = $(event.target).closest("a").attr("src");
+			if (!url) {
+				// if not specified open as internal link
+				event.preventDefault();
+				url = $(event.target).closest('.feed').attr("feed");
+				if (url.indexOf("urn:feed:") === 0) {
+					url = url.substring("urn:feed:".length);
+				}
+				if (url) {
+					window.history.pushState(null, null, "/" + url);
+					onPopulate();
+				} else {
+					console.log("Feed click: could not determine destination");
+					console.log(event);
+				}
+			}
+		});
+
 		return feedElement;
 	};
 
@@ -628,7 +648,8 @@
 					base = base.substring(0, index - 1);
 				}
 			} else {
-				base = ""; // or: "http://home.trsst.com/feed";
+				// default to trsst hub
+				base = "http://home.trsst.com/feed";
 			}
 			form.find(".title input").val(feedData.children("title").text());
 			form.find(".subtitle textarea").val(feedData.children("subtitle").text());
@@ -849,11 +870,14 @@
 
 		/* Reroute all preexisting anchors */
 		$("a").click(function(e) {
-			e.preventDefault();
-			var url = $(e.target).closest("a").attr("href");
-			if (url) {
-				window.history.pushState(null, null, url);
-				onPopulate();
+			var a = $(e.target).closest("a");
+			if (a.attr("target") !== "_blank") {
+				e.preventDefault();
+				var url = a.attr("href");
+				if (url) {
+					window.history.pushState(null, null, url);
+					onPopulate();
+				}
 			}
 		});
 
