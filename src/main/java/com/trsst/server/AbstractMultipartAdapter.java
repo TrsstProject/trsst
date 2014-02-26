@@ -64,11 +64,13 @@ public abstract class AbstractMultipartAdapter extends
     }
 
     protected List<MultipartRelatedPost> getMultipartRelatedData(
-            RequestContext request) throws IOException, ParseException,
+            RequestContext request, InputStream requestData) throws IOException, ParseException,
             MessagingException {
 
+        //NOTE: because request.getInputStream() has already been read 
+        // we pass in a seperate input stream containing the request data
+        MultipartInputStream stream = getMultipartStream(request, requestData);
         List<MultipartRelatedPost> result = new LinkedList<MultipartRelatedPost>();
-        MultipartInputStream stream = getMultipartStream(request);
         stream.skipBoundary();
 
         String start = request.getContentType().getParameter(START_PARAM);
@@ -121,7 +123,7 @@ public abstract class AbstractMultipartAdapter extends
         return result;
     }
 
-    private MultipartInputStream getMultipartStream(RequestContext request)
+    private MultipartInputStream getMultipartStream(RequestContext request, InputStream inputStream)
             throws IOException, ParseException, IllegalArgumentException {
         String boundary = request.getContentType().getParameter(BOUNDARY_PARAM);
 
@@ -140,7 +142,7 @@ public abstract class AbstractMultipartAdapter extends
         }
 
         PushbackInputStream pushBackInput = new PushbackInputStream(
-                request.getInputStream(), 2);
+                inputStream, 2);
         pushBackInput.unread("\r\n".getBytes());
 
         return new MultipartInputStream(pushBackInput, boundary.getBytes());

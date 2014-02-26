@@ -15,11 +15,15 @@
  */
 package com.trsst.server;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.StringReader;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.PublicKey;
@@ -557,7 +561,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     public ResponseContext postMedia(RequestContext request) {
         try {
             if (MimeTypeHelper.isMultipart(request.getContentType().toString())) {
-                List<MultipartRelatedPost> posts = getMultipartRelatedData(request);
+                byte[] requestData = Common.readFully(request.getInputStream());
+                List<MultipartRelatedPost> posts = getMultipartRelatedData(
+                        request, new ByteArrayInputStream(requestData));
                 Feed incomingFeed = null;
                 if (posts != null) {
                     Map<String, Entry> contentIdToEntry = new HashMap<String, Entry>();
@@ -639,6 +645,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                                                 + hash);
                             }
                         }
+                        forwardIfNeeded(incomingFeed, request, requestData);
                         return ProviderHelper.returnBase(incomingFeed, 201,
                                 null);
                     }
@@ -1108,12 +1115,13 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 // WORKAROUND:
                 // loading the stream and making our own parser works
                 byte[] bytes = Common.readFully(request.getInputStream());
+                System.out.println(new String(bytes, "UTF-8"));
                 Feed incomingFeed = (Feed) Abdera.getInstance().getParser()
                         .parse(new ByteArrayInputStream(bytes)).getRoot();
 
                 // we require a feed entity (not solo entries like atompub)
                 ingestFeed(incomingFeed);
-
+                forwardIfNeeded(incomingFeed, request, bytes);
                 return ProviderHelper.returnBase(incomingFeed, 201, null);
             } catch (XMLSignatureException xmle) {
                 log.error("Could not verify signature: ", xmle);
@@ -1438,6 +1446,68 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     public ResponseContext headMedia(RequestContext request) {
         // TODO: implement HEAD support
         return getMedia(request);
+    }
+
+    /**
+     * Checks to see if this request needs to be forwarded, and spawns tasks to
+     * do so if needed.
+     * 
+     * @param context
+     * @param hostUrl
+     */
+    private void forwardIfNeeded(Feed feed, RequestContext request,
+            byte[] requestData) {
+        IRI ourUri = request.getBaseUri();
+        IRI theirUri = feed.getBaseUri();
+        if (theirUri != null) {
+            String url = theirUri.toString();
+            if (!url.startsWith(ourUri.toString())) {
+                // TODO: we want to eventually post to naked service url
+                // String feedId = Common.toFeedIdString(feed.getId());
+                // int index = url.indexOf(feedId);
+                // if (index != -1) {
+                // url = url.substring(0, index - 1); // trailing slash
+                // }
+                forwardPostToUrl(request,
+                        new ByteArrayInputStream(requestData), url);
+            }
+        }
+    }
+
+    /**
+     * Copies the current request and sends it to the specified host. Called
+     * when someone posts to us an entry whose home is on another server: we
+     * still ingest a copy but we make sure it gets where it needs to go.
+     * 
+     * @param context
+     * @param hostUrl
+     */
+    private void forwardPostToUrl(RequestContext request,
+            InputStream requestStream, String hostUrl) {
+        try {
+            URL url = new URL(hostUrl);
+            HttpURLConnection connection = (HttpURLConnection) url
+                    .openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", request
+                    .getContentType().toString());
+            connection.setDoInput(false);
+            connection.setDoOutput(true);
+            connection.connect();
+            OutputStream output = new BufferedOutputStream(
+                    connection.getOutputStream());
+            InputStream input = new BufferedInputStream(requestStream);
+            int len;
+            byte[] buf = new byte[256];
+            while ((len = input.read(buf)) != -1) {
+                output.write(buf, 0, len);
+            }
+            output.flush();
+            output.close();
+            connection.disconnect();
+        } catch (IOException ioe) {
+            log.warn("Unexpected error while forwarding: ", ioe);
+        }
     }
 
 }
