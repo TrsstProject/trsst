@@ -15,8 +15,6 @@
  */
 package com.trsst.server;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -27,13 +25,15 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.PublicKey;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -142,17 +142,17 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // if async fetch is allowed
         if (wrapper.getParameter("sync") == null) {
             // return latest from local storage
-            feed = fetchFeedFromStorage(feedId);
+            feed = fetchFeedFromStorage(feedId, persistence);
             if (feed != null) {
                 // trigger async fetch in case we're stale
-                fetchLaterFromRelay(feedId, request);
+                pullLaterFromRelay(feedId, request);
             }
         }
 
         // otherwise fetch synchronously
         if (feed == null) {
             // attempt to fetch from relay peer
-            feed = fetchFromRelay(request);
+            feed = pullFromRelay(request);
         }
 
         if (feed != null) {
@@ -170,12 +170,12 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         throw new FileNotFoundException("Not found: " + feedId);
     }
 
-    private Feed fetchFeedFromStorage(String feedId) {
+    private static Feed fetchFeedFromStorage(String feedId, Storage storage) {
         Feed feed = null;
         try {
             log.debug("fetchFeedFromStorage: " + feedId);
             feed = (Feed) Abdera.getInstance().getParser()
-                    .parse(new StringReader(persistence.readFeed(feedId)))
+                    .parse(new StringReader(storage.readFeed(feedId)))
                     .getRoot();
         } catch (FileNotFoundException fnfe) {
             log.debug("Not found in local storage: " + feedId);
@@ -196,7 +196,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * likelihood that a refetch is needed, e.g. factoring in time since last
      * update and frequency of updates, etc.
      */
-    protected void fetchLaterFromRelay(final String feedId,
+    protected void pullLaterFromRelay(final String feedId,
             final RequestContext request) {
         if (TASK_QUEUE == null) {
             TASK_QUEUE = new Timer();
@@ -208,7 +208,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             TimerTask task = new TimerTask() {
                 public void run() {
                     log.debug("fetchLaterFromRelay: starting: " + uri);
-                    fetchFromRelay(request);
+                    pullFromRelay(request);
                     COALESCING_TIMERS.remove(uri);
                 }
             };
@@ -220,12 +220,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     public static Timer TASK_QUEUE;
     private static Map<String, TimerTask> COALESCING_TIMERS = new Hashtable<String, TimerTask>();
 
-    /**
-     * 
-     * @param request
-     * @return
-     */
-    private Feed fetchFromRelay(RequestContext request) {
+    private Feed pullFromRelay(RequestContext request) {
         Feed result = null;
         RequestContextWrapper wrapper = new RequestContextWrapper(request);
         int limit = 5; // arbitrary
@@ -245,10 +240,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // if relay peer count is less than search limit
         List<String> relays = wrapper.getParameters("relay");
         if (relays == null || relays.size() <= limit) {
-            URL relayPeer = getRelayPeer();
+            URL relayPeer = getRelayPeer(relays);
             if (relayPeer != null) {
                 log.debug("Using relay peer: " + relayPeer);
-                result = fetchFromServiceUrl(request, relayPeer);
+                result = pullFromServiceUrl(request, relayPeer);
             } else {
                 log.debug("No relay peer available for request: "
                         + request.getResolvedUri());
@@ -278,7 +273,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                     }
                 } else {
                     // ingest the native feed
-                    ingestFeed(result);
+                    ingestFeed(persistence, result);
                 }
             } catch (Throwable t) {
                 log.error("Could not ingest feed: " + feedId, t);
@@ -295,8 +290,11 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * implementation currently returns a relay from the
      * com.trsst.client.storage property, or null if the property does not
      * exist.
+     * 
+     * @param relays
+     *            may not return any relay on this list
      */
-    protected URL getRelayPeer() {
+    protected URL getRelayPeer(List<String> excludeHashes) {
         if (RELAYS == null) {
             String property = System.getProperty("com.trsst.server.relays");
             if (property == null) {
@@ -305,34 +303,34 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 RELAYS = property.split(",");
             }
         }
-        try {
-            if (RELAYS.length == 0) {
-                return null;
-            } else if (RELAYS.length == 1) {
-                return new URL(RELAYS[0]);
-            }
-            return new URL(RELAYS[RELAY_RANDOM.nextInt(RELAYS.length)]);
-        } catch (MalformedURLException e) {
-            log.error("getRelayPeer: should never happen", e);
-            return null;
+        // return a random relay that's not on the exclude list
+        Set<String> excludes = new HashSet<String>();
+        if (excludeHashes != null) {
+            excludes.addAll(excludeHashes);
         }
+        List<String> relays = new LinkedList<String>();
+        for (String relay : RELAYS) {
+            relays.add(relay);
+        }
+        Collections.shuffle(relays);
+        for (String relay : relays) {
+            try {
+                if (!excludes.contains(relay)) {
+                    return new URL(relay);
+                }
+            } catch (MalformedURLException e) {
+                log.error("getRelayPeer: bad relay specified: " + relay, e);
+            }
+        }
+        return null;
     }
 
-    private static final Random RELAY_RANDOM = new Random();
-    private static String[] RELAYS;
-
     /**
-     * Fetch from the specified trsst service url, validate it, ingest it, and
-     * return the returned feed.
+     * Return a one-way hash token for the specified relay url.
      */
-    private Feed fetchFromServiceUrl(RequestContext request, URL serviceUrl) {
-        Feed result = null;
-        log.trace("fetchFromServiceUrl: uri: " + request.getResolvedUri());
-        IRI uri = request.getResolvedUri();
-        String hostName = uri.getHost();
+    protected String getHashForRelay(String relay) {
         // FLAG: hash name for a bit of extra obscurity
-        String hashName = Integer.toHexString(hostName.hashCode());
-        // is this overkill? #paranoid
+        // would this be overkill? #paranoid
         // byte[] hostBytes;
         // try {
         // hostBytes = hostName.getBytes("UTF-8");
@@ -342,6 +340,21 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // log.error("Should never happen", e1);
         // hashName = hostName;
         // }
+        return Integer.toHexString(relay.hashCode());
+    }
+
+    private static String[] RELAYS;
+
+    /**
+     * Fetch from the specified trsst service url, validate it, ingest it, and
+     * return the returned feed.
+     */
+    private Feed pullFromServiceUrl(RequestContext request, URL serviceUrl) {
+        Feed result = null;
+        log.trace("fetchFromServiceUrl: uri: " + request.getResolvedUri());
+        IRI uri = request.getResolvedUri();
+        String hostName = uri.getHost();
+        String hashName = getHashForRelay(hostName);
         String queryString = uri.getQuery();
         if (queryString == null) {
             queryString = "";
@@ -364,29 +377,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         if (index != -1) {
             path = path.substring(0, index);
         }
-        if (!path.startsWith("/")) {
-            path = "/" + path;
-        }
 
-        try {
-            URL url = new URL(serviceUrl.toString() + path + '?' + queryString);
-            log.info("fetchFromServiceUrl: " + url);
-            InputStream input = url.openStream();
-            result = (Feed) Abdera.getInstance().getParser().parse(input)
-                    .getRoot();
-        } catch (FileNotFoundException fnfe) {
-            log.warn("Could not fetch from relay: " + feedId);
-        } catch (MalformedURLException urle) {
-            log.error("Could not construct relay fetch url: "
-                    + serviceUrl.toString() + '?' + queryString);
-        } catch (IOException ioe) {
-            log.error("Could not connect: " + feedId, ioe);
-        } catch (ClassCastException cce) {
-            log.error("Not a valid feed: " + feedId, cce);
-        } catch (Exception e) {
-            log.error("Could not process feed from relay: " + feedId, e);
-        }
-        return result;
+        return pullFromService(serviceUrl.toString(), path, queryString);
     }
 
     /**
@@ -514,7 +506,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             result = currentFeed(request);
             // add requested entry
             String entryId = request.getTarget().getParameter("entry");
-            Document<Entry> entry = getEntry(Common.toEntryId(entryId));
+            Document<Entry> entry = getEntry(persistence, feedId,
+                    Common.toEntryId(entryId));
             if (entry != null) {
                 result.addEntry(entry.getRoot());
             } else {
@@ -534,7 +527,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
     }
 
-    private Document<Entry> getEntry(long entryId) {
+    private static Document<Entry> getEntry(Storage storage, String feedId,
+            long entryId) {
         try {
             // NOTE: by this point currentFeed() will have fetched
             // the requested entry via relay if needed
@@ -544,8 +538,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             return Abdera
                     .getInstance()
                     .getParser()
-                    .parse(new StringReader(persistence.readEntry(feedId,
-                            entryId)));
+                    .parse(new StringReader(storage.readEntry(feedId, entryId)));
         } catch (FileNotFoundException fnfe) {
             // fall through
         } catch (Exception e) {
@@ -611,7 +604,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                     }
                     // if all content ids match an entry content element
                     if (contentIdToEntry.size() == posts.size()) {
-                        ingestFeed(incomingFeed);
+                        ingestFeed(persistence, incomingFeed);
                         for (Map.Entry<String, Entry> i : contentIdToEntry
                                 .entrySet()) {
                             String cid = i.getKey();
@@ -645,7 +638,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                                                 + hash);
                             }
                         }
-                        forwardIfNeeded(incomingFeed, request, requestData);
+                        pushRawPostIfNeeded(incomingFeed, request, requestData);
                         return ProviderHelper.returnBase(incomingFeed, 201,
                                 null);
                     }
@@ -673,8 +666,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @throws Exception
      *             any other problem
      */
-    protected void ingestFeed(Feed feed) throws XMLSignatureException,
-            IllegalArgumentException, Exception {
+    protected static void ingestFeed(Storage storage, Feed feed)
+            throws XMLSignatureException, IllegalArgumentException, Exception {
 
         // clone a copy so we can manipulate
         feed = (Feed) feed.clone();
@@ -683,13 +676,14 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         Date lastUpdated = feed.getUpdated();
         if (lastUpdated == null) {
             throw new IllegalArgumentException(
-                    "Feed update timestamp is required: " + feedId);
+                    "Feed update timestamp is required: " + feed.getId());
         }
         if (lastUpdated.after(new Date(
                 System.currentTimeMillis() + 1000 * 60 * 5))) {
             // allows five minutes of variance
             throw new IllegalArgumentException(
-                    "Feed update timestamp cannot be in the future: " + feedId);
+                    "Feed update timestamp cannot be in the future: "
+                            + feed.getId());
         }
 
         // grab the signing key
@@ -697,7 +691,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 Common.SIGN));
         if (signingElement == null) {
             throw new XMLSignatureException(
-                    "Could not find signing key for feed: " + feedId);
+                    "Could not find signing key for feed: " + feed.getId());
         }
 
         // verify that the key matches the id
@@ -726,16 +720,17 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         for (Entry entry : feed.getEntries()) {
             if (!signature.verify(entry, options)) {
                 log.warn("Could not verify signature for entry with id: "
-                        + feedId);
+                        + feed.getId());
                 throw new XMLSignatureException(
                         "Could not verify signature for entry with id: "
-                                + entry.getId() + " : " + feedId);
+                                + entry.getId() + " : " + feed.getId());
             }
             // remove from feed parent
             entry.discard();
             try {
                 // see if this file already exists
-                persistence.readEntry(feedId, Common.toEntryId(entry.getId()));
+                storage.readEntry(Common.toFeedIdString(feed.getId()),
+                        Common.toEntryId(entry.getId()));
                 // this file exists; remove from processing
                 entries.remove(entry);
             } catch (FileNotFoundException e) {
@@ -763,13 +758,16 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // now validate feed signature sans entries
         if (!signature.verify(feed, options)) {
-            log.warn("Could not verify signature for feed with id: " + feedId);
+            log.warn("Could not verify signature for feed with id: "
+                    + feed.getId());
             throw new XMLSignatureException(
-                    "Could not verify signature for feed with id: " + feedId);
+                    "Could not verify signature for feed with id: "
+                            + feed.getId());
         }
 
         // persist feed
-        persistence.updateFeed(feedId, feed.getUpdated(), feed.toString());
+        storage.updateFeed(Common.toFeedIdString(feed.getId()),
+                feed.getUpdated(), feed.toString());
         // only now persist each entry
         for (Entry entry : entries) {
             Date date = entry.getPublished();
@@ -777,8 +775,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 // fall back to updated if publish not set
                 date = entry.getUpdated();
             }
-            persistence.updateEntry(feedId, Common.toEntryId(entry.getId()),
-                    date, entry.toString());
+            storage.updateEntry(Common.toFeedIdString(feed.getId()),
+                    Common.toEntryId(entry.getId()), date, entry.toString());
 
             // check for delete operation
             String verb = entry.getSimpleExtension(new QName(
@@ -790,7 +788,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 for (Element mention : mentions) {
                     Entry deleted = null;
                     try {
-                        deleted = deleteEntry(
+                        deleted = deleteEntry(storage,
+                                Common.toFeedIdString(feed.getId()),
                                 Common.toEntryId(mention.getText()),
                                 Common.toEntryId(entry.getId()));
                     } catch (IOException exc) {
@@ -1080,7 +1079,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         if (updated == null) {
             log.debug("Ingesting RSS feed with no update timestamp: using last known time"
                     + feedId);
-            Feed existingFeed = fetchFeedFromStorage(feedId);
+            Feed existingFeed = fetchFeedFromStorage(feedId, persistence);
             if (existingFeed != null) {
                 updated = existingFeed.getUpdated();
             }
@@ -1120,8 +1119,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                         .parse(new ByteArrayInputStream(bytes)).getRoot();
 
                 // we require a feed entity (not solo entries like atompub)
-                ingestFeed(incomingFeed);
-                forwardIfNeeded(incomingFeed, request, bytes);
+                ingestFeed(persistence, incomingFeed);
+                pushRawPostIfNeeded(incomingFeed, request, bytes);
                 return ProviderHelper.returnBase(incomingFeed, 201, null);
             } catch (XMLSignatureException xmle) {
                 log.error("Could not verify signature: ", xmle);
@@ -1157,9 +1156,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @param deletingId
      *            the id to be mentioned
      */
-    private Entry deleteEntry(long deletedId, long deletingId)
-            throws IOException {
-        Document<Entry> document = getEntry(deletedId);
+    private static Entry deleteEntry(Storage storage, String feedId,
+            long deletedId, long deletingId) throws IOException {
+        Document<Entry> document = getEntry(storage, feedId, deletedId);
         Element element;
         if (document != null) {
 
@@ -1189,8 +1188,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                     Common.MENTION), Common.toEntryUrn(feedId, deletingId));
 
             // write the entry
-            persistence.updateEntry(feedId, deletedId,
-                    replacement.getUpdated(), replacement.toString());
+            storage.updateEntry(feedId, deletedId, replacement.getUpdated(),
+                    replacement.toString());
             return replacement;
         }
         return null;
@@ -1317,7 +1316,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         int end = Math.min(entryIds.length, start + length);
         Document<Entry> document;
         for (int i = start; i < end; i++) {
-            document = getEntry(entryIds[i]);
+            document = getEntry(persistence, feedId, entryIds[i]);
             if (document != null) {
                 feed.addEntry((Entry) document.getRoot().clone());
             } else {
@@ -1394,8 +1393,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
     }
 
-    private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(this
-            .getClass());
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory
+            .getLogger(TrsstAdapter.class);
 
     public Map<String, String> getAlternateAccepts(RequestContext request) {
         if (accepts == null) {
@@ -1455,7 +1454,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @param context
      * @param hostUrl
      */
-    private void forwardIfNeeded(Feed feed, RequestContext request,
+    private void pushRawPostIfNeeded(Feed feed, RequestContext request,
             byte[] requestData) {
         IRI ourUri = request.getBaseUri();
         IRI theirUri = feed.getBaseUri();
@@ -1463,13 +1462,13 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             String url = theirUri.toString();
             if (!url.startsWith(ourUri.toString())) {
                 // TODO: we want to eventually post to naked service url
-                // String feedId = Common.toFeedIdString(feed.getId());
-                // int index = url.indexOf(feedId);
-                // if (index != -1) {
-                // url = url.substring(0, index - 1); // trailing slash
-                // }
-                forwardPostToUrl(request,
-                        new ByteArrayInputStream(requestData), url);
+                String feedId = Common.toFeedIdString(feed.getId());
+                int index = url.indexOf(feedId);
+                if (index != -1) {
+                    url = url.substring(0, index - 1); // trailing slash
+                }
+                syncToService(feedId, persistence, url);
+                pushRawPost(feed, request, requestData, url);
             }
         }
     }
@@ -1482,8 +1481,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @param context
      * @param hostUrl
      */
-    private void forwardPostToUrl(RequestContext request,
-            InputStream requestStream, String hostUrl) {
+    private void pushRawPost(Feed feed, RequestContext request,
+            byte[] requestData, String hostUrl) {
         try {
             URL url = new URL(hostUrl);
             HttpURLConnection connection = (HttpURLConnection) url
@@ -1491,23 +1490,180 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", request
                     .getContentType().toString());
-            connection.setDoInput(false);
+            connection.setDoInput(true);
             connection.setDoOutput(true);
             connection.connect();
-            OutputStream output = new BufferedOutputStream(
-                    connection.getOutputStream());
-            InputStream input = new BufferedInputStream(requestStream);
-            int len;
-            byte[] buf = new byte[256];
-            while ((len = input.read(buf)) != -1) {
-                output.write(buf, 0, len);
-            }
+            OutputStream output = connection.getOutputStream();
+            output.write(requestData);
             output.flush();
             output.close();
             connection.disconnect();
+            System.out.println("Response: " + connection.getResponseCode()
+                    + " : " + connection.getResponseMessage());
+            log.debug("Forwarded to: " + hostUrl);
         } catch (IOException ioe) {
-            log.warn("Unexpected error while forwarding: ", ioe);
+            log.warn("Connection error while connecting to: " + hostUrl, ioe);
+        } catch (Throwable t) {
+            log.error("Unexpected error while forwarding to: " + hostUrl, t);
         }
+    }
+
+    private static boolean syncToService(String id, Storage storage,
+            String serviceUrl) {
+        Feed localFeed = fetchFeedFromStorage(id, storage);
+        Feed remoteFeed = pullFromService(serviceUrl, id, "count=1");
+        if (localFeed != null && remoteFeed != null) {
+            // find which is most recent
+            long[] entryIds = storage.getEntryIdsForFeedId(id, 0, 1, null,
+                    null, null, null, null, null);
+            List<Entry> remoteEntries = remoteFeed.getEntries();
+            if (entryIds.length == 0) {
+                // no local entries: treat as no feed and drop below
+                localFeed = null;
+            }
+            if (remoteEntries.size() == 0) {
+                // no remote entries: treat as no feed and drop below
+                remoteFeed = null;
+            }
+            if (localFeed != null && remoteFeed != null) {
+                // compare timestamps
+                Date localDate = new Date(entryIds[0]);
+                Date remoteDate = remoteEntries.get(0).getUpdated();
+                if (localDate.before(remoteDate)) {
+                    // remote has latest info: pull difference
+                    try {
+                        remoteFeed = pullFromService(
+                                serviceUrl,
+                                id,
+                                "count=99&after="
+                                        + Long.toHexString(localDate.getTime()));
+                        ingestFeed(storage, remoteFeed);
+                        return true;
+                    } catch (IllegalArgumentException e) {
+                        log.warn("syncToService: ingest latest remote: invalid feed: "
+                                + id
+                                + " : "
+                                + serviceUrl
+                                + " : "
+                                + Long.toHexString(localDate.getTime()));
+                    } catch (XMLSignatureException e) {
+                        log.warn("syncToService: ingest latest remote: invalid signature: "
+                                + id
+                                + " : "
+                                + serviceUrl
+                                + " : "
+                                + Long.toHexString(localDate.getTime()));
+                    } catch (Exception e) {
+                        log.error("syncToService: ingest latest remote: unexpected error: "
+                                + id
+                                + " : "
+                                + serviceUrl
+                                + " : "
+                                + Long.toHexString(localDate.getTime()));
+                    }
+                } else if (remoteDate.before(localDate)) {
+                    // local has latest info: push difference
+                    entryIds = storage.getEntryIdsForFeedId(id, 0, 99,
+                            remoteDate, null, null, null, null, null);
+                    for (long entryId : entryIds) {
+                        localFeed.addEntry(getEntry(storage, id, entryId)
+                                .getRoot());
+                    }
+                    return pushToService(localFeed, serviceUrl);
+                }
+                // otherwise: feeds are in sync
+                return true;
+            }
+        }
+
+        if (localFeed == null && remoteFeed != null) {
+            // local is missing: ingest remote
+            try {
+                ingestFeed(storage, remoteFeed);
+                return true;
+            } catch (IllegalArgumentException e) {
+                log.warn("syncToService: ingest remote: invalid feed: " + id
+                        + " : " + serviceUrl);
+            } catch (XMLSignatureException e) {
+                log.warn("syncToService: ingest remote: invalid signature: "
+                        + id + " : " + serviceUrl);
+            } catch (Exception e) {
+                log.error("syncToService: ingest remote: unexpected error: "
+                        + id + " : " + serviceUrl);
+            }
+        } else if (localFeed != null && remoteFeed == null) {
+            // remote is missing: push local with (all?) entries
+            long[] entryIds = storage.getEntryIdsForFeedId(id, 0, 99,
+                    null, null, null, null, null, null);
+            for (long entryId : entryIds) {
+                localFeed.addEntry(getEntry(storage, id, entryId)
+                        .getRoot());
+            }
+            return pushToService(localFeed, serviceUrl);
+        }
+        return false;
+    }
+
+    private static boolean pushToService(Feed feed, String serviceUrl) {
+        try {
+            URL url = new URL(serviceUrl + "/"
+                    + Common.toFeedIdString(feed.getId()));
+            HttpURLConnection connection = (HttpURLConnection) url
+                    .openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type",
+                    "application/atom+xml; type=feed; charset=utf-8");
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+            connection.connect();
+            OutputStream output = connection.getOutputStream();
+            feed.writeTo(output);
+            output.flush();
+            output.close();
+            connection.disconnect();
+            System.out.println("Response: " + connection.getResponseCode()
+                    + " : " + connection.getResponseMessage());
+            log.debug("Pushed: " + feed.getId() + " : " + serviceUrl);
+            return true;
+        } catch (MalformedURLException e) {
+            log.error("pushToService: bad url: " + serviceUrl + "/"
+                    + Common.toFeedIdString(feed.getId()));
+        } catch (IOException e) {
+            log.warn("pushToService: could not connect: " + serviceUrl + "/"
+                    + Common.toFeedIdString(feed.getId()));
+        }
+        return false;
+    }
+
+    private static Feed pullFromService(String serviceUrl, String entityId,
+            String queryString) {
+        Feed result = null;
+        if (!entityId.startsWith("/")) {
+            entityId = "/" + entityId;
+        }
+        if (queryString != null) {
+            queryString = "?" + queryString;
+        } else {
+            queryString = "";
+        }
+        String combined = serviceUrl + entityId + queryString;
+        try {
+            URL url = new URL(combined);
+            log.info("pullFromService: " + url);
+            result = (Feed) Abdera.getInstance().getParser()
+                    .parse(url.openStream()).getRoot();
+        } catch (FileNotFoundException fnfe) {
+            log.warn("Could not fetch from relay: " + combined);
+        } catch (MalformedURLException urle) {
+            log.error("Could not construct relay fetch url: " + combined);
+        } catch (IOException ioe) {
+            log.error("Could not connect: " + combined, ioe);
+        } catch (ClassCastException cce) {
+            log.error("Not a valid feed: " + combined, cce);
+        } catch (Exception e) {
+            log.error("Could not process feed from relay: " + combined, e);
+        }
+        return result;
     }
 
 }

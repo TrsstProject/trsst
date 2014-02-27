@@ -210,7 +210,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
      *            a hint for implementors
      * @return a Storage for the specified feed id
      */
-    protected Storage getStorage() {
+    Storage getStorage() {
         if (sharedStorage == null) {
             try {
                 Storage clientStorage = new FileStorage(Common.getClientRoot());
