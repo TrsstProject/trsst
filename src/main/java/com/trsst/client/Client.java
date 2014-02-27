@@ -76,7 +76,10 @@ public class Client {
 
         // FLAG: allow anonymous SSL:
         // trsst clients aren't vulnerable to MITM
-        // because we don't trust the man anyway.
+        // because we don't trust the man anyway;
+        // the worst he can do is drop our messages,
+        // but we keep our copy and others will see
+        // the gap in the blog chain.
         Protocol anonhttps = new Protocol("https",
                 (ProtocolSocketFactory) new AnonymSSLSocketFactory(), 443);
         Protocol.registerProtocol("https", anonhttps);
@@ -217,7 +220,7 @@ public class Client {
      * @return a Feed containing the latest entries for this feed id.
      */
     public Feed pull(String urn) {
-        AbderaClient client = new AbderaClient(Abdera.getInstance());
+        AbderaClient client = new AbderaClient(Abdera.getInstance(), Common.getBuildString());
 
         if (urn.startsWith("urn:feed:")) {
             urn = urn.substring("urn:feed:".length());
