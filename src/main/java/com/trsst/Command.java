@@ -805,6 +805,7 @@ public class Command {
     }
 
     private void printAllUsage() {
+        System.err.println(Common.getBuildString());
         printPostUsage();
         printPullUsage();
         printPushUsage();

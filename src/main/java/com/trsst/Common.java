@@ -40,6 +40,8 @@ import java.security.Security;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -614,5 +616,51 @@ public class Common {
         StringWriter writer = new StringWriter();
         tidy.parse(new StringReader(xml), writer);
         return writer.toString();
+    }
+
+    public static Attributes getManifestAttributes() {
+        Attributes result = null;
+        Class<Common> clazz = Common.class;
+        String className = clazz.getSimpleName() + ".class";
+        String classPath = clazz.getResource(className).toString();
+        if (!classPath.startsWith("jar")) {
+            // Class not from JAR
+            return null;
+        }
+        String manifestPath = classPath.substring(0,
+                classPath.lastIndexOf("!") + 1) + "/META-INF/MANIFEST.MF";
+        try {
+            Manifest manifest = new Manifest(new URL(manifestPath).openStream());
+            result = manifest.getMainAttributes();
+        } catch (MalformedURLException e) {
+            log.error("Could not locate manifest: " + manifestPath);
+        } catch (IOException e) {
+            log.error("Could not open manifest: " + manifestPath);
+        }
+        return result;
+    }
+
+    public static String getBuildString() {
+        String result = null;
+        String[] keys = new String[] { "Implementation-Title",
+                "Implementation-Version", "Implementation-Build", "Built-On",
+                "Build-Jdk" };
+        Attributes attributes = getManifestAttributes();
+        if (attributes != null) {
+            Object value;
+            for (String key : keys) {
+                value = attributes.get(key);
+                if (value != null) {
+                    if (result == null) {
+                        result = value.toString();
+                    } else {
+                        result = ' ' + value.toString();
+                    }
+                }
+            }
+        } else {
+            result = "trsst client";
+        }
+        return result;
     }
 }
