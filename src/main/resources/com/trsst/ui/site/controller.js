@@ -918,7 +918,7 @@
 				query = query.substring(0, query.length - 1);
 
 				// navigate with new query
-				window.history.pushState(null, null, "/" + query);
+				window.history.pushState(null, null, window.location.pathname + query);
 				onPopulate();
 			}
 		});
@@ -958,6 +958,10 @@
 			$("body").removeClass("page-home");
 			$("body").removeClass("page-entry");
 			$("body").addClass("page-feed");
+			var uid = model.getAuthenticatedAccountId();
+			if ( uid && uid.indexOf(path) !== -1 ) {
+				$("body").addClass("page-self");
+			}
 
 			pollster = new EntryPollster(createElementForEntryData, $("#entryContainer"));
 			pollster.addFeed(path);
@@ -979,6 +983,7 @@
 			$("body").addClass("page-home");
 			$("body").removeClass("page-entry");
 			$("body").removeClass("page-feed");
+			$("body").removeClass("page-self");
 
 			var id = getCurrentAccountId();
 			if (!id) {
