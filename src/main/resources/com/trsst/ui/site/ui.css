@@ -355,9 +355,11 @@ body.pending #entryContainer:empty:before {
 .signed-in .main .feed .follow {
 	display: inherit;
 }
-.page-home .feed .follow {
+.page-home .feed .follow,
+.page-self .feed .follow
+{
 /* everyone follows themselves implicitly */
-	display: none;
+	display: none !important;
 }
 
 .feed .follow span:before {
@@ -584,8 +586,9 @@ body.pending #entryContainer:empty:before {
 	max-height: 0px;
 	pointer-events: none;
 	position: relative;
-	padding-top: 4px;;
+	padding-top: 4px;
 	padding-bottom: 16px;
+	display: none; //test
 }
 .entry.expanded .composer,
 .entry.commented .composer
@@ -593,6 +596,7 @@ body.pending #entryContainer:empty:before {
 	max-height: 400px;
 	pointer-events: inherit;
 	opacity: 1;
+	display: inherit; //test
 }
 /* @end */
 
@@ -750,7 +754,6 @@ body.pending #entryContainer:empty:before {
 .entry.verb-repost,
 .entry.verb-follow 
 {
-	margin-top: 6px;
 	padding-bottom: 0px;
 	margin-bottom: 0px;
 	min-height: 0px;
@@ -763,7 +766,7 @@ body.pending #entryContainer:empty:before {
 .entry.verb-repost>section,
 .entry.verb-follow>section
 {
-	height: 36px;
+	height: 28px;
 }
 .entry.verb-repost>section .feed-title, 
 .entry.verb-follow>section .feed-title 
@@ -1061,11 +1064,25 @@ nav {
 /* So we can reuse the feed template here. */
 nav .menu-item>section>*,
 nav .menu-item .composer,
-nav .menu-item a
+nav .menu-item .action
 {
 	display: none;
 }
-
+nav .menu-item a {
+	float: inherit;
+	margin: 0px;
+	padding: 0px;
+	text-decoration: none;
+	pointer-events: none;
+	background: inherit;
+	width: inherit;
+	color: inherit;
+	text-align: right;
+	font-weight: inherit;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	
+}
 /* @group Account Selector Expanded */
 
 .menu-showing nav .menu {
@@ -1396,6 +1413,10 @@ body .footer-container .wrapper {
 	display: block;
 	height: 32px;
 	vertical-align: middle;
+	display: none;
+}
+.page-feed .footer-container .util-search form {
+	display: inherit;
 }
 .footer-container .util-search form input {
 	position: absolute;
