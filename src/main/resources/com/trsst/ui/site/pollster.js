@@ -114,7 +114,7 @@
 		});
 	};
 
-	AbstractPollster.prototype.addEntriesFromFeed = function(feedData) {
+	AbstractPollster.prototype.addEntriesFromFeed = function(feedData, filter) {
 		var self = this;
 		var result = [];
 		if (self.feedContainer && self.feedFactory) {
@@ -127,6 +127,8 @@
 				var element = self.addDataToEntryContainer(feedData, this);
 				if (element) {
 					result.push(element);
+					// remember how we got here
+					element[0].filter = filter;
 					// if this is the last one
 					if (index === total - 1) {
 						self.scrollTriggers.push(element);
@@ -214,18 +216,13 @@
 	AbstractPollster.prototype.fetchPrevious = function(elem) {
 		var entryUrn = $(elem).attr("entry");
 		var entryId = controller.entryIdFromEntryUrn(entryUrn);
-		var feedId = controller.feedIdFromEntryUrn(entryUrn);
-		// find matching task filter
-		var filter = {};
-		for ( var i in this.queue) {
-			if (this.queue[i].filter.feedId === feedId) {
-				// clone filter so we can
-				filter = shallowCopy(this.queue[i].filter);
-				break;
-			}
+		// get filter from element if any
+		var filter = elem.filter;
+		if ( !filter ) {
+			filter = {};
 		}
+		filter = shallowCopy(filter);
 
-		filter.feedId = feedId;
 		// fetch only before this entry
 		filter.before = entryId;
 		// don't overwhelm dom
@@ -248,7 +245,7 @@
 				console.log("fetchPrevious: complete: not found: " + JSON.stringify(filter));
 			} else {
 				console.log("fetchPrevious: complete: found: " + JSON.stringify(filter));
-				displayableResults = self.addEntriesFromFeed(feedData);
+				displayableResults = self.addEntriesFromFeed(feedData, filter);
 				// no more to fetch: exit
 			}
 		}, function(feedData) {
@@ -258,7 +255,7 @@
 				console.log("fetchPrevious: partial: not found: " + JSON.stringify(filter));
 			} else {
 				console.log("fetchPrevious: partial: found: " + JSON.stringify(filter));
-				displayableResults = self.addEntriesFromFeed(feedData);
+				displayableResults = self.addEntriesFromFeed(feedData, filter);
 				if (displayableResults.length === 0) {
 					// not enough to display: keep fetching
 					return true;
@@ -430,7 +427,7 @@
 			} else {
 				console.log("Received: " + concurrentFetchCount + " : " + JSON.stringify(filter));
 				for ( var i in pollsters) {
-					pollsters[i].addEntriesFromFeed(feedData);
+					pollsters[i].addEntriesFromFeed(feedData, filter);
 				}
 				// grab the latest result if any
 				var entries = feedData.children("entry");
