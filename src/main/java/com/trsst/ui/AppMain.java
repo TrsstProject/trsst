@@ -23,6 +23,10 @@ import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
+import java.util.List;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Logger;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -33,6 +37,7 @@ import javax.net.ssl.X509TrustManager;
 
 import com.trsst.Command;
 
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.scene.web.PopupFeatures;
@@ -48,7 +53,19 @@ import javafx.util.Callback;
  */
 public class AppMain extends javafx.application.Application {
 
+    private WebView webView;
+    private static AppleEvents appleEvents;
+
     public static void main(String[] argv) {
+        // registers osx-native event handlers
+        //NOTE: must happen first to collect launch events
+        try {
+            appleEvents = new AppleEvents();
+        } catch ( Throwable t ) {
+            // probably wrong platform: ignore
+            log.warn("Could not load osx events: " + t.getMessage() );
+        }
+
         // try to set user-friendly client and server directories
         String home = System.getProperty("user.home", ".");
         File client = new File(home, "Trsst Keyfiles");
@@ -64,37 +81,48 @@ public class AppMain extends javafx.application.Application {
                     "http://home.trsst.com/feed");
         }
 
-        // try {
-        // // try to write to a log file in temporary directory
-        // String path = System.getProperty("java.io.tmpdir", "")
-        // + "trsst.log";
-        // Handler handler = new FileHandler(path, 1024 * 1024, 3);
-        // Logger.getLogger("").addHandler(handler);
-        // log.info("Writing log file to: " + path);
-        //
-        // } catch (SecurityException e) {
-        // log.warn("No permission to write to log file", e);
-        // } catch (IOException e) {
-        // log.warn("Can't write to log file", e);
-        // }
+        try {
+            // try to write to a log file in temporary directory
+            String path = System.getProperty("java.io.tmpdir", "")
+                    + "trsst.log";
+            path = "/tmp/trsst.log";
+            Handler handler = new FileHandler(path, 1024 * 1024, 3);
+            Logger.getLogger("").addHandler(handler);
+            log.info("Writing log file to: " + path);
+
+        } catch (SecurityException e) {
+            log.warn("No permission to write to log file", e);
+        } catch (IOException e) {
+            log.warn("Can't write to log file", e);
+        }
 
         // major improvement in font rendering on OSX
         System.setProperty("prism.lcdtext", "false");
 
-        // launc the app
+        // launch the app
         launch(argv);
+    }
+
+    public static AppMain instance;
+
+    public static AppMain getInstance() {
+        return instance;
     }
 
     @Override
     public void start(Stage stage) {
+
+        instance = this;
+
         // we connect with our local server with a self-signed certificate:
         // we create our server with a random port that would fail to bind
         // if there were a mitm that happened to be serving on that port.
         enableAnonymousSSL();
 
         AppClient appClient = new AppClient();
+
         stage.setTitle("trsst");
-        final WebView webView = new WebView();
+        webView = new WebView();
 
         // intercept target=_blank hyperlinks
         webView.getEngine().setCreatePopupHandler(
@@ -133,12 +161,6 @@ public class AppMain extends javafx.application.Application {
         if (i != -1) {
             url = url.substring(0, i);
         }
-        // url = url + "/index.html";
-        // url = url + "/http%3A%2F%2Fwww.theregister.co.uk%2Fheadlines.atom";
-        // url = "http://trsst.com";
-        // url = url
-        // +
-        // "/http%3A%2F%2Frss.nytimes.com%2Fservices%2Fxml%2Frss%2Fnyt%2FPolitics.xml";
         webView.getEngine().load(url);
         StackPane root = new StackPane();
         root.getChildren().add(webView);
@@ -146,6 +168,44 @@ public class AppMain extends javafx.application.Application {
         stage.setScene(scene);
         stage.show();
 
+        // registers osx-native event handlers
+        //NOTE: must happen last to receive non-launch events
+        try {
+            appleEvents.run();
+        } catch ( Throwable t ) {
+            // probably wrong platform: ignore
+            log.warn("Could not start osx events: " + t.getMessage() );
+        }
+    }
+
+    public void openURI(URI uri) {
+        log.info("openURI: got this far 1: " + uri);
+        // mac feed urls use a feed:// protocol; convert to http
+        String url = uri.toString().replace("feed://", "http://");
+        final String script = "controller.pushState('/" + url + "');";
+        log.info("openURI: got this far 2: " + uri);
+        Platform.runLater(new Runnable() {
+            public void run() {
+                try {
+                    webView.getEngine().executeScript(script);
+                } catch (Throwable t) {
+                    log.error("Unexpected error: ", t);
+                }
+                log.info("openURI: got this far 3: " + script);
+            }
+        });
+    }
+
+    public void openFiles(final List<File> files) {
+        Platform.runLater(new Runnable() {
+            public void run() {
+                // for (File s : files) {
+                // TODO: read file for path
+                // TODO: extract link rel=self
+                // TODO: append that link to browser location
+                // }
+            }
+        });
     }
 
     @Override

@@ -32,8 +32,8 @@ public class AppClient {
         // start a client with a local server
         try {
             // use "feed" path for atompub calls
-            // server = new Server(8181, "feed", true) {//, true) { 
-            server = new Server("feed", true) { // secure
+             server = new Server(8181, "feed", false)  { // dev only 
+            //server = new Server("feed", true) { // secure
                 // serve static files and api from root
                 protected void configureContext(ServletContextHandler context) {
                     super.configureContext(context);
