@@ -452,22 +452,18 @@ public class Command {
         }
 
         for (String id : arguments) {
-            if (Common.isAccountId(id)) {
-                System.out.println( destinationClient.push(client.pull(id), url) );
-                // Feed feed = client.pull(id);
-                // if ( feed != null ) {
-                // feed = client.push(feed, url);
-                // if ( feed != null ) {
-                // out.println(feed);
-                // } else {
-                // System.err.println("Failed to push feed for id: " + id);
-                // }
-                // } else {
-                // System.err.println("Failed to pull feed for id: " + id);
-                // }
-            } else {
-                System.err.println("Invalid address, skipping: " + id);
-            }
+            System.out.println(destinationClient.push(client.pull(id), url));
+            // Feed feed = client.pull(id);
+            // if ( feed != null ) {
+            // feed = client.push(feed, url);
+            // if ( feed != null ) {
+            // out.println(feed);
+            // } else {
+            // System.err.println("Failed to push feed for id: " + id);
+            // }
+            // } else {
+            // System.err.println("Failed to pull feed for id: " + id);
+            // }
         }
         return 0; // "OK"
     }
