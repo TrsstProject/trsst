@@ -1301,7 +1301,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
         }
 
-        int length = ProviderHelper.getPageSize(context, "count", 25);
+        //note: "default" to getPageSize was actually max page size
+        int length = ProviderHelper.getPageSize(context, "count", 100); 
         // int offset = ProviderHelper.getOffset(context, "page", length);
         int maxresults = 999; // arbitrary: clients that need larger should page
                               // themselves by date
