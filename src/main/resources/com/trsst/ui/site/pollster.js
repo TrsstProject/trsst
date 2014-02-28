@@ -214,10 +214,11 @@
 	};
 
 	AbstractPollster.prototype.fetchPrevious = function(elem) {
-		var entryUrn = $(elem).attr("entry");
+		elem = $(elem);
+		var entryUrn = elem.attr("entry");
 		var entryId = controller.entryIdFromEntryUrn(entryUrn);
 		// get filter from element if any
-		var filter = elem.filter;
+		var filter = elem[0].filter;
 		if ( !filter ) {
 			filter = {};
 		}

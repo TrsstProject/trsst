@@ -355,8 +355,8 @@ body.pending #entryContainer:empty:before {
 .signed-in .main .feed .follow {
 	display: inherit;
 }
-.page-home .feed .follow,
-.page-self .feed .follow
+.page-home aside .feed .follow,
+.page-self aside .feed .follow
 {
 /* everyone follows themselves implicitly */
 	display: none !important;
