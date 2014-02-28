@@ -316,7 +316,7 @@ public class TrsstTest extends TestCase {
                         new FeedOptions());
                 entry = feed.getEntries().get(0);
             }
-            feed = client.pull(Common.fromFeedUrn(feed.getId()));
+            feed = client.pull(Common.fromFeedUrn(feed.getId())+"?count=25");
             assertTrue("Feed has only first page of entries", (25 == feed
                     .getEntries().size()));
 
