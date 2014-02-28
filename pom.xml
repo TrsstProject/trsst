@@ -183,6 +183,13 @@
 			<artifactId>jtidy</artifactId>
 			<version>r938</version>
 		</dependency>
+		<dependency>
+			<groupId>com.apple</groupId>
+			<artifactId>eawt</artifactId>
+			<version>1.8</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/src/main/resources/eawt.jar</systemPath>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>

@@ -15,44 +15,47 @@ To build:
 
 To run: 
 
-	java -jar target/trsst-client-1.0-SNAPSHOT-exe.jar
+	java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar
 
 Usage:
 
 	post [<id>] [--status <text>] [--encrypt <pubkey>]
-	 -a,--attach <file>      Attach the file at the specified path to the new
-							 entry
-	 -b,--body <markdown>    Specify entry body on command line
+	 -a,--attach <file>      Attach the specified file, or - for std input
+	 -b,--base <url>         Set base URL for this feed
+	 -c,--content <text>     Specify entry content on command line
 	 -e,--encrypt <pubkey>   Encrypt entry for specified public key
-	 -i,--icon <url>         Set this feed's icon url
+	 -g,--tag <text>         Add a tag (aka category)
+	 -i,--icon <url>         Set as this feed's icon or specify url
 	 -k,--key <file>         Use the key store at the specified path
-	 -l,--logo <url>         Set this feed's logo url
+	 -l,--logo <url>         Set as this feed's logo or specify url
 	 -m,--mail <email>       Set this feed's author email
 	 -n,--name <text>        Set this feed's author name
-		--subtitle <text>    Set this feed's subtitle
+	    --subtitle <text>    Set this feed's subtitle
+	    --vanity <prefix>    Generate feed id with specified prefix
 	 -p,--pass <text>        Specify passphrase on the command line
+	 -r,--mention <id>       Add a mention (aka reference)
 	 -s,--status <text>      Specify status update on command line
 	 -t,--title <text>       Set this feed's title
 	 -u,--url <url>          Attach the specified url to the new entry
 	 -v,--verb <verb>        Specify an activitystreams verb for this entry
-	 
+	
 	pull <id>...
-	 -h,--home <url>   Set home service for this operation
-	 
+	 -d,--decrypt <id>   Decrypt entries as specified recipient id
+	 -h,--host <url>     Set host server for this operation
+	
 	push <url> <id>...
-	 -h,--home <url>   Set home service for this operation
-	 
+	
 	port <portnumber>
-	 -?,--help   Display these options
+	
 
 Example: start a server.
 
-	$ java -jar target/trsst-client-1.0-SNAPSHOT-exe.jar port 8181
+	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar port 8181
 	Services now available at: http://192.168.1.21:8181/trsst
 
 Example: create a new empty feed.
 
-	$ java -jar target/trsst-client-1.0-SNAPSHOT-exe.jar post
+	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar post
 	
 	Starting temporary service at: http://192.168.1.15:51703
 	Generating new feed id... 
@@ -87,7 +90,7 @@ Example: create a new empty feed.
 
 Example: create a new post on a preexisting feed.
 
-	$ java -jar target/trsst-client-1.0-SNAPSHOT-exe.jar post --status "First Post" 145qkKDkkeDA93Va4vSLePdmp6okkXeD9U
+	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar post --status "First Post" 145qkKDkkeDA93Va4vSLePdmp6okkXeD9U
 	
 	Starting temporary service at: http://192.168.1.15:51777
 	Obtaining keys for feed id: 1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN
@@ -147,7 +150,7 @@ Example: create a new post on a preexisting feed.
 
 Example: create an encrypted post on a preexisting feed.
 
-	$ java -jar target/trsst-client-1.0-SNAPSHOT-exe.jar post --status "Secret Post" 145qkKDkkeDA93Va4vSLePdmp6okkXeD9U
+	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar post --status "Secret Post" 145qkKDkkeDA93Va4vSLePdmp6okkXeD9U
 	-- encrypt MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEQn1eOiToQlurH0gIE0AsBTJNBF1jrOSSIr8i4RSRdvx7dtkD1hre0vgPabJMLH9QktK6AYhl31xkf3xqp_mPxw
 
 	Starting temporary service at: http://192.168.1.15:51929
