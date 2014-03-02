@@ -219,7 +219,7 @@
 
 	var incrementPendingCount = function() {
 		pollster.incrementPendingCount();
-		if (concurrentFetchCount > 1) {
+		if (getPendingCount() > 1) {
 			$("body").addClass("pending");
 		}
 	};
@@ -321,17 +321,7 @@
 
 	AbstractRenderer.prototype.stop = function() {
 		console.log("onStop");
-		// scan the entire list and remove ourself
-		for ( var i in filterToRenderers) {
-			for ( var j in filterToRenderers[i]) {
-				if (filterToRenderers[i][j] === this) {
-					filterToRenderers[i].splice(j, 1); // remove
-					if (filterToRenderers[i].length === 0) {
-						delete filterToRenderers[i];
-					}
-				}
-			}
-		}
+		pollster.removeSubscriber(this);
 		this.scrollTriggers = [];
 		if (this.allEntryElements) {
 			this.allEntryElements = [];

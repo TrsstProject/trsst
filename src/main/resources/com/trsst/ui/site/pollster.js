@@ -35,18 +35,18 @@
 	/**
 	 * Shared subscriber list.
 	 */
-	var filterToPollsters = {};
+	var filterToSubscribers = {};
 
 	pollster.addSubscriberToFeed = function(pollster, filter) {
 		var stringified = JSON.stringify(filter);
-		var pollsters = filterToPollsters[stringified];
+		var pollsters = filterToSubscribers[stringified];
 		if (pollsters) {
 			var existing = pollsters.indexOf(pollster);
 			if (existing === -1) {
 				pollsters.push(pollster);
 			}
 		} else {
-			filterToPollsters[stringified] = [ pollster ];
+			filterToSubscribers[stringified] = [ pollster ];
 		}
 
 		var task = getCachedTask(filter);
@@ -68,6 +68,20 @@
 		doTask(task);
 	};
 
+	pollster.removeSubscriber = function(subscriber) {
+		// scan the entire list and remove ourself
+		for ( var i in filterToSubscribers) {
+			for ( var j in filterToSubscribers[i]) {
+				if (filterToSubscribers[i][j] === subscriber) {
+					filterToSubscribers[i].splice(j, 1); // remove
+					if (filterToSubscribers[i].length === 0) {
+						delete filterToSubscribers[i];
+					}
+				}
+			}
+		}
+	};
+
 	var concurrentFetchCount = 0;
 
 	pollster.getPendingCount = function() {
@@ -83,7 +97,7 @@
 	};
 
 	var doTask = function(task) {
-		var pollsters = filterToPollsters[JSON.stringify(task.filter)];
+		var pollsters = filterToSubscribers[JSON.stringify(task.filter)];
 		if (!pollsters || pollsters.length === 0) {
 			console.log("Should never happen: task for no subscribers");
 			console.log(task);
