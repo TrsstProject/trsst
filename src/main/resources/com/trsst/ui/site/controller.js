@@ -205,7 +205,10 @@
 			entryElement.find(".feed-title").addClass("empty-text");
 		}
 		entryElement.find(".feed-id span").text(feedData.children("id").text().substring("urn:feed:".length));
-		entryElement.find(".title span").text(entryData.find("title").text());
+
+		var titleConverted = entryData.find("title").text();
+		titleConverted = convertToHtml(titleConverted);
+		entryElement.find(".title span").html(titleConverted);
 
 		// summary: sandboxed iframe
 		var summary = entryData.find("summary").text();
@@ -280,7 +283,18 @@
 		return entryElement;
 	};
 
+	var gruberUrl = /\b((?:https?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))/i;
 	var inlineStyle = '<base target="_blank"/><style>* { font-family: sans-serif; font-size: 13px !important; } img { display: block; width: 100%; float:left; height: auto; margin-bottom: 30px; }</style>';
+
+	/** Used to highlight links in urls and respect linebreaks. */
+	var convertToHtml = function(text) {
+		if (text.indexOf("htt") !== -1) {
+			// actually is a bit faster to prequalify before applying regex
+			text = text.replace(gruberUrl, '<a target="_blank" href="$1">$1</a>');
+		}
+		text = text.replace(/\n/g, "<br>");
+		return text;
+	};
 
 	var addContentPreviewToElement = function(dataElement, viewElement, duplicateDetector) {
 		// handle both content elements and link enclosures
@@ -882,7 +896,7 @@
 			e.preventDefault();
 			var url = $(".util-feed-navigator form input").val();
 			if (url) {
-				controller.pushState(url);
+				controller.pushState("/" + url);
 			}
 		});
 
@@ -912,13 +926,15 @@
 				query = query.substring(0, query.length - 1);
 
 				// navigate with new query
-				controller.pushState("/" + window.location.pathname + query);
+				controller.pushState(window.location.pathname + query);
 			}
 		});
 
 		new Composer($(document).find(".private.messaging form"));
 		new Composer($("article>.composer").get());
 	};
+	
+	var initialHistoryLength = window.history.length;
 
 	controller.pushState = function(path) {
 		window.history.pushState(null, null, path);
@@ -951,7 +967,7 @@
 			path = path.substring(j + host.length + 1);
 		}
 
-		if (window.history.length > 1) {
+		if (window.history.length > initialHistoryLength) {
 			$("body").addClass("has-back");
 		} else {
 			$("body").removeClass("has-back");
@@ -1024,15 +1040,19 @@
 $(document).ready(function() {
 	controller.start();
 
-//	// firebug
-//	if (!document.getElementById('FirebugLite')) {
-//		E = document['createElement' + 'NS'] && document.documentElement.namespaceURI;
-//		E = E ? document['createElement' + 'NS'](E, 'script') : document['createElement']('script');
-//		E['setAttribute']('id', 'FirebugLite');
-//		E['setAttribute']('src', 'https://getfirebug.com/' + 'firebug-lite.js' + '#startOpened');
-//		E['setAttribute']('FirebugLite', '4');
-//		(document['getElementsByTagName']('head')[0] || document['getElementsByTagName']('body')[0]).appendChild(E);
-//		E = new Image;
-//		E['setAttribute']('src', 'https://getfirebug.com/' + '#startOpened');
-//	}
+	// // firebug
+	// if (!document.getElementById('FirebugLite')) {
+	// E = document['createElement' + 'NS'] &&
+	// document.documentElement.namespaceURI;
+	// E = E ? document['createElement' + 'NS'](E, 'script') :
+	// document['createElement']('script');
+	// E['setAttribute']('id', 'FirebugLite');
+	// E['setAttribute']('src', 'https://getfirebug.com/' + 'firebug-lite.js' +
+	// '#startOpened');
+	// E['setAttribute']('FirebugLite', '4');
+	// (document['getElementsByTagName']('head')[0] ||
+	// document['getElementsByTagName']('body')[0]).appendChild(E);
+	// E = new Image;
+	// E['setAttribute']('src', 'https://getfirebug.com/' + '#startOpened');
+	// }
 });
