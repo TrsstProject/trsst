@@ -1301,8 +1301,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
         }
 
-        //note: "default" to getPageSize was actually max page size
-        int length = ProviderHelper.getPageSize(context, "count", 100); 
+        // note: "default" to getPageSize was actually max page size
+        int length = ProviderHelper.getPageSize(context, "count", 100);
         // int offset = ProviderHelper.getOffset(context, "page", length);
         int maxresults = 999; // arbitrary: clients that need larger should page
                               // themselves by date
@@ -1485,6 +1485,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     private void pushRawPost(Feed feed, RequestContext request,
             byte[] requestData, String hostUrl) {
         try {
+            // FIXME: eventually want to move off feed ids in POST
+            hostUrl = hostUrl + "/" + Common.toFeedIdString(feed.getId());
             URL url = new URL(hostUrl);
             HttpURLConnection connection = (HttpURLConnection) url
                     .openConnection();
@@ -1594,11 +1596,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
         } else if (localFeed != null && remoteFeed == null) {
             // remote is missing: push local with (all?) entries
-            long[] entryIds = storage.getEntryIdsForFeedId(id, 0, 99,
-                    null, null, null, null, null, null);
+            long[] entryIds = storage.getEntryIdsForFeedId(id, 0, 99, null,
+                    null, null, null, null, null);
             for (long entryId : entryIds) {
-                localFeed.addEntry(getEntry(storage, id, entryId)
-                        .getRoot());
+                localFeed.addEntry(getEntry(storage, id, entryId).getRoot());
             }
             return pushToService(localFeed, serviceUrl);
         }
