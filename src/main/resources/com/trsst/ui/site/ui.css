@@ -380,7 +380,6 @@ body.pending #entryContainer:empty:before {
 	padding-right: 32px;
 	padding-top: 16px;
 	border-bottom: 1px solid #ddd;
-	cursor: pointer;
 	min-height: 56px;
 }
 
@@ -392,11 +391,27 @@ body.pending #entryContainer:empty:before {
 	border-bottom: 1px solid #ddd;
 }
 
-.entry .title {
+.entry section>.title {
 	float: none;
 	color: black;
 	margin-top: 8px;
 	margin-bottom: 6px;
+	line-height: 16px;
+	max-height: 96px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	-webkit-transition: max-height .4s ease-in-out .0s, opacity .4s ease-in-out .0s ;
+}
+.entry.expanded section>.title {
+	max-height: 2000px;
+}
+
+.entry .title a {
+	color: #f16312;
+}
+.feed .title a {
+    /* don't highlight followed feed titles */
+	color: inherit;
 }
 
 .entry iframe {
@@ -572,31 +587,34 @@ body.pending #entryContainer:empty:before {
 	/* adjust for composer */
 	margin-bottom: -20px;
 }
+
 .entry.commented,
 .entry.expanded {
+	
 }
+
 .entry section>div {
 	z-index: 3;
 	/* needed for stacking context */
 	position: relative;
 }
 .entry .composer {
-	-webkit-transition: max-height .4s ease-in-out .0s, opacity .4s ease-in-out .0s ;
+	-webkit-transition: max-height .4s ease-in-out .0s, opacity .4s ease-in-out .0s, margin-top .4s ease-in-out .0s ;
 	opacity: 0;
 	max-height: 0px;
 	pointer-events: none;
 	position: relative;
+	margin-top: -40px;
 	padding-top: 4px;
 	padding-bottom: 16px;
-	display: none; //test
 }
 .entry.expanded .composer,
 .entry.commented .composer
 {
+	margin-top: 0px;
 	max-height: 400px;
 	pointer-events: inherit;
 	opacity: 1;
-	display: inherit; //test
 }
 /* @end */
 
@@ -620,6 +638,9 @@ body.pending #entryContainer:empty:before {
 	margin-top: 8px;
 	margin-bottom: 12px;
 	display: none;
+}
+.entry.contented {
+	cursor: pointer;
 }
 
 .entry.contented .content {
@@ -684,7 +705,9 @@ body.pending #entryContainer:empty:before {
 	float: left;
 	display: none;
 }
-.contented .expand {
+.contented .action.expand,
+.expandable .action.expand
+{
 	display: inherit;
 }
 .entry .action a {
@@ -776,8 +799,8 @@ body.pending #entryContainer:empty:before {
 .entry.verb-repost>section .title,
 .entry.verb-repost>section .icon,
 .entry.verb-repost>section .feed-id, 
-.entry.verb-repost .action,
-.entry.verb-repost .composer,
+.entry.verb-repost>.action,
+.entry.verb-repost>.composer,
 .entry.verb-follow>section .title,
 .entry.verb-follow>section .icon,
 .entry.verb-follow>section .feed-id,
