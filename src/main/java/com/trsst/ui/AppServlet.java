@@ -47,7 +47,7 @@ public class AppServlet extends HttpServlet {
     private static final long serialVersionUID = -8082699767921771750L;
     private static final String[] ALLOWED_FILES = { "boiler.css", "index.html",
             "favicon.ico", "jquery-1.10.1.js", "model.js", "composer.js",
-            "pollster.js", "controller.js", "ui.css", "icon-256.png",
+            "pollster.js", "renderer.js", "controller.js", "ui.css", "icon-256.png",
             "icon-back.png", "note.svg", "note.png", "loading-on-white.gif",
             "loading-on-gray.gif", "loading-on-orange.gif", "icon-rss.png" };
 

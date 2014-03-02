@@ -948,7 +948,7 @@
 		controller.pushState("/" + href);
 	};
 
-	var pollsters = [];
+	var renderers = [];
 	var onPopulate = function() {
 		var host = window.location.host;
 		var path = window.location.toString();
@@ -957,10 +957,10 @@
 		$(".util-browser-launcher a").attr("target", "_blank").attr("href", path);
 
 		console.log("onPopulate: " + host + " : " + path);
-		for ( var i in pollsters) {
-			pollsters[i].stop();
+		for ( var i in renderers) {
+			renderers[i].stop();
 		}
-		pollsters = [];
+		renderers = [];
 
 		var j = path.indexOf(host);
 		if (j !== -1) {
@@ -973,7 +973,7 @@
 			$("body").removeClass("has-back");
 		}
 
-		var pollster;
+		var renderer;
 		if (path.trim().length > 1) {
 
 			$("body").removeClass("page-home");
@@ -984,9 +984,9 @@
 				$("body").addClass("page-self");
 			}
 
-			pollster = new EntryPollster(createElementForEntryData, $("#entryContainer"));
-			pollster.addFeed(path);
-			pollsters.push(pollster);
+			renderer = new EntryRenderer(createElementForEntryData, $("#entryContainer"));
+			renderer.addFeed(path);
+			renderers.push(renderer);
 
 			// some trickery to keep private msg in sync with feed
 			var customCreateElementForFeedData = function(feedData) {
@@ -996,9 +996,9 @@
 				return createElementForFeedData(feedData);
 			};
 
-			pollster = new FeedPollster(customCreateElementForFeedData, $("#feedContainer"));
-			pollster.addFeed(path);
-			pollsters.push(pollster);
+			renderer = new FeedRenderer(customCreateElementForFeedData, $("#feedContainer"));
+			renderer.addFeed(path);
+			renderers.push(renderer);
 
 		} else {
 			$("body").addClass("page-home");
@@ -1011,15 +1011,15 @@
 				id = "8crfxaHcBWTHuhA8cXfwPc3vfJ3SbsRpJ";
 			}
 
-			pollster = new FeedPollster(createElementForFeedData, $("#feedContainer"));
-			pollsters.push(pollster);
-			pollster.addFeed(id);
+			renderer = new FeedRenderer(createElementForFeedData, $("#feedContainer"));
+			renderers.push(renderer);
+			renderer.addFeed(id);
 
-			pollster = new EntryPollster(createElementForEntryData, $("#entryContainer"));
-			pollsters.push(pollster);
-			pollster.addFeed(id);
+			renderer = new EntryRenderer(createElementForEntryData, $("#entryContainer"));
+			renderers.push(renderer);
+			renderer.addFeed(id);
 
-			pollster.addFeedFollows(id);
+			renderer.addFeedFollows(id);
 			// TESTING: high volume test
 			// "http://api.flickr.com/services/feeds/photos_public.gne" );
 			// //
