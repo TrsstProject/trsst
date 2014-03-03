@@ -98,23 +98,35 @@
 	/**
 	 * Monitor for specified feeds and entries.
 	 */
-	AbstractRenderer.prototype.addEntries = function(filter) {
-		console.log("addEntries: " + filter);
-
-		// **********//
-		pollster.addSubscriberToFeed(this, filter);
-	};
-
-	/**
-	 * Monitor for specified feeds and entries.
-	 */
 	AbstractRenderer.prototype.addFeed = function(id) {
 		this.addEntries({
 			feedId : id
 		});
 	};
 
-	AbstractRenderer.prototype.addEntriesFromFeed = function(feedData, filter) {
+	/**
+	 * Monitor for specified feeds and entries.
+	 */
+	AbstractRenderer.prototype.addEntries = function(query) {
+		console.log("addEntries: " + query);
+		pollster.subscribe(query, this);
+	};
+	
+	/**
+	 * Called by pollster to update our contents with the specified feed.
+	 */
+	AbstractRenderer.prototype.notify = function(feedData, query) {
+		console.log("notify: " + query);
+		this.addEntriesFromFeed(feedData, query);
+	};
+	
+
+	AbstractRenderer.prototype.addEntriesFromFeed = function(feedData, query) {
+		// ignore delayed fetch responses
+		if ( this.disposed ) {
+			return;
+		}
+		
 		var self = this;
 		var result = [];
 		if (self.feedContainer && self.feedFactory) {
@@ -128,7 +140,7 @@
 				if (element) {
 					result.push(element);
 					// remember how we got here
-					element[0].filter = filter;
+					element[0].query = query;
 					// if this is the last one
 					if (index === total - 1) {
 						self.scrollTriggers.push(element);
@@ -166,6 +178,10 @@
 	 * onscreen elements.
 	 */
 	AbstractRenderer.prototype.renderNow = function() {
+		if ( this.disposed ) {
+			return;
+		} 
+		
 		console.log("rendering: ");
 		if (getPendingCount() === 0) {
 			$("body").removeClass("pending");
@@ -219,7 +235,7 @@
 
 	var incrementPendingCount = function() {
 		pollster.incrementPendingCount();
-		if (getPendingCount() > 1) {
+		if (getPendingCount() > 2	) {
 			$("body").addClass("pending");
 		}
 	};
@@ -238,20 +254,21 @@
 	};
 
 	AbstractRenderer.prototype.fetchPrevious = function(elem) {
+//if ( true ) return; 
 		elem = $(elem);
 		var entryUrn = elem.attr("entry");
 		var entryId = controller.entryIdFromEntryUrn(entryUrn);
-		// get filter from element if any
-		var filter = elem[0].filter;
-		if (!filter) {
-			filter = {};
+		// get query from element if any
+		var query = elem[0].query;
+		if (!query) {
+			query = {};
 		}
-		filter = shallowCopy(filter);
+		query = shallowCopy(query);
 
 		// fetch only before this entry
-		filter.before = entryId;
+		query.before = entryId;
 		// don't overwhelm dom
-		filter.count = 5;
+		query.count = 5;
 
 		var self = this;
 		incrementPendingCount();
@@ -261,24 +278,24 @@
 		 * fetching until there is something to display.
 		 */
 		var displayableResults;
-		model.pull(filter, function(feedData) {
+		model.pull(query, function(feedData) {
 			/* fetch complete */
 			decrementPendingCount();
 			if (!feedData) {
-				console.log("fetchPrevious: complete: not found: " + JSON.stringify(filter));
+				console.log("fetchPrevious: complete: not found: " + JSON.stringify(query));
 			} else {
-				console.log("fetchPrevious: complete: found: " + JSON.stringify(filter));
-				displayableResults = self.addEntriesFromFeed(feedData, filter);
+				console.log("fetchPrevious: complete: found: " + JSON.stringify(query));
+				displayableResults = self.addEntriesFromFeed(feedData, query);
 				// no more to fetch: exit
 			}
 		}, function(feedData) {
 			/* fetch partial */
 			decrementPendingCount();
 			if (!feedData) {
-				console.log("fetchPrevious: partial: not found: " + JSON.stringify(filter));
+				console.log("fetchPrevious: partial: not found: " + JSON.stringify(query));
 			} else {
-				console.log("fetchPrevious: partial: found: " + JSON.stringify(filter));
-				displayableResults = self.addEntriesFromFeed(feedData, filter);
+				console.log("fetchPrevious: partial: found: " + JSON.stringify(query));
+				displayableResults = self.addEntriesFromFeed(feedData, query);
 				if (displayableResults.length === 0) {
 					// not enough to display: keep fetching
 					return true;
@@ -314,19 +331,25 @@
 			self.renderNow();
 		}, 500);
 	};
-
-	AbstractRenderer.prototype.start = function() {
-		console.log("onStart");
+	
+	AbstractRenderer.prototype.dispose = function() {
+		this.reset();
+		this.disposed = true;
 	};
 
-	AbstractRenderer.prototype.stop = function() {
-		console.log("onStop");
-		pollster.removeSubscriber(this);
+	AbstractRenderer.prototype.reset = function() {
+		console.log("reset");
+		pollster.unsubscribe(this);
 		this.scrollTriggers = [];
 		if (this.allEntryElements) {
 			this.allEntryElements = [];
 		}
-		// TODO: need to stop listening for scroll event
+		if (this.entryContainer) {
+			this.entryContainer.empty();
+		}
+		if (this.feedContainer) {
+			this.feedContainer.empty();
+		}
 	};
 
 	/**
@@ -370,12 +393,10 @@
 		this.scrollTriggers = [];
 		var self = this;
 		$(window).scroll(function() {
-			// TODO: need to unsubscribe on stop
 			if (self.scrollTriggers.length > 0) {
 				self.onScroll();
 			}
 		});
-		this.start();
 	};
 	EntryRenderer.prototype = new AbstractRenderer();
 	EntryRenderer.prototype.constructor = EntryRenderer;
@@ -392,12 +413,10 @@
 		this.scrollTriggers = [];
 		var self = this;
 		$(window).on("scroll", null, function() {
-			// TODO: need to unsubscribe on stop
 			if (self.scrollTriggers.length > 0) {
 				self.onScroll();
 			}
 		});
-		this.start();
 	};
 	FeedRenderer.prototype = new AbstractRenderer();
 	FeedRenderer.prototype.constructor = FeedRenderer;

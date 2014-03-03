@@ -854,6 +854,8 @@
 		}
 		return obj;
 	};
+	
+	var TRSST_WELCOME = "8crfxaHcBWTHuhA8cXfwPc3vfJ3SbsRpJ";
 
 	var onInit = function() {
 
@@ -958,7 +960,7 @@
 
 		console.log("onPopulate: " + host + " : " + path);
 		for ( var i in renderers) {
-			renderers[i].stop();
+			renderers[i].dispose();
 		}
 		renderers = [];
 
@@ -1008,7 +1010,7 @@
 
 			var id = getCurrentAccountId();
 			if (!id) {
-				id = "8crfxaHcBWTHuhA8cXfwPc3vfJ3SbsRpJ";
+				id = TRSST_WELCOME;
 			}
 
 			renderer = new FeedRenderer(createElementForFeedData, $("#feedContainer"));
@@ -1018,7 +1020,10 @@
 			renderer = new EntryRenderer(createElementForEntryData, $("#entryContainer"));
 			renderers.push(renderer);
 			renderer.addFeed(id);
-
+			if ( id !== TRSST_WELCOME) {
+				renderer.addFeed(TRSST_WELCOME);
+			}
+			
 			renderer.addFeedFollows(id);
 			// TESTING: high volume test
 			// "http://api.flickr.com/services/feeds/photos_public.gne" );

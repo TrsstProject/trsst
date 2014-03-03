@@ -28,54 +28,69 @@
 	var timer;
 
 	/**
-	 * Shared task queue.
+	 * Ordered queue of tasks to complete, highest priority at front.
 	 */
 	var queue = [];
 
 	/**
-	 * Shared subscriber list.
+	 * Shared callback list.
 	 */
-	var filterToSubscribers = {};
+	var topicToSubscribers = {};
 
-	pollster.addSubscriberToFeed = function(pollster, filter) {
-		var stringified = JSON.stringify(filter);
-		var pollsters = filterToSubscribers[stringified];
-		if (pollsters) {
-			var existing = pollsters.indexOf(pollster);
+	/**
+	 * Mapping of topic to corresponding task.
+	 */
+	var topicToTask = {};
+
+	/**
+	 * Subscribe to have your notify(feedXml, query) method called each time new
+	 * results are received for the specified query.
+	 */
+	pollster.subscribe = function(query, subscriber) {
+		var topic = JSON.stringify(query);
+		var subscribers = topicToSubscribers[topic];
+		if (subscribers) {
+			var existing = subscribers.indexOf(subscriber);
 			if (existing === -1) {
-				pollsters.push(pollster);
+				subscribers.push(subscriber);
 			}
 		} else {
-			filterToSubscribers[stringified] = [ pollster ];
+			topicToSubscribers[topic] = [ subscriber ];
 		}
 
-		var task = getCachedTask(filter);
+		// if existing task
+		var task = topicToTask[topic];
 		if (task) {
-			// note: for now just queue an immediate fetch
+			// notify subscriber now of latest results
+			if (task.latestResult) {
+				subscriber.notify(task.latestResult, query);
+			}
+			// eliminate delay before next refetch
 			task.noFetchBefore = 0;
-			// TODO populate with most recent cached result instead
 		} else {
-			// create new task
+			// otherwise: create new task
 			task = {
-				filter : filter,
+				query : query,
 				lastUpdate : 0,
 				lastFetched : 0,
 				noFetchBefore : 0
 			};
-			setCachedTask(filter, task);
+			topicToTask[topic] = task;
+			// execute now
+			doTask(task);
+			// doTask will insert task into queue
 		}
 
-		doTask(task);
 	};
 
-	pollster.removeSubscriber = function(subscriber) {
+	pollster.unsubscribe = function(subscriber) {
 		// scan the entire list and remove ourself
-		for ( var i in filterToSubscribers) {
-			for ( var j in filterToSubscribers[i]) {
-				if (filterToSubscribers[i][j] === subscriber) {
-					filterToSubscribers[i].splice(j, 1); // remove
-					if (filterToSubscribers[i].length === 0) {
-						delete filterToSubscribers[i];
+		for ( var i in topicToSubscribers) {
+			for ( var j in topicToSubscribers[i]) {
+				if (topicToSubscribers[i][j] === subscriber) {
+					topicToSubscribers[i].splice(j, 1); // remove
+					if (topicToSubscribers[i].length === 0) {
+						delete topicToSubscribers[i];
 					}
 				}
 			}
@@ -96,56 +111,67 @@
 		concurrentFetchCount--;
 	};
 
+	/**
+	 * Executes the task's query and notifies subscribers. Return true if task
+	 * completed successfully, or false if no query was executed.
+	 */
 	var doTask = function(task) {
-		var pollsters = filterToSubscribers[JSON.stringify(task.filter)];
-		if (!pollsters || pollsters.length === 0) {
-			console.log("Should never happen: task for no subscribers");
+		var topic = JSON.stringify(task.query);
+		var subscribers = topicToSubscribers[topic];
+		if (!subscribers || subscribers.length === 0) {
+			console.log("Deleting task: " + topic);
 			console.log(task);
-			return;
+			delete topicToSubscribers[topic];
+			delete topicToTask[topic];
+			return false; // task was not handled
 		}
 		// console.log("doTask: " + task.toString());
-		var filter = shallowCopy(task.filter);
-		var feedId = filter.feedId;
+		var query = shallowCopy(task.query);
+		var feedId = query.feedId;
 
 		if (task.latestEntryId) {
 			// use latest entry update time
-			filter.after = task.latestEntryId;
+			query.after = task.latestEntryId;
 		}
 
+		// if first time executing task
 		if (task.lastFetched === 0) {
-			// else first time executing task
-			// fetch one and requeue
-			filter.count = 1;
+			// fetch only latest few and requeue
+			query.count = 3;
 		}
 
 		var self = this;
 		pollster.incrementPendingCount();
 		console.log("concurrentFetchCount: inc:" + concurrentFetchCount);
-		console.log("Sent:     " + concurrentFetchCount + " : " + JSON.stringify(filter));
-		model.pull(filter, function(feedData) {
+		console.log("Sent:     " + concurrentFetchCount + " : " + JSON.stringify(query));
+		model.pull(query, function(feedData) {
 			concurrentFetchCount--;
 			console.log("concurrentFetchCount: dec:" + concurrentFetchCount);
 			if (!feedData) {
-				console.log("Not found: " + concurrentFetchCount + " : " + JSON.stringify(filter));
+				console.log("Not found: " + concurrentFetchCount + " : " + JSON.stringify(query));
 			} else {
-				console.log("Received: " + concurrentFetchCount + " : " + JSON.stringify(filter));
-				for ( var i in pollsters) {
-					pollsters[i].addEntriesFromFeed(feedData, filter);
+				console.log("Received: " + concurrentFetchCount + " : " + JSON.stringify(query));
+
+				// call each subscriber's notify function
+				for ( var i in subscribers) {
+					subscribers[i].notify(feedData, query);
 				}
+
 				// grab the latest result if any
+				task.latestResult = feedData;
 				var entries = feedData.children("entry");
 				if (entries.length > 0) {
-					task.latestEntryId = controller.entryIdFromEntryUrn(entries.first().children("id").text());
-					task.latestResult = domToString(feedData[0]);
+					task.latestEntry = entries.first();
+					task.latestEntryId = controller.entryIdFromEntryUrn(task.latestEntry.children("id").text());
 				}
 
 				// requeue this task
 				var now = new Date().getTime();
 				var updated;
 				var diff;
-				if (task.latestResult) {
+				if (task.latestEntry) {
 					// use latest entry update if we can
-					updated = Date.parse($(task.latestResult).find("entry updated").first().text());
+					updated = Date.parse(task.latestEntry.find("entry updated").first().text());
 					if (!updated) {
 						console.log("Error: could not parse entry date: " + Date.parse($(feedData).children("entry updated").text()));
 					}
@@ -171,22 +197,22 @@
 					// first time fetch:
 					// fetch again asap
 					task.noFetchBefore = 0;
-					console.log("rescheduled: " + task.filter.feedId + " : asap");
+					console.log("rescheduled: " + task.query.feedId + " : asap");
 				} else {
 					// fetch on a sliding delay
 					diff = Math.max(6, Math.min(diff, Math.floor(Math.pow(diff / 60000, 1 / 3) * 20000)));
 					task.noFetchBefore = now + diff;
 					// schedule fetch for cube root of the number of elapsed
 					// minutes
-					console.log("rescheduled: " + task.filter.feedId + " : " + Math.floor((now - updated) / 1000) + "s : " + Math.floor(diff / 1000 / 60) + "m " + Math.floor((diff / 1000) % 60) + "s");
+					console.log("rescheduled: " + task.query.feedId + " : " + Math.floor((now - updated) / 1000) + "s : " + Math.floor(diff / 1000 / 60) + "m " + Math.floor((diff / 1000) % 60) + "s");
 				}
 				task.lastUpdate = updated;
 				task.lastFetched = now;
-				setCachedTask(filter, task);
 
 				insertTaskIntoSortedQueue(task);
 			}
 		});
+		return true; // task was handled
 	};
 
 	var insertTaskIntoSortedQueue = function(task) {
@@ -200,7 +226,7 @@
 			next = queue[i].nextFetch;
 			if (next === time) {
 				// check for duplicate task
-				if (JSON.stringify(queue[i].filter) === JSON.stringify(task.filter)) {
+				if (JSON.stringify(queue[i].query) === JSON.stringify(task.query)) {
 					console.log("Coalescing duplicate task");
 					return; // done: exit
 				}
@@ -245,8 +271,9 @@
 				task = queue[i];
 				if (task.noFetchBefore < time) {
 					queue.splice(i, 1); // remove
-					doTask(task);
-					return; // done: exit
+					if (doTask(task)) {
+						return; // done: exit
+					}
 				}
 			}
 		}
@@ -260,40 +287,9 @@
 		return result;
 	};
 
-	var domToString = function(node) {
-		if (node.outerHTML) {
-			return node.outerHTML;
-		} else {
-			try {
-				console.log("domToString: no outerHTML");
-				var oldParent = node.parent();
-				var tmpParent = $("div");
-				tmpParent.append(node);
-				var result = node.innerHTML;
-				task.latestResult = domToString(node);
-				oldParent.append(node);
-				return result;
-			} catch (e2) {
-				console.log("domToString: no innerHTML");
-				return null;
-			}
-		}
-	};
-
-	var setCachedTask = function(filter, task) {
-		// note: localStorage would be bad due to our random port each launch
-		// !!return sessionStorage.setItem(JSON.stringify(filter),
-		// JSON.stringify(task));
-	};
-
-	var getCachedTask = function(filter) {
-		// session storage so our embedded webkit window shares state
-		// !!return JSON.parse(sessionStorage.getItem(JSON.stringify(filter)));
-	};
-
 	/**
 	 * Called by model to notify us of a local change to a feed so we can
-	 * refresh our pollsters if needed.
+	 * refresh our subscribers if needed.
 	 */
 	model.subscribe(function(feedId) {
 		var copy = [];
@@ -303,7 +299,7 @@
 		for (i in queue) {
 			task = queue[i];
 			// catch plain and urn:feed case
-			if (feedId.indexOf(task.filter.feedId) != -1) {
+			if (feedId.indexOf(task.query.feedId) != -1) {
 				// fetch asap
 				task.noFetchBefore = 0;
 				task.lastUpdate = new Date().getTime();
