@@ -974,7 +974,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 // RSS feeds don't have millisecond precision
                 // so we need to add it to avoid duplicate ids
                 if (timestamp % 1000 == 0) {
-                    timestamp = timestamp + existing.hashCode() % 1000;
+                    // need a deterministic source
+                    String hash = existing.toString() + entry.getTitle();
+                    timestamp = timestamp + hash.hashCode() % 1000;
                 }
                 converted.setId(Common.toEntryUrn(feedId, timestamp));
                 converted.setUpdated(entry.getUpdated());
