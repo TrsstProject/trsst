@@ -33,6 +33,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedList;
@@ -254,7 +255,15 @@ public class Command {
         try {
 
             CommandLineParser argParser = new GnuParser();
-            CommandLine commands = argParser.parse(mergedOptions, argv);
+            CommandLine commands;
+            try {
+                commands = argParser.parse(mergedOptions, argv);
+            } catch (Throwable t) {
+                log.error(
+                        "Unexpected error parsing arguments: "
+                                + Arrays.asList(argv), t);
+                return 127;
+            }
             LinkedList<String> arguments = new LinkedList<String>();
             for (Object o : commands.getArgList()) {
                 arguments.add(o.toString()); // dodge untyped param warning
