@@ -251,7 +251,7 @@
 			if (content.attr("type") !== undefined) {
 				entryElement.addClass("contented").addClass("collapsed");
 			}
-			addContentPreviewToElement(content, viewElement, duplicateDetector);
+			addContentPreviewToElement(entryData, content, viewElement, duplicateDetector);
 
 			// add any 'enclosure' links
 			entryData.find("link[rel='enclosure']").each(function() {
@@ -259,7 +259,7 @@
 				if (content.attr("type") !== undefined) {
 					entryElement.addClass("contented").addClass("collapsed");
 				}
-				addContentPreviewToElement($(this), viewElement, duplicateDetector);
+				addContentPreviewToElement(entryData, $(this), viewElement, duplicateDetector);
 			});
 
 			// add any 'alternate' links last
@@ -268,7 +268,7 @@
 				if (content.attr("type") !== undefined) {
 					entryElement.addClass("contented").addClass("collapsed");
 				}
-				addContentPreviewToElement($(this), viewElement, duplicateDetector);
+				addContentPreviewToElement(entryData, $(this), viewElement, duplicateDetector);
 			});
 
 		});
@@ -296,18 +296,18 @@
 		return text;
 	};
 
-	var addContentPreviewToElement = function(dataElement, viewElement, duplicateDetector) {
+	var addContentPreviewToElement = function(entryXml, contentElement, viewElement, duplicateDetector) {
 		// handle both content elements and link enclosures
-		var src = dataElement.attr("src");
+		var src = contentElement.attr("src");
 		if (!src) {
-			src = dataElement.attr("href");
+			src = contentElement.attr("href");
 		}
-		src = model.resolveUrl(src, dataElement);
+		src = model.resolveUrl(src, contentElement);
 
 		if (!duplicateDetector[src]) {
 			duplicateDetector[src] = src;
-			var type = dataElement.attr("type");
-			var verb = dataElement.attr("verb");
+			var type = contentElement.attr("type");
+			var verb = entryXml.find("verb").text();
 			var e;
 			if (type !== undefined) {
 				if (type.indexOf("video/") === 0) {
@@ -333,8 +333,12 @@
 							feedId : src,
 							count : 0
 						}, function(feedData) {
-							// following entry appears above followed feed
-							createElementForFeedData(feedData).appendTo($(viewElement).closest(".entry"));
+							if (feedData.length > 0) {
+								// following entry appears above followed feed
+								createElementForFeedData(feedData).appendTo($(viewElement).closest(".entry"));
+							} else {
+								console.log("Could not fetch followed feed: " + src);
+							}
 						});
 					} else if ((index = src.indexOf("urn:entry:")) !== -1) {
 						src = src.substring(index);
@@ -343,30 +347,16 @@
 							feedId : src,
 							count : 1
 						}, function(feedData) {
-							// reposting entry appears above reposted entry
-							var entryData = $(feedData).children("entry").first();
-							createElementForEntryData(feedData, entryData).appendTo($(viewElement).closest(".entry"));
+							if (feedData.length > 0) {
+								// reposting entry appears above reposted entry
+								var entryData = $(feedData).children("entry").first();
+								createElementForEntryData(feedData, entryData).appendTo($(viewElement).closest(".entry"));
+							} else {
+								console.log("Could not fetch reposted entry: " + src);
+							}
 						});
 					} else {
 						console.log("Unsupported atom link: " + src);
-					}
-				} else if (verb === "reply") {
-					// get last mention:
-					// this is the nearest parent in a tree of comments
-					var ref = dataElement.find("mention").last().text();
-					var prefix = src.indexOf("urn:entry:");
-					if (prefix !== -1) {
-						ref = ref.substring(prefix);
-						model.pull({
-							feedId : src,
-							count : 1
-						}, function(feedData) {
-							// replying entry appears under mention entry
-							var entryData = $(feedData).children("entry").first();
-							createElementForEntryData(feedData, entryData).prependTo($(viewElement).closest(".entry"));
-						});
-					} else {
-						console.log("Unexpected mention type for reply: " + ref);
 					}
 				} else if (src !== undefined) {
 					e = $("<a target='_blank'><span></span></a>");
@@ -374,14 +364,34 @@
 					e.attr("title", src);
 					e.children("span").text(src);
 					$(viewElement).append(e);
-				} else if (dataElement.text().trim().length > 0) {
+				} else if (contentElement.text().trim().length > 0) {
 					e = $("<div class='overlay'><iframe scrolling='no' seamless='seamless' sandbox=''></iframe></div>");
-					e.find("iframe").attr("tmpdoc", inlineStyle + dataElement.text());
+					e.find("iframe").attr("tmpdoc", inlineStyle + contentElement.text());
 					// tmpdoc becomes srcdoc when expanded
 					$(viewElement).append(e);
 				} else {
 					console.log("Unrecognized content type:" + type);
 					// console.log(this);
+				}
+			} else if (verb === "reply") {
+				// get last mention:
+				// this is the nearest parent in a tree of comments
+				var ref = entryXml.find("mention").last().text();
+				if (ref) {
+					model.pull({
+						feedId : ref,
+						count : 1
+					}, function(feedData) {
+						if (feedData.length > 0) {
+							// replying entry appears under mention entry
+							var entryData = $(feedData).children("entry").first();
+							createElementForEntryData(feedData, entryData).prependTo($(viewElement).closest(".entry"));
+						} else {
+							console.log("Could not fetch referenced entry: " + ref);
+						}
+					});
+				} else {
+					console.log("Unexpected mention type for reply: " + ref);
 				}
 			} else {
 				console.log("Missing content type:" + type);
@@ -467,6 +477,12 @@
 
 		// if target was in the input section
 		if ($(event.target).parents('.input').length !== 0) {
+			// handle normally
+			return;
+		}
+
+		// if target was in a form section
+		if ($(event.target).parents('form').length !== 0) {
 			// handle normally
 			return;
 		}
@@ -974,7 +990,7 @@
 		}
 
 		var renderer;
-		
+
 		// if we're on a detail page
 		if (path.trim().length > 1) {
 
@@ -1019,7 +1035,7 @@
 
 		} else {
 			// otherwise: we're on the "home" page
-			
+
 			$("body").addClass("page-home");
 			$("body").removeClass("page-entry");
 			$("body").removeClass("page-feed");
@@ -1057,14 +1073,12 @@
 				}
 			}, 2000);
 
-			// we can show the account menu now
-			$(document.body).removeClass("accounts-loading");
-
 			// TESTING: high volume test
 			// "http://api.flickr.com/services/feeds/photos_public.gne" );
 			// //
-		
 		}
+		// we can show the account menu now
+		$(document.body).removeClass("accounts-loading");
 	};
 
 	// + Jonas Raoni Soares Silva
