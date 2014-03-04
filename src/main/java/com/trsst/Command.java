@@ -148,111 +148,164 @@ public class Command {
         }
     }
 
-    private static Options pullOptions;
-    private static Options mergedOptions;
-    private static Options postOptions;
-    private static Option helpOption;
+    private Options pullOptions;
+    private Options mergedOptions;
+    private Options postOptions;
+    private Option helpOption;
     private boolean format = false;
 
     @SuppressWarnings("static-access")
-    private static synchronized void buildOptions(String[] argv, PrintStream out,
+    private void buildOptions(String[] argv, PrintStream out,
             InputStream in) {
         
         //NOTE: OptionsBuilder is NOT thread-safe
         // which was causing us random failures.
-        
+        Option o;
+
         pullOptions = new Options();
-        pullOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("url").withLongOpt("host")
-                .withDescription("Set host server for this operation")
-                .create('h'));
-        pullOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("id").withLongOpt("decrypt")
-                .withDescription("Decrypt entries as specified recipient id")
-                .create('d'));
+
+        o = new Option("h", "Set host server for this operation");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("url");
+        o.setLongOpt("host");
+        pullOptions.addOption(o);
+        
+        o = new Option("d", "Decrypt entries as specified recipient id");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("id");
+        o.setLongOpt("decrypt");
+        pullOptions.addOption(o);
 
         postOptions = new Options();
-        postOptions.addOption(OptionBuilder
-                .isRequired(false)
-                .hasOptionalArg()
-                .withArgName("file")
-                .withLongOpt("attach")
-                .withDescription(
-                        "Attach the specified file, or - for std input")
-                .create('a'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("url").withLongOpt("base")
-                .withDescription("Set base URL for this feed").create('b'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("file").withLongOpt("key")
-                .withDescription("Use the key store at the specified path")
-                .create('k'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("text").withLongOpt("pass")
-                .withDescription("Specify passphrase on the command line")
-                .create('p'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("text").withLongOpt("status")
-                .withDescription("Specify status update on command line")
-                .create('s'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("url").withLongOpt("url")
-                .withDescription("Attach the specified url to the new entry")
-                .create('u'));
-        postOptions.addOption(OptionBuilder
-                .isRequired(false)
-                .hasArgs(1)
-                .withArgName("verb")
-                .withLongOpt("verb")
-                .withDescription(
-                        "Specify an activitystreams verb for this entry")
-                .create('v'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("id").withLongOpt("mention")
-                .withDescription("Add a mention (aka reference)").create('r'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("text").withLongOpt("tag")
-                .withDescription("Add a tag (aka category)").create('g'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("text").withLongOpt("content")
-                .withDescription("Specify entry content on command line")
-                .create('c'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("text").withLongOpt("title")
-                .withDescription("Set this feed's title").create('t'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("text").withLongOpt("subtitle")
-                .withDescription("Set this feed's subtitle").create());
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("text").withLongOpt("name")
-                .withDescription("Set this feed's author name").create('n'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("pubkey").withLongOpt("encrypt")
-                .withDescription("Encrypt entry for specified public key")
-                .create('e'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("email").withLongOpt("mail")
-                .withDescription("Set this feed's author email").create('m'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasOptionalArg()
-                .withArgName("url").withLongOpt("icon")
-                .withDescription("Set as this feed's icon or specify url")
-                .create('i'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasOptionalArg()
-                .withArgName("url").withLongOpt("logo")
-                .withDescription("Set as this feed's logo or specify url")
-                .create('l'));
-        postOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
-                .withArgName("prefix").withLongOpt("vanity")
-                .withDescription("Generate feed id with specified prefix")
-                .create());
 
+        o = new Option("a", "Attach the specified file, or - for std input");
+        o.setRequired(false);
+        o.setOptionalArg(true);
+        o.setArgName("file");
+        o.setLongOpt("attach");
+        postOptions.addOption(o);
+
+        o = new Option("b", "Set base URL for this feed");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("url");
+        o.setLongOpt("base");
+        postOptions.addOption(o);
+
+        o = new Option("p", "Specify passphrase on the command line");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("text");
+        o.setLongOpt("pass");
+        postOptions.addOption(o);
+
+        o = new Option("s", "Specify status update on command line");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("text");
+        o.setLongOpt("status");
+        postOptions.addOption(o);
+
+        o = new Option("u", "Attach the specified url to the new entry");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("url");
+        o.setLongOpt("url");
+        postOptions.addOption(o);
+        
+        o = new Option("v", "Specify an activitystreams verb for this entry");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("verb");
+        o.setLongOpt("verb");
+        postOptions.addOption(o);
+        
+        o = new Option("r", "Add a mention (aka reference) an activitystreams verb for this entry");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("id");
+        o.setLongOpt("mention");
+        postOptions.addOption(o);
+        
+        o = new Option("g", "Add a tag (aka category)");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("text");
+        o.setLongOpt("tag");
+        postOptions.addOption(o);
+        
+        o = new Option("c", "Specify entry content on command line");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("text");
+        o.setLongOpt("content");
+        postOptions.addOption(o);
+        
+        o = new Option("t", "Set this feed's title");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("text");
+        o.setLongOpt("title");
+        postOptions.addOption(o);
+        
+        o = new Option(null, "Set this feed's subtitle");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("text");
+        o.setLongOpt("subtitle");
+        postOptions.addOption(o);
+        
+        o = new Option("n", "Set this feed's author name");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("text");
+        o.setLongOpt("name");
+        postOptions.addOption(o);
+        
+        o = new Option("e", "Encrypt entry for specified public key");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("pubkey");
+        o.setLongOpt("encrypt");
+        postOptions.addOption(o);
+        
+        o = new Option("m", "Set this feed's author email");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("email");
+        o.setLongOpt("mail");
+        postOptions.addOption(o);
+        
+        o = new Option("i", "Set as this feed's icon or specify url");
+        o.setRequired(false);
+        o.setOptionalArg(true);
+        o.setArgName("url");
+        o.setLongOpt("icon");
+        postOptions.addOption(o);
+
+        o = new Option("l", "Set as this feed's logo or specify url");
+        o.setRequired(false);
+        o.setOptionalArg(true);
+        o.setArgName("url");
+        o.setLongOpt("logo");
+        postOptions.addOption(o);
+
+        o = new Option(null, "Generate feed id with specified prefix");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("prefix");
+        o.setLongOpt("vanity");
+        postOptions.addOption(o);
+        
         // merge options parameters
         mergedOptions = new Options();
-        for (Object o : pullOptions.getOptions()) {
-            mergedOptions.addOption((Option) o);
+        for (Object obj : pullOptions.getOptions()) {
+            mergedOptions.addOption((Option) obj);
         }
-        for (Object o : postOptions.getOptions()) {
-            mergedOptions.addOption((Option) o);
+        for (Object obj : postOptions.getOptions()) {
+            mergedOptions.addOption((Option) obj);
         }
         helpOption = OptionBuilder.isRequired(false).withLongOpt("help")
                 .withDescription("Display these options").create('?');
@@ -261,9 +314,7 @@ public class Command {
 
     public int doBegin(String[] argv, PrintStream out, InputStream in) {
 
-        if (mergedOptions == null) {
-            buildOptions(argv, out, in);
-        }
+        buildOptions(argv, out, in);
 
         int result = 0;
         Server server = null;
