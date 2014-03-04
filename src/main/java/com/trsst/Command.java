@@ -148,16 +148,19 @@ public class Command {
         }
     }
 
-    private Options pullOptions;
-    private Options mergedOptions;
-    private Options postOptions;
-    private Option helpOption;
+    private static Options pullOptions;
+    private static Options mergedOptions;
+    private static Options postOptions;
+    private static Option helpOption;
     private boolean format = false;
 
     @SuppressWarnings("static-access")
-    public int doBegin(String[] argv, PrintStream out, InputStream in) {
-
-        // create the command line parser
+    private static synchronized void buildOptions(String[] argv, PrintStream out,
+            InputStream in) {
+        
+        //NOTE: OptionsBuilder is NOT thread-safe
+        // which was causing us random failures.
+        
         pullOptions = new Options();
         pullOptions.addOption(OptionBuilder.isRequired(false).hasArgs(1)
                 .withArgName("url").withLongOpt("host")
@@ -254,6 +257,13 @@ public class Command {
         helpOption = OptionBuilder.isRequired(false).withLongOpt("help")
                 .withDescription("Display these options").create('?');
         mergedOptions.addOption(helpOption);
+    }
+
+    public int doBegin(String[] argv, PrintStream out, InputStream in) {
+
+        if (mergedOptions == null) {
+            buildOptions(argv, out, in);
+        }
 
         int result = 0;
         Server server = null;
@@ -439,7 +449,7 @@ public class Command {
                 }
             } catch (Throwable t) {
                 log.error(
-                        "Unexpected error on pull:" + feedId + " : " + client,
+                        "Unexpected error on pull: " + feedId + " : " + client,
                         t);
             }
         }
