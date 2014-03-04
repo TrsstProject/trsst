@@ -30,11 +30,25 @@
 			e.preventDefault();
 			self.form.submit();
 		});
-		this.form.find(".attach").click(function(e) {
+		
+		var attach = this.form.find(".attach");
+		var input = this.form.find("input[type='file']");
+		attach.click(function(e) {
 			e.preventDefault();
-			var input = self.form.find("input[type='file']");
-			input.val(""); // clear any preexisting value
+			input[0].value=""; // clear any preexisting value
+			input.change();
 			input.click();
+		});
+		input.on('change', function(e) {
+			// grab file name so the UI can display it
+			var value = input[0].value;
+			if ( value !== undefined ) {
+				var i = value.lastIndexOf('\\');
+				if ( i !== -1 ) {
+					value = value.substring(i+1);
+				}
+				attach.attr("file", value);
+			}
 		});
 	};
 	Composer.prototype = new Composer();
@@ -50,7 +64,18 @@
 			console.log("Not posting because nothing to send.");
 		} else {
 			var self = this;
-			model.updateFeed(new FormData(self.form[0]), function(feedData) {
+			var formData = new FormData(self.form[0]);
+
+			// copy mentions from enclosed reply
+			var entry = this.form.closest(".entry");
+			if (entry.length === 1) {
+				// var mentions =
+				// TODO: copy mentions when we display them
+				formData.append("mention", entry.attr("entry"));
+				formData.append("verb", "reply");
+			}
+
+			model.updateFeed(formData, function(feedData) {
 				if (feedData) {
 					// success
 					console.log("updateFeed: result: ");

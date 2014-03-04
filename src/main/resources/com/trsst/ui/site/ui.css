@@ -91,6 +91,15 @@ article>.composer textarea {
 
 /* @end */
 
+/* @group Composer States */
+
+.composer.error textarea {
+	background-color: #ffdcbe;
+	opacity: 1;
+}
+
+/* @end */
+
 /* @group Private Messaging */
 
 aside .private.messaging
@@ -284,7 +293,7 @@ body.pending #entryContainer:empty:before {
 	background-position: center;
 	background-size: cover;
 	overflow: hidden;	
-	border-radius: 8px;
+	border-radius: 16px;
 	/* fallback image */
 	background-image: url('icon-256.png');
 	background-color: #ddd;
@@ -423,7 +432,7 @@ body.pending #entryContainer:empty:before {
 
 .entry .icon {
 	position: absolute;
-	border-radius: 8px;
+	border-radius: 12px;
 	left: 16px;
 	width: 48px;
 	height: 48px;
@@ -570,11 +579,29 @@ body.pending #entryContainer:empty:before {
 	margin-left: 0px;
 }
 
-.composer .submit span:after {
+.composer .submit span:before {
 	content: 'Send';
 }
-.composer .attach span:after {
+.composer .attach span:before {
 	content: 'Attach';
+}
+.composer .attach {
+	position: relative;
+}
+.composer .attach:after {
+/* display filename if any */
+	position: absolute;
+	content: attr(file);
+	left: 100%;
+	top: 50%;
+	margin-top: -25%;
+	margin-left: 8px;;
+	bottom: 0px;
+	width: 300%;
+	text-align: left;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
 }
 
 /* @group Entry Comment Slide-Out Reveal */
@@ -863,6 +890,40 @@ div.entry.verb-follow>div.feed .subtitle {
 	display: none;
 }
 
+/* @group Inline Reply */
+
+.entry.verb-reply  {
+margin-top: 0px;
+padding-top: 0px;
+}
+.entry.verb-reply>div.entry {
+	position: relative;
+	left: -80px;
+	width: 100%;
+	border-top: none;
+	x-border-bottom: none;
+	x-padding-bottom: 0px;
+}
+.entry.verb-reply>section  {
+	padding-top: 12px;
+	padding-left: 64px;
+	font-size: 85%;
+	position: relative;
+}
+.entry.verb-reply>section .icon {
+	left: 0px;
+}
+.entry.verb-reply>section .updated {
+	right: -12px;
+}
+.entry.verb-reply>section .feed-title:after {
+	content: ' commented';
+}
+.entry.verb-reply>section .feed-id {
+	display: none;
+}
+
+/* @end */
 
 /* @end */
 
@@ -1061,6 +1122,7 @@ nav {
 	padding: 0px;
 	margin: 0px;
 	margin-left: 8px;
+	border-radius: 8px;
 }
 
 .menu-item .title {
