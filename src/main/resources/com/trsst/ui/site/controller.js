@@ -292,7 +292,7 @@
 			// actually is a bit faster to prequalify before applying regex
 			text = text.replace(gruberUrl, '<a target="_blank" href="$1">$1</a>');
 		}
-		text = text.replace(/\n/g, "<br>");
+		text = text.trim().replace(/\n/g, "<br>");
 		return text;
 	};
 
