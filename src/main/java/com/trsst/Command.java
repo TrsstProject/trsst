@@ -52,6 +52,7 @@ import com.trsst.client.Client;
 import com.trsst.client.EntryOptions;
 import com.trsst.client.FeedOptions;
 import com.trsst.server.Server;
+import com.trsst.server.TrsstAdapter;
 
 /**
  * Command-line program that implements the application-level features needed to
@@ -130,6 +131,10 @@ public class Command {
             } else {
                 // CLI mode
                 result = new Command().doBegin(argv, System.out, System.in);
+            }
+            // task queue prevents exit unless stopped
+            if (TrsstAdapter.TASK_QUEUE != null) {
+                TrsstAdapter.TASK_QUEUE.cancel();
             }
         } catch (Throwable t) {
             result = 1; // "general catchall error code"
@@ -433,7 +438,9 @@ public class Command {
                             + client);
                 }
             } catch (Throwable t) {
-                log.error("Unexpected error on pull.", t);
+                log.error(
+                        "Unexpected error on pull:" + feedId + " : " + client,
+                        t);
             }
         }
         return 0; // "OK"

@@ -203,10 +203,6 @@ public class Server {
     public void stop() {
         try {
             server.stop();
-            // task queue prevents exit unless stopped
-            if (TrsstAdapter.TASK_QUEUE != null) {
-                TrsstAdapter.TASK_QUEUE.cancel();
-            }
         } catch (Exception e) {
             log.error("Error while stopping server", e);
         }
