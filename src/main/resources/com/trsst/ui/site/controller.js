@@ -562,8 +562,6 @@
 			$(document.body).removeClass("signed-in");
 			onPopulate();
 		}
-		// we can show the account menu now
-		$(document.body).removeClass("accounts-loading");
 	};
 
 	/** Update the UI to show we're logged in as the specified user id. */
@@ -816,7 +814,7 @@
 			var accountId = getCurrentAccountId();
 			if (result.length === 0 || accountId === null || result.indexOf(accountId) === -1) {
 				// no matching accounts: update the UI
-				setCurrentAccountId(null);
+				// setCurrentAccountId(null);
 			}
 
 			// need to pull each account to populate the UI
@@ -854,7 +852,7 @@
 		}
 		return obj;
 	};
-	
+
 	var TRSST_WELCOME = "8crfxaHcBWTHuhA8cXfwPc3vfJ3SbsRpJ";
 
 	var onInit = function() {
@@ -935,7 +933,7 @@
 		new Composer($(document).find(".private.messaging form"));
 		new Composer($("article>.composer").get());
 	};
-	
+
 	var initialHistoryLength = window.history.length;
 
 	controller.pushState = function(path) {
@@ -976,6 +974,8 @@
 		}
 
 		var renderer;
+		
+		// if we're on a detail page
 		if (path.trim().length > 1) {
 
 			$("body").removeClass("page-home");
@@ -986,10 +986,6 @@
 				$("body").addClass("page-self");
 			}
 
-			renderer = new EntryRenderer(createElementForEntryData, $("#entryContainer"));
-			renderer.addFeed(path);
-			renderers.push(renderer);
-
 			// some trickery to keep private msg in sync with feed
 			var customCreateElementForFeedData = function(feedData) {
 				// update form private encryption option with encryption key
@@ -998,11 +994,32 @@
 				return createElementForFeedData(feedData);
 			};
 
+			// page owner
 			renderer = new FeedRenderer(customCreateElementForFeedData, $("#feedContainer"));
 			renderer.addFeed(path);
 			renderers.push(renderer);
 
+			// page owner's entries
+			renderer = new EntryRenderer(createElementForEntryData, $("#entryContainer"));
+			renderer.addFeed(path);
+			renderers.push(renderer);
+
+			// delay load for followed feeds
+			$("#followsContainer").empty();
+			window.setTimeout(function() {
+				var element = $("<div></div>");
+				$("#followsContainer").append(element);
+				var renderer = new FeedRenderer(createElementForFeedData, element);
+				renderers.push(renderer);
+				if (path !== TRSST_WELCOME) {
+					renderer.addFeed(TRSST_WELCOME);
+				}
+				renderer.addFeedFollows(path);
+			}, 2000);
+
 		} else {
+			// otherwise: we're on the "home" page
+			
 			$("body").addClass("page-home");
 			$("body").removeClass("page-entry");
 			$("body").removeClass("page-feed");
@@ -1013,22 +1030,49 @@
 				id = TRSST_WELCOME;
 			}
 
+			// this is the "home" feed
 			renderer = new FeedRenderer(createElementForFeedData, $("#feedContainer"));
 			renderers.push(renderer);
 			renderer.addFeed(id);
 
+			// our followed feeds
 			renderer = new EntryRenderer(createElementForEntryData, $("#entryContainer"));
 			renderers.push(renderer);
 			renderer.addFeed(id);
-			if ( id !== TRSST_WELCOME) {
+			if (id !== TRSST_WELCOME) {
 				renderer.addFeed(TRSST_WELCOME);
 			}
-			
 			renderer.addFeedFollows(id);
+
+			// delay load for recommended feeds
+			$("#followsContainer").empty();
+			window.setTimeout(function() {
+				var element = $("<div></div>");
+				$("#followsContainer").append(element);
+				var renderer = new FeedRenderer(createElementForFeedData, element);
+				renderers.push(renderer);
+				renderer.addFeedFollows(id);
+				if (id !== TRSST_WELCOME) {
+					renderer.addFeed(TRSST_WELCOME);
+				}
+			}, 2000);
+
+			// we can show the account menu now
+			$(document.body).removeClass("accounts-loading");
+
 			// TESTING: high volume test
 			// "http://api.flickr.com/services/feeds/photos_public.gne" );
 			// //
+		
 		}
+	};
+
+	// + Jonas Raoni Soares Silva
+	// @ http://jsfromhell.com/array/shuffle [v1.0]
+	var shuffle = function(o) { // v1.0
+		for (var j, x, i = o.length; i; j = Math.floor(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x)
+			;
+		return o;
 	};
 
 	controller.start = function() {

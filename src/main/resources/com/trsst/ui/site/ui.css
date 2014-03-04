@@ -100,7 +100,7 @@ aside .private.messaging
 	padding-bottom: 36px;
 	background: #fff;
 	border-radius:8px;
-	margin-top: 16px;
+	margin: 16px 0px;
 	color: black;
 }
 aside .private.messaging:before
@@ -108,7 +108,7 @@ aside .private.messaging:before
 	padding: 18px 18px;
 	position: absolute;
 	border-bottom: 1px solid #ddd;
-	content: 'Conversation';
+	content: 'Direct Messages';
 	font-weight: bold;
 	font-size: 20px;
 	top: 0px;
@@ -220,7 +220,7 @@ h1.title span {
 	color: black;
 }
 .page-home #entryContainer:before {
-	content: 'Followed Feeds';
+	content: 'Live Stream';
 }
 
 body.pending #entryContainer:empty:before {
@@ -254,7 +254,7 @@ body.pending #entryContainer:empty:before {
 	border-radius: 6px;
 }
 
-#feedContainer a {
+.feed a {
 	cursor: pointer;
 }
 
@@ -355,8 +355,8 @@ body.pending #entryContainer:empty:before {
 .signed-in .main .feed .follow {
 	display: inherit;
 }
-.page-home aside .feed .follow,
-.page-self aside .feed .follow
+.page-home aside #feedContainer .feed .follow,
+.page-self aside #feedContainer .feed .follow
 {
 /* everyone follows themselves implicitly */
 	display: none !important;
@@ -733,6 +733,7 @@ body.pending #entryContainer:empty:before {
 
 .action.expand span:after {
 	content: 'More';
+	display: none;
 }
 .expanded .action.expand span:after {
 	content: 'Less';
@@ -1144,12 +1145,18 @@ nav .menu-item {
 .signed-in nav .menu-item.login {
 	display: none;
 }
+nav .menu-item .title:after {
+	line-height: 16px;
+	display: block;
+}
 nav .menu-item.login .title:after {
 	content: "Sign In";
 }
 
 nav .menu-item.create .title:after {
 	content: "New Account";
+	height: 16px;
+	overflow: hidden;
 }
 .signed-in nav .menu-item.create {
 	display: none;
@@ -1500,4 +1507,115 @@ body .footer-container .wrapper {
 }
 
 /* @end */
+
+/* @group Follows Container */
+
+aside #followsContainer {
+	border-radius: 8px;
+	padding-top: 53px;
+	background-color: #fff;
+	position: relative;
+	overflow: hidden;
+}
+
+aside #followsContainer:before
+{
+	padding: 18px 18px;
+	position: absolute;
+	border-bottom: 1px solid #ddd;
+	content: 'Following';
+	font-weight: bold;
+	font-size: 20px;
+	top: 0px;
+	left: 0px;
+	right: 0px;
+	height: 16px;
+	color: #000;
+	border-bottom: 1px solid #ddd;
+}
+.page-home aside #followsContainer:before {
+	content: 'You might follow';
+}
+.page-self aside #followsContainer:before {
+	content: 'You are following';
+}
+
+aside #followsContainer>div {
+	height: 360px;
+	overflow-x: hidden;
+	overflow-y: scroll;
+	margin-right: -18px;
+}
+
+aside div#followsContainer .feed {
+	border-radius: 0px;
+	background: #fff;
+	text-align: left;
+	border-bottom: 1px solid #ddd;
+	padding: 8px;
+	padding-right: 36px;
+	min-height: 90px
+}
+aside div#followsContainer .feed .title {
+	color: #000;
+	font-size: 130%;
+	margin-left: 88px;
+	margin-top: 8px;
+	margin-bottom: 4px;
+}
+aside div#followsContainer .feed .subtitle {
+	display: none;
+}
+aside div#followsContainer .feed .feed-id {
+	font-size: 85%;
+	margin-left: 88px;
+	margin-bottom: 4px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+aside div#followsContainer .feed .follow {
+	left: 88px;
+	text-align: left;
+	position: relative;
+}
+aside div#followsContainer .feed .logo {
+	display: none;
+}
+aside div#followsContainer .feed .icon {
+	margin: 8px;
+	position: absolute;
+}
+
+aside div#followsContainer:empty {
+	display: none;
+}
+
+
+/* @end */
+
+/* @group iPhone/Android/Mobile */
+
+@media only screen and (max-width: 480px) {
+
+body {
+	margin: 4px -4px;
+    -webkit-text-size-adjust: 100%;
+}   
+aside {
+	padding-bottom: 0px !important;
+}
+aside div#followsContainer {
+	display: none;
+}
+
+div.main.wrapper {
+	padding: 0px 0px;
+	margin: 8px 0px;
+	width: 100%;
+}
+
+/* @end */
+
 

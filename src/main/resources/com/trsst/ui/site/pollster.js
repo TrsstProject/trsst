@@ -43,6 +43,12 @@
 	var topicToTask = {};
 
 	/**
+	 * Keeps a copy of latest result for a given query.
+	 * TODO: need to clear out the cache after a while
+	 */
+	var resultCache = {};
+
+	/**
 	 * Subscribe to have your notify(feedXml, query) method called each time new
 	 * results are received for the specified query.
 	 */
@@ -61,12 +67,14 @@
 		// if existing task
 		var task = topicToTask[topic];
 		if (task) {
-			// notify subscriber now of latest results
-			if (task.latestResult) {
-				subscriber.notify(task.latestResult, query);
+			if (task.latestFeed) {
+				// notify subscriber now of latest results
+				subscriber.notify(task.latestFeed, query);
+			} else {
+				// trigger refetch asap 
+				task.noFetchBefore = 0;
 			}
-			// eliminate delay before next refetch
-			task.noFetchBefore = 0;
+			// will get updated on already queued task
 		} else {
 			// otherwise: create new task
 			task = {
@@ -119,11 +127,11 @@
 		var topic = JSON.stringify(task.query);
 		var subscribers = topicToSubscribers[topic];
 		if (!subscribers || subscribers.length === 0) {
-			console.log("Deleting task: " + topic);
-			console.log(task);
-			delete topicToSubscribers[topic];
-			delete topicToTask[topic];
-			return false; // task was not handled
+//			console.log("Deleting task: " + topic);
+//			console.log(task);
+//			delete topicToSubscribers[topic];
+//			delete topicToTask[topic];
+			return false; // task skipped
 		}
 		// console.log("doTask: " + task.toString());
 		var query = shallowCopy(task.query);
@@ -143,7 +151,8 @@
 		var self = this;
 		pollster.incrementPendingCount();
 		console.log("concurrentFetchCount: inc:" + concurrentFetchCount);
-		console.log("Sent:     " + concurrentFetchCount + " : " + JSON.stringify(query));
+		var stringifiedQuery = JSON.stringify(query); 
+		console.log("Sent:     " + concurrentFetchCount + " : " + stringifiedQuery);
 		model.pull(query, function(feedData) {
 			concurrentFetchCount--;
 			console.log("concurrentFetchCount: dec:" + concurrentFetchCount);
@@ -158,11 +167,13 @@
 				}
 
 				// grab the latest result if any
-				task.latestResult = feedData;
+				resultCache[stringifiedQuery] = feedData;
 				var entries = feedData.children("entry");
 				if (entries.length > 0) {
 					task.latestEntry = entries.first();
 					task.latestEntryId = controller.entryIdFromEntryUrn(task.latestEntry.children("id").text());
+					task.latestFeed = feedData;
+					// remember latest feed *with entries*
 				}
 
 				// requeue this task
@@ -247,7 +258,7 @@
 		if (!timer) {
 			timer = window.setInterval(function() {
 				onTick();
-			}, 1000);
+			}, 250);
 		}
 	};
 

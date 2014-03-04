@@ -21,7 +21,6 @@
 	 */
 
 	var AbstractRenderer = function() {
-		this.ids = [];
 	};
 
 	/**
@@ -30,10 +29,21 @@
 	 */
 	AbstractRenderer.prototype.addDataToFeedContainer = function(feedData) {
 		var id = feedData.children("id").text();
+		var updated = feedData.children("updated").text();
 		console.log("addDataToFeedContainer: " + id);
 		this.feedContainer.find("[feed='" + id + "']").remove();
-		this.feedContainer.append(this.feedFactory(feedData));
-
+		var element = this.feedFactory(feedData);
+		element[0].updated = updated;
+		this.feedContainer.children().each(function() {
+			if (this.updated && this.updated < element[0].updated) {
+				element.insertBefore(this);
+				return false;
+			}
+		});
+		if (!element[0].parentNode) {
+			// if no match, append to end
+			this.feedContainer.append(element);
+		}
 	};
 
 	/**
@@ -108,10 +118,14 @@
 	 * Monitor for specified feeds and entries.
 	 */
 	AbstractRenderer.prototype.addEntries = function(query) {
-		console.log("addEntries: " + query);
-		pollster.subscribe(query, this);
+		var key = JSON.stringify(query);
+		if (!this.querySet[key]) {
+			console.log("addEntries: " + key);
+			pollster.subscribe(query, this);
+			this.querySet[key] = key; // avoid duplicates
+		}
 	};
-	
+
 	/**
 	 * Called by pollster to update our contents with the specified feed.
 	 */
@@ -119,14 +133,13 @@
 		console.log("notify: " + query);
 		this.addEntriesFromFeed(feedData, query);
 	};
-	
 
 	AbstractRenderer.prototype.addEntriesFromFeed = function(feedData, query) {
 		// ignore delayed fetch responses
-		if ( this.disposed ) {
+		if (this.disposed) {
 			return;
 		}
-		
+
 		var self = this;
 		var result = [];
 		if (self.feedContainer && self.feedFactory) {
@@ -178,10 +191,10 @@
 	 * onscreen elements.
 	 */
 	AbstractRenderer.prototype.renderNow = function() {
-		if ( this.disposed ) {
+		if (this.disposed) {
 			return;
-		} 
-		
+		}
+
 		console.log("rendering: ");
 		if (getPendingCount() === 0) {
 			$("body").removeClass("pending");
@@ -235,7 +248,7 @@
 
 	var incrementPendingCount = function() {
 		pollster.incrementPendingCount();
-		if (getPendingCount() > 2	) {
+		if (getPendingCount() > 2) {
 			$("body").addClass("pending");
 		}
 	};
@@ -254,7 +267,7 @@
 	};
 
 	AbstractRenderer.prototype.fetchPrevious = function(elem) {
-//if ( true ) return; 
+		// if ( true ) return;
 		elem = $(elem);
 		var entryUrn = elem.attr("entry");
 		var entryId = controller.entryIdFromEntryUrn(entryUrn);
@@ -331,7 +344,7 @@
 			self.renderNow();
 		}, 500);
 	};
-	
+
 	AbstractRenderer.prototype.dispose = function() {
 		this.reset();
 		this.disposed = true;
@@ -350,6 +363,9 @@
 		if (this.feedContainer) {
 			this.feedContainer.empty();
 		}
+		if (this.querySet) {
+			this.querySet = {};
+		}
 	};
 
 	/**
@@ -363,7 +379,7 @@
 		if (this.feedContainer) {
 			this.feedContainer.empty();
 		}
-		// FIXME: need to populate this.ids
+		// FIXME: need to populate this.querySet
 		// FIXME: need to re-create list with this.ids
 	};
 
@@ -391,6 +407,7 @@
 		this.entryContainer.empty();
 		this.entryFactory = entryFactoryFunction;
 		this.scrollTriggers = [];
+		this.querySet = {};
 		var self = this;
 		$(window).scroll(function() {
 			if (self.scrollTriggers.length > 0) {
@@ -411,6 +428,7 @@
 		this.feedContainer.empty();
 		this.feedFactory = feedFactoryFunction;
 		this.scrollTriggers = [];
+		this.querySet = {};
 		var self = this;
 		$(window).on("scroll", null, function() {
 			if (self.scrollTriggers.length > 0) {
