@@ -85,7 +85,7 @@
 	};
 
 	/**
-	 * Called to notify observers object did change on a later event.
+	 * Called to notify observers object did change on next event.
 	 */
 	model.notify = function(feedId) {
 		if (notifyQueue.indexOf(feedId) === -1) {
@@ -101,7 +101,7 @@
 					}
 				}
 				notifyQueue = [];
-			}, 500);
+			}, 1);
 		}
 	};
 	var notifyTimer;
