@@ -159,7 +159,7 @@
 			if (!feedData) {
 				console.log("Not found: " + concurrentFetchCount + " : " + JSON.stringify(query));
 			} else {
-				console.log("Received: " + concurrentFetchCount + " : " + JSON.stringify(query));
+				//console.log("Received: " + concurrentFetchCount + " : " + JSON.stringify(query));
 
 				// call each subscriber's notify function
 				for ( var i in subscribers) {
