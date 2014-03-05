@@ -293,7 +293,7 @@ body.pending #entryContainer:empty:before {
 	background-position: center;
 	background-size: cover;
 	overflow: hidden;	
-	border-radius: 16px;
+	border-radius: 25%;
 	/* fallback image */
 	background-image: url('icon-256.png');
 	background-color: #ddd;
@@ -432,7 +432,6 @@ body.pending #entryContainer:empty:before {
 
 .entry .icon {
 	position: absolute;
-	border-radius: 12px;
 	left: 16px;
 	width: 48px;
 	height: 48px;
@@ -1122,7 +1121,6 @@ nav {
 	padding: 0px;
 	margin: 0px;
 	margin-left: 8px;
-	border-radius: 8px;
 }
 
 .menu-item .title {
@@ -1654,6 +1652,120 @@ aside div#followsContainer:empty {
 	display: none;
 }
 
+/* @end */
+
+/* @group Entry Page */
+
+body.page-entry article {
+	position: absolute;
+	width: 600px;
+	left: 50%;
+	margin-left: -300px;
+}
+body.page-entry.pending article {
+	display: none;
+}
+
+body.page-entry #followsContainer {
+	display: none;
+}
+
+body.page-entry #entryContainer {
+	padding: 0px;
+	border-radius: 24px;
+}
+
+body.page-entry #entryContainer:before {
+	content: '';
+	font-weight: bold;
+	font-size: 20px;
+	position: absolute;
+	left: 16px;
+	top: 18px;
+	color: black;
+}
+body.page-entry #entryContainer:empty:before {
+	top: 28px;
+	left: 24px;
+	content: 'No entry found';
+	color: #aaa;
+}
+body.page-entry.pending #entryContainer:empty:before {
+	content: 'Loading...';
+}
+
+body.page-entry .entry {
+	padding-top: 24px;
+	padding-bottom: 48px;
+}
+
+body.page-entry .entry .icon {
+	width: 64px;
+	height: 64px;
+}
+body.page-entry .entry .feed-title {
+	margin-top: 8px;
+	margin-left: 18px;
+	font-size: 24px;
+	line-height: 28px;
+}
+body.page-entry .entry .feed-id {
+	display: block;
+	margin-left: 18px;
+	font-size: 16px;
+	line-height: 18px;
+}
+body.page-entry .entry .title {
+	display: block;
+	margin: 18px;
+	font-size: 24px;
+	line-height: 32px;
+	font-weight: lighter;
+}
+
+body.page-entry .entry.expanded.contented .content .overlay {
+	height: 400px;
+}
+body.page-entry .entry .content>a {
+	margin-right: 32px;
+}
+
+/* @group Single Entry Date Handling */
+
+body.page-entry .entry .updated {
+	position: absolute;
+	bottom: 16px;
+	left: 96px;
+	width: inherit;
+	top: inherit;
+}
+body.page-entry .entry .updated .relative {
+	display: none !important;
+}
+body.page-entry .entry .updated .absolute {
+	display: inherit !important;
+	text-align: left;
+}
+body.page-entry .entry .updated .absolute span {
+	display: inline;
+}
+body.page-entry .entry .updated .absolute span.minute:after{
+	content: ' ';
+}
+body.page-entry .entry .updated .absolute span.second{
+	display: none;
+}
+body.page-entry .entry .updated .absolute span.day:before {
+	content: ' - ';
+}
+body.page-entry .entry .updated .absolute span.month span {
+	display: none;
+}
+body.page-entry .entry .updated .absolute span.year:before {
+	content: ' ';
+}
+
+/* @end */
 
 /* @end */
 

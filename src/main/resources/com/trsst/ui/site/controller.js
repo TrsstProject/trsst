@@ -459,9 +459,26 @@
 			// note: now just falling through to expand/collapse
 		}
 
+		var url;
+
+		// if target was in the date/time updated section
+		if ($(event.target).parents('.updated').length !== 0) {
+			url = $(event.target).parents('.entry').first().attr("entry");
+			if (url.indexOf("urn:entry:") === 0) {
+				url = url.substring("urn:entry:".length);
+				var colon = url.lastIndexOf(":");
+				if (colon !== -1) {
+					// convert to path
+					url = url.substring(0, colon) + "/" + url.substring(colon + 1);
+				}
+				controller.pushState("/" + url);
+			}
+			return;
+		}
+
 		// if target was in the content section
 		if ($(event.target).parents('.content .feed').length !== 0) {
-			var url = $(event.target).parents('.content .feed').attr("feed");
+			url = $(event.target).parents('.content .feed').attr("feed");
 			if (url.indexOf("urn:feed:") === 0) {
 				url = url.substring("urn:feed:".length);
 				controller.pushState("/" + url);
@@ -950,10 +967,13 @@
 		new Composer($("article>.composer").get());
 	};
 
-	var initialHistoryLength = window.history.length;
-
 	controller.pushState = function(path) {
-		window.history.pushState(null, null, path);
+		// if any state is set, the back button appears
+		var state = model.getAuthenticatedAccountId();
+		if (!state) {
+			state = ""; // non-null empty string
+		}
+		window.history.pushState(state, null, path);
 		onPopulate();
 	};
 
@@ -968,6 +988,7 @@
 	var onPopulate = function() {
 		var host = window.location.host;
 		var path = window.location.toString();
+		var pathname = window.location.pathname;
 
 		/* Enable "Open in Browser" */
 		$(".util-browser-launcher a").attr("target", "_blank").attr("href", path);
@@ -983,7 +1004,8 @@
 			path = path.substring(j + host.length + 1);
 		}
 
-		if (window.history.length > initialHistoryLength) {
+		// determine if we're at origin page
+		if (window.history.state !== null) {
 			$("body").addClass("has-back");
 		} else {
 			$("body").removeClass("has-back");
@@ -991,47 +1013,78 @@
 
 		var renderer;
 
-		// if we're on a detail page
+		// if we're not on the home page
 		if (path.trim().length > 1) {
 
-			$("body").removeClass("page-home");
-			$("body").removeClass("page-entry");
-			$("body").addClass("page-feed");
+			// if we're on a entry page
 			var uid = model.getAuthenticatedAccountId();
-			if (uid && uid.indexOf(path) !== -1) {
-				$("body").addClass("page-self");
-			}
-
-			// some trickery to keep private msg in sync with feed
-			var customCreateElementForFeedData = function(feedData) {
-				// update form private encryption option with encryption key
-				var privateMessaging = $(document).find(".private.messaging");
-				privateMessaging.find("option.private").attr("value", feedData.find("encrypt").text());
-				return createElementForFeedData(feedData);
-			};
-
-			// page owner
-			renderer = new FeedRenderer(customCreateElementForFeedData, $("#feedContainer"));
-			renderer.addFeed(path);
-			renderers.push(renderer);
-
-			// page owner's entries
-			renderer = new EntryRenderer(createElementForEntryData, $("#entryContainer"));
-			renderer.addFeed(path);
-			renderers.push(renderer);
-
-			// delay load for followed feeds
-			$("#followsContainer").empty();
-			window.setTimeout(function() {
-				var element = $("<div></div>");
-				$("#followsContainer").append(element);
-				var renderer = new FeedRenderer(createElementForFeedData, element);
-				renderers.push(renderer);
-				if (path !== TRSST_WELCOME) {
-					renderer.addFeed(TRSST_WELCOME);
+			var entry = /([^#?]*)\/([0-9a-fA-F]{11})/.exec(pathname);
+			if (entry !== null) {
+				$("body").removeClass("page-home");
+				$("body").removeClass("page-feed");
+				$("body").addClass("page-entry");
+				if (uid && uid.indexOf(path) !== -1) {
+					$("body").addClass("page-self");
 				}
-				renderer.addFeedFollows(path);
-			}, 2000);
+				var entryContainer = $("#entryContainer");
+				entryContainer.empty();
+
+				pathname = pathname.substring(1); // trim leading slash
+				model.pull({
+					feedId : pathname,
+					count : 1
+				}, function(feedData) {
+					$("body").removeClass("pending");
+					if (feedData.length > 0) {
+						// replying entry appears under mention entry
+						var entryData = $(feedData).children("entry").first();
+						createElementForEntryData(feedData, entryData).prependTo(entryContainer).click();
+						// click to expand
+					} else {
+						console.log("Could not fetch requested entry: " + pathname);
+						// TODO: display a not-found message
+					}
+				});
+			} else {
+				// otherwise we're on a feed page
+				$("body").removeClass("page-home");
+				$("body").removeClass("page-entry");
+				$("body").addClass("page-feed");
+				if (uid && uid.indexOf(path) !== -1) {
+					$("body").addClass("page-self");
+				}
+
+				// some trickery to keep private composer in sync with feed
+				var customCreateElementForFeedData = function(feedData) {
+					// update form private encryption option with encryption key
+					var privateMessaging = $(document).find(".private.messaging");
+					privateMessaging.find("option.private").attr("value", feedData.find("encrypt").text());
+					return createElementForFeedData(feedData);
+				};
+
+				// page owner
+				renderer = new FeedRenderer(customCreateElementForFeedData, $("#feedContainer"));
+				renderer.addFeed(path);
+				renderers.push(renderer);
+
+				// page owner's entries
+				renderer = new EntryRenderer(createElementForEntryData, $("#entryContainer"));
+				renderer.addFeed(path);
+				renderers.push(renderer);
+
+				// delay load for followed feeds
+				$("#followsContainer").empty();
+				window.setTimeout(function() {
+					var element = $("<div></div>");
+					$("#followsContainer").append(element);
+					var renderer = new FeedRenderer(createElementForFeedData, element);
+					renderers.push(renderer);
+					if (path !== TRSST_WELCOME) {
+						renderer.addFeed(TRSST_WELCOME);
+					}
+					renderer.addFeedFollows(path);
+				}, 2000);
+			}
 
 		} else {
 			// otherwise: we're on the "home" page
