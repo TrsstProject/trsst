@@ -57,13 +57,16 @@ public class AppMain extends javafx.application.Application {
     private static AppleEvents appleEvents;
 
     public static void main(String[] argv) {
-        // registers osx-native event handlers
-        //NOTE: must happen first to collect launch events
+
+        // register osx-native event handlers if needed
         try {
+            // NOTE: must happen first to collect launch events
             appleEvents = new AppleEvents();
-        } catch ( Throwable t ) {
+            // major improvement in font rendering on OSX
+            System.setProperty("prism.lcdtext", "false");
+        } catch (Throwable t) {
             // probably wrong platform: ignore
-            log.warn("Could not load osx events: " + t.getMessage() );
+            log.warn("Could not load osx events: " + t.getMessage());
         }
 
         // try to set user-friendly client and server directories
@@ -78,26 +81,22 @@ public class AppMain extends javafx.application.Application {
         if (System.getProperty("com.trsst.server.relays") == null) {
             // if unspecified, default relay to home.trsst.com
             System.setProperty("com.trsst.server.relays",
-                  "http://home.trsst.com/feed");
+                    "http://home.trsst.com/feed");
         }
 
         try {
-            // try to write to a log file in temporary directory
-            String path = System.getProperty("java.io.tmpdir", "")
-                    + "trsst.log";
-            path = "/tmp/trsst.log";
-            Handler handler = new FileHandler(path, 1024 * 1024, 3);
-            Logger.getLogger("").addHandler(handler);
-            log.info("Writing log file to: " + path);
-
+            // write to log file if configured
+            String path = System.getProperty("com.trsst.logfile");
+            if (path != null) {
+                Handler handler = new FileHandler(path, 1024 * 1024, 3);
+                Logger.getLogger("").addHandler(handler);
+                log.info("Writing log file to: " + path);
+            }
         } catch (SecurityException e) {
             log.warn("No permission to write to log file", e);
         } catch (IOException e) {
             log.warn("Can't write to log file", e);
         }
-
-        // major improvement in font rendering on OSX
-        System.setProperty("prism.lcdtext", "false");
 
         // launch the app
         launch(argv);
@@ -169,12 +168,12 @@ public class AppMain extends javafx.application.Application {
         stage.show();
 
         // registers osx-native event handlers
-        //NOTE: must happen last to receive non-launch events
+        // NOTE: must happen last to receive non-launch events
         try {
             appleEvents.run();
-        } catch ( Throwable t ) {
+        } catch (Throwable t) {
             // probably wrong platform: ignore
-            log.warn("Could not start osx events: " + t.getMessage() );
+            log.warn("Could not start osx events: " + t.getMessage());
         }
     }
 
