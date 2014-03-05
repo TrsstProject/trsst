@@ -75,7 +75,11 @@
 				formData.append("verb", "reply");
 			}
 
+			self.form.addClass("pending");
+			self.form.find("button").attr("disabled", true);
 			model.updateFeed(formData, function(feedData) {
+				self.form.removeClass("pending");
+				self.form.find("button").attr("disabled", false);
 				if (feedData) {
 					// success
 					console.log("updateFeed: result: ");
