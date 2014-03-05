@@ -78,7 +78,7 @@ public class AppMain extends javafx.application.Application {
         if (System.getProperty("com.trsst.server.relays") == null) {
             // if unspecified, default relay to home.trsst.com
             System.setProperty("com.trsst.server.relays",
-                    "http://home.trsst.com/feed");
+                  "http://home.trsst.com/feed");
         }
 
         try {
