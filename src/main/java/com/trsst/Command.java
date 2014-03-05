@@ -113,6 +113,17 @@ public class Command {
 
     public static void main(String[] argv) {
 
+        // during alpha period: expire after one week
+        Date builtOn = Common.getBuiltOn();
+        if (builtOn != null) {
+            if (System.currentTimeMillis() - builtOn.getTime() > 1000 * 60 * 60
+                    * 24 * 7) {
+                System.err.println( "Build expired: " + builtOn );
+                System.err.println( "Please obtain a more recent build for testing." );
+                System.exit(1);
+            }
+        }
+
         Console console = System.console();
         int result;
         try {
@@ -155,10 +166,9 @@ public class Command {
     private boolean format = false;
 
     @SuppressWarnings("static-access")
-    private void buildOptions(String[] argv, PrintStream out,
-            InputStream in) {
-        
-        //NOTE: OptionsBuilder is NOT thread-safe
+    private void buildOptions(String[] argv, PrintStream out, InputStream in) {
+
+        // NOTE: OptionsBuilder is NOT thread-safe
         // which was causing us random failures.
         Option o;
 
@@ -170,7 +180,7 @@ public class Command {
         o.setArgName("url");
         o.setLongOpt("host");
         pullOptions.addOption(o);
-        
+
         o = new Option("d", "Decrypt entries as specified recipient id");
         o.setRequired(false);
         o.setArgs(1);
@@ -214,70 +224,71 @@ public class Command {
         o.setArgName("url");
         o.setLongOpt("url");
         postOptions.addOption(o);
-        
+
         o = new Option("v", "Specify an activitystreams verb for this entry");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("verb");
         o.setLongOpt("verb");
         postOptions.addOption(o);
-        
-        o = new Option("r", "Add a mention (aka reference) an activitystreams verb for this entry");
+
+        o = new Option("r",
+                "Add a mention (aka reference) an activitystreams verb for this entry");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("id");
         o.setLongOpt("mention");
         postOptions.addOption(o);
-        
+
         o = new Option("g", "Add a tag (aka category)");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("text");
         o.setLongOpt("tag");
         postOptions.addOption(o);
-        
+
         o = new Option("c", "Specify entry content on command line");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("text");
         o.setLongOpt("content");
         postOptions.addOption(o);
-        
+
         o = new Option("t", "Set this feed's title");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("text");
         o.setLongOpt("title");
         postOptions.addOption(o);
-        
+
         o = new Option(null, "Set this feed's subtitle");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("text");
         o.setLongOpt("subtitle");
         postOptions.addOption(o);
-        
+
         o = new Option("n", "Set this feed's author name");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("text");
         o.setLongOpt("name");
         postOptions.addOption(o);
-        
+
         o = new Option("e", "Encrypt entry for specified public key");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("pubkey");
         o.setLongOpt("encrypt");
         postOptions.addOption(o);
-        
+
         o = new Option("m", "Set this feed's author email");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("email");
         o.setLongOpt("mail");
         postOptions.addOption(o);
-        
+
         o = new Option("i", "Set as this feed's icon or specify url");
         o.setRequired(false);
         o.setOptionalArg(true);
@@ -298,7 +309,7 @@ public class Command {
         o.setArgName("prefix");
         o.setLongOpt("vanity");
         postOptions.addOption(o);
-        
+
         // merge options parameters
         mergedOptions = new Options();
         for (Object obj : pullOptions.getOptions()) {
@@ -499,9 +510,8 @@ public class Command {
                             + client);
                 }
             } catch (Throwable t) {
-                log.error(
-                        "Unexpected error on pull: " + feedId + " : " + client,
-                        t);
+                log.error("Unexpected error on pull: " + feedId + " : "
+                        + client, t);
             }
         }
         return 0; // "OK"

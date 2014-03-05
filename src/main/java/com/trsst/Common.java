@@ -39,7 +39,9 @@ import java.security.PublicKey;
 import java.security.Security;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
@@ -636,6 +638,22 @@ public class Common {
             log.error("Could not locate manifest: " + manifestPath);
         } catch (IOException e) {
             log.error("Could not open manifest: " + manifestPath);
+        }
+        return result;
+    }
+
+    public static Date getBuiltOn() {
+        Date result = null;
+        Attributes attributes = getManifestAttributes();
+        if (attributes != null) {
+            String dateString = (String) attributes.get("Built-On");
+            try {
+                result = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(dateString);
+            } catch (Throwable t) {
+                log.warn("Could not parse build timestamp: " + dateString);
+            }
+        } else {
+            log.warn("Could not find manifest attributes.");
         }
         return result;
     }
