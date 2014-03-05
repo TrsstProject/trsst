@@ -642,13 +642,14 @@ public class Common {
         return result;
     }
 
-    public static Date getBuiltOn() {
+    public static Date getBuildDate() {
         Date result = null;
         Attributes attributes = getManifestAttributes();
         if (attributes != null) {
-            String dateString = (String) attributes.get("Built-On");
+            String dateString = attributes.getValue("Built-On");
             try {
-                result = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(dateString);
+                result = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                        .parse(dateString);
             } catch (Throwable t) {
                 log.warn("Could not parse build timestamp: " + dateString);
             }
@@ -658,21 +659,30 @@ public class Common {
         return result;
     }
 
+    public static String getBuildId() {
+        Attributes attributes = getManifestAttributes();
+        if (attributes != null) {
+            return attributes.getValue("Implementation-Build");
+        } else {
+            log.warn("Could not find manifest attributes.");
+        }
+        return null;
+    }
+
     public static String getBuildString() {
         String result = null;
         String[] keys = new String[] { "Implementation-Title",
-                "Implementation-Version", "Implementation-Build", "Built-On",
-                "Build-Jdk" };
+                "Implementation-Version", "Implementation-Build", "Built-On", };
         Attributes attributes = getManifestAttributes();
         if (attributes != null) {
             Object value;
             for (String key : keys) {
-                value = attributes.get(key);
+                value = attributes.getValue(key);
                 if (value != null) {
                     if (result == null) {
                         result = value.toString();
                     } else {
-                        result = ' ' + value.toString();
+                        result = result + ' ' + value.toString();
                     }
                 }
             }

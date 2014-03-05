@@ -114,13 +114,17 @@ public class Command {
     public static void main(String[] argv) {
 
         // during alpha period: expire after one week
-        Date builtOn = Common.getBuiltOn();
+        Date builtOn = Common.getBuildDate();
         if (builtOn != null) {
-            if (System.currentTimeMillis() - builtOn.getTime() > 1000 * 60 * 60
-                    * 24 * 7) {
-                System.err.println( "Build expired: " + builtOn );
-                System.err.println( "Please obtain a more recent build for testing." );
+            long weekMillis = 1000 * 60 * 60 * 24 * 7;
+            Date expiry = new Date(builtOn.getTime() + weekMillis);
+            if (new Date().after(expiry)) {
+                System.err.println("Build expired on: " + expiry);
+                System.err
+                        .println("Please obtain a more recent build for testing.");
                 System.exit(1);
+            } else {
+                System.err.println("Build will expire on: " + expiry);
             }
         }
 
