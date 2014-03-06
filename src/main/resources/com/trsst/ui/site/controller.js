@@ -222,10 +222,18 @@
 		entryElement.find(".updated .raw span").text(dateString);
 		try {
 			var date = new Date(dateString);
-			entryElement.find(".updated .absolute .second span").text(date.getSeconds());
-			entryElement.find(".updated .absolute .second").attr("value", date.getSeconds());
-			entryElement.find(".updated .absolute .minute span").text(date.getMinutes());
-			entryElement.find(".updated .absolute .minute").attr("value", date.getMinutes());
+			var seconds = date.getSeconds().toString();
+			if (seconds.length < 2) {
+				seconds = "0" + seconds;
+			}
+			var minutes = date.getMinutes().toString();
+			if (minutes.length < 2) {
+				minutes = "0" + minutes;
+			}
+			entryElement.find(".updated .absolute .second span").text(seconds);
+			entryElement.find(".updated .absolute .second").attr("value", seconds);
+			entryElement.find(".updated .absolute .minute span").text(minutes);
+			entryElement.find(".updated .absolute .minute").attr("value", minutes);
 			entryElement.find(".updated .absolute .hour span").text(date.getHours());
 			entryElement.find(".updated .absolute .hour").attr("value", date.getHours());
 			entryElement.find(".updated .absolute .day span").text(date.getDate());
