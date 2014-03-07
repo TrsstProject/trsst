@@ -42,7 +42,6 @@ public class AppleEvents implements OpenURIHandler, OpenFilesHandler,
     private final static org.slf4j.Logger log = org.slf4j.LoggerFactory
             .getLogger(AppleEvents.class);
 
-    @Override
     public void openURI(OpenURIEvent e) {
         // Application.getApplication().setDockIconBadge("URI");
         log.info("openURI: " + e.getURI());
@@ -50,31 +49,26 @@ public class AppleEvents implements OpenURIHandler, OpenFilesHandler,
 
     }
 
-    @Override
     public void handleAbout(AboutEvent e) {
         log.info("handleAbout: ");
         // Application.getApplication().setDockIconBadge("About");
     }
 
-    @Override
     public void handleQuitRequestWith(QuitEvent e, QuitResponse arg1) {
         log.info("handleQuitRequestWith: ");
         // Application.getApplication().setDockIconBadge("Quit");
     }
 
-    @Override
     public void printFiles(PrintFilesEvent e) {
         log.info("printFiles: ");
         // Application.getApplication().setDockIconBadge("Print");
     }
 
-    @Override
     public void handlePreferences(PreferencesEvent e) {
         log.info("handlePreferences: ");
         // Application.getApplication().setDockIconBadge("Prefs");
     }
 
-    @Override
     public void openFiles(OpenFilesEvent e) {
         // Application.getApplication().setDockIconBadge("File");
         log.info("openFiles: " + e.getSearchTerm() + " : " + e.getFiles());
