@@ -101,6 +101,10 @@
 				url = $(event.target).closest('.feed').attr("feed");
 				if (url.indexOf("urn:feed:") === 0) {
 					url = url.substring("urn:feed:".length);
+					// escape parameterized urns
+					if (url.indexOf("?") !== -1) {
+						url = encodeURIComponent(url);
+					}
 				}
 				if (url) {
 					controller.pushState("/" + url);
@@ -477,8 +481,14 @@
 				var colon = url.lastIndexOf(":");
 				if (colon !== -1) {
 					// convert to path
-					url = url.substring(0, colon) + "/" + url.substring(colon + 1);
+					// escape parameterized urns
+					if (url.indexOf("?") !== -1) {
+						url = encodeURIComponent(url.substring(0, colon)) + "/" + url.substring(colon + 1);
+					} else {
+						url = url.substring(0, colon) + "/" + url.substring(colon + 1);
+					}
 				}
+				// go there
 				controller.pushState("/" + url);
 			}
 			return;
@@ -489,6 +499,11 @@
 			url = $(event.target).parents('.content .feed').attr("feed");
 			if (url.indexOf("urn:feed:") === 0) {
 				url = url.substring("urn:feed:".length);
+				// escape parameterized urns
+				if (url.indexOf("?") !== -1) {
+					url = encodeURIComponent(url);
+				}
+				// go there
 				controller.pushState("/" + url);
 			}
 			return;
@@ -523,6 +538,11 @@
 				href = anchor.closest(".entry").attr("entry");
 				if (href) {
 					href = controller.feedIdFromEntryUrn(href);
+					// escape parameterized urns
+					if (href.indexOf("?") !== -1) {
+						href = encodeURIComponent(href);
+					}
+					// go there
 					controller.pushState("/" + href);
 				} else {
 					console.log("Unrecognized anchor:");
@@ -937,6 +957,10 @@
 			e.preventDefault();
 			var url = $(".util-feed-navigator form input").val();
 			if (url) {
+				// escape parameterized urns
+				if (url.indexOf("?") !== -1) {
+					url = encodeURIComponent(url);
+				}
 				controller.pushState("/" + url);
 			}
 		});
@@ -1062,8 +1086,27 @@
 					$("body").addClass("page-self");
 				}
 
+				// delay load for followed feeds
+				var loadRecommendations = function() {
+					$("#followsContainer").empty();
+					var element = $("<div></div>");
+					$("#followsContainer").append(element);
+					var renderer = new FeedRenderer(createElementForFeedData, element);
+					renderers.push(renderer);
+					if (path !== TRSST_WELCOME) {
+						renderer.addFeed(TRSST_WELCOME);
+					}
+					renderer.addFeedFollows(path);
+				};
+
 				// some trickery to keep private composer in sync with feed
 				var customCreateElementForFeedData = function(feedData) {
+					// if first time: load recommendations
+					if (loadRecommendations && feedData && feedData.length > 0) {
+						loadRecommendations();
+						loadRecommendations = null;
+					}
+
 					// update form private encryption option with encryption key
 					var privateMessaging = $(document).find(".private.messaging");
 					privateMessaging.find("option.private").attr("value", feedData.find("encrypt").text());
@@ -1079,19 +1122,6 @@
 				renderer = new EntryRenderer(createElementForEntryData, $("#entryContainer"));
 				renderer.addFeed(path);
 				renderers.push(renderer);
-
-				// delay load for followed feeds
-				$("#followsContainer").empty();
-				window.setTimeout(function() {
-					var element = $("<div></div>");
-					$("#followsContainer").append(element);
-					var renderer = new FeedRenderer(createElementForFeedData, element);
-					renderers.push(renderer);
-					if (path !== TRSST_WELCOME) {
-						renderer.addFeed(TRSST_WELCOME);
-					}
-					renderer.addFeedFollows(path);
-				}, 2000);
 			}
 
 		} else {

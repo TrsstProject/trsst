@@ -428,12 +428,7 @@
 		// FIXME: we get called a lot of times with the same query
 		// so we need to start caching sooner than later
 		filterObject = shallowCopy(filterObject);
-		// if we're logged in
-		if (authenticatedUid) {
-			// decrypt entries
-			filterObject.decrypt = authenticatedUid;
-			filterObject.pass = authenticatedPwd;
-		}
+
 		var path = filterObject.feedId;
 		if (path) {
 			delete filterObject.feedId;
@@ -448,9 +443,16 @@
 		} else {
 			path = ""; // no feed filter
 		}
-		// !! recursiveAjax(defaultBase + '/' + path, filterObject, callback,
-		// callbackPartial);
-		recursiveAjax('/pull/' + path, filterObject, callback, callbackPartial);
+
+		if (authenticatedUid) {
+			// if we're logged in: decrypt entries via servlet
+			filterObject.decrypt = authenticatedUid;
+			filterObject.pass = authenticatedPwd;
+			recursiveAjax('/pull/' + path, filterObject, callback, callbackPartial);
+		} else {
+			// not logged in: pull direct from service
+			recursiveAjax(defaultBase + '/' + path, filterObject, callback, callbackPartial);
+		}
 	};
 
 	var recursiveAjax = function(url, filterObject, callback, callbackPartial) {
