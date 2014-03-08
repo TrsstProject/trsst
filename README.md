@@ -1,11 +1,22 @@
 trsst
 =====
 
-Trsst protocol implementation draft.
+What is trsst?
 ------------------------------------
 
-This includes a working server and command-line client for review, testing, and compatibility.
-This is not intended for consumers or any other regular folk.
+It depends on who you are.
+
+- For most users, trsst looks like a microblogging social network -- a twitter clone -- where you can follow other people and news feeds.  
+
+- For other users, trsst looks like a stream-style RSS reader with built-in microblog publishing capabilities.  
+
+- And for a few, trsst looks like an extension to the Atom Publishing Protocol where anyone can anonymously create self-signed and/or self-encrypted feeds and entries and publish them to any participating server.  
+
+All of these are correct. 
+
+
+Development Howto
+------------------------------------
 
 Requires Java and Maven.
 
