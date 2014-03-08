@@ -15,6 +15,13 @@ It depends on who you are.
 All of these are correct. 
 
 
+Frequently Asked Questions
+------------------------------------
+
+The FAQ is currently kept here:
+https://github.com/TrsstProject/trsst/wiki/Frequently-Asked-Questions
+
+
 Development Howto
 ------------------------------------
 
