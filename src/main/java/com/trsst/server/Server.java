@@ -64,6 +64,7 @@ public class Server {
     String path;
     boolean secure;
     private org.eclipse.jetty.server.Server server;
+    private ServletContextHandler context;
 
     public Server() throws Exception {
         this(0, null);
@@ -208,6 +209,10 @@ public class Server {
         }
         server.destroy();
     }
+    
+    public ServletContextHandler getServletContextHandler() {
+        return context;
+    }
 
     protected ServletHolder createProvidingServletHolder() {
         ServletHolder servletHolder = new ServletHolder(new AbderaServlet());
@@ -259,7 +264,7 @@ public class Server {
     public org.eclipse.jetty.server.Server getJetty() {
         if (server == null) {
             server = new org.eclipse.jetty.server.Server(port);
-            ServletContextHandler context = new ServletContextHandler(
+            context = new ServletContextHandler(
                     ServletContextHandler.NO_SESSIONS);
             context.setContextPath("/");
             server.setHandler(context);

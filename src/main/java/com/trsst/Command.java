@@ -47,12 +47,15 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.tika.Tika;
+import org.eclipse.jetty.servlet.ServletHolder;
 
 import com.trsst.client.Client;
 import com.trsst.client.EntryOptions;
 import com.trsst.client.FeedOptions;
 import com.trsst.server.Server;
 import com.trsst.server.TrsstAdapter;
+import com.trsst.ui.AppMain;
+import com.trsst.ui.AppServlet;
 
 /**
  * Command-line program that implements the application-level features needed to
@@ -128,25 +131,29 @@ public class Command {
             }
         }
 
+        // default to user-friendlier file names
+        String home = System.getProperty("user.home", ".");
+        if (System.getProperty("com.trsst.client.storage") == null) {
+            File client = new File(home, "Trsst Keyfiles");
+            System.setProperty("com.trsst.client.storage",
+                    client.getAbsolutePath());
+        }
+        if (System.getProperty("com.trsst.server.storage") == null) {
+            File server = new File(home, "Trsst System Cache");
+            System.setProperty("com.trsst.server.storage",
+                    server.getAbsolutePath());
+        }
+        // TODO: try to detect if launching from external volume like a flash
+        // drive and store on the local flash drive instead
+
         Console console = System.console();
         int result;
         try {
-            if ((console == null && argv.length == 0)
-                    || (argv.length == 1 && argv[0].equals("ui"))) {
-                // attempt GUI mode
-                try {
-                    Class<?> app = Command.class.getClassLoader().loadClass(
-                            "com.trsst.ui.AppMain");
-                    app.getMethod("main", new String[0].getClass()).invoke(
-                            null, (Object) argv);
-                } catch (Throwable t) {
-                    log.error("Could not launch UI client", t);
-                }
-                result = 0;
-            } else {
-                // CLI mode
-                result = new Command().doBegin(argv, System.out, System.in);
+            if (console == null && argv.length == 0) {
+                argv = new String[] { "port", "--gui" };
             }
+            result = new Command().doBegin(argv, System.out, System.in);
+
             // task queue prevents exit unless stopped
             if (TrsstAdapter.TASK_QUEUE != null) {
                 TrsstAdapter.TASK_QUEUE.cancel();
@@ -163,6 +170,7 @@ public class Command {
         }
     }
 
+    private Options portOptions;
     private Options pullOptions;
     private Options mergedOptions;
     private Options postOptions;
@@ -175,6 +183,26 @@ public class Command {
         // NOTE: OptionsBuilder is NOT thread-safe
         // which was causing us random failures.
         Option o;
+
+        portOptions = new Options();
+
+        o = new Option(null, "Expose REST API");
+        o.setRequired(false);
+        o.setArgs(0);
+        o.setLongOpt("api");
+        portOptions.addOption(o);
+
+        o = new Option(null, "Launch embedded GUI");
+        o.setRequired(false);
+        o.setArgs(0);
+        o.setLongOpt("gui");
+        portOptions.addOption(o);
+
+        o = new Option(null, "Turn off SSL");
+        o.setRequired(false);
+        o.setArgs(0);
+        o.setLongOpt("clear");
+        portOptions.addOption(o);
 
         pullOptions = new Options();
 
@@ -320,6 +348,9 @@ public class Command {
             mergedOptions.addOption((Option) obj);
         }
         for (Object obj : postOptions.getOptions()) {
+            mergedOptions.addOption((Option) obj);
+        }
+        for (Object obj : portOptions.getOptions()) {
             mergedOptions.addOption((Option) obj);
         }
         helpOption = OptionBuilder.isRequired(false).withLongOpt("help")
@@ -561,22 +592,42 @@ public class Command {
 
     public int doPort(CommandLine commands, LinkedList<String> arguments) {
 
-        if (arguments.size() < 1) {
-            printPortUsage();
-            return 78; // "configuration error"
-        }
-        String portString = arguments.removeFirst().toString();
+        boolean apiOption = commands.hasOption("api");
+        boolean guiOption = commands.hasOption("gui");
+        boolean clearOption = commands.hasOption("clear");
+        int portOption = 0; // default to random port
 
+        if (arguments.size() > 0) {
+            String portString = arguments.removeFirst().toString();
+            try {
+                portOption = Integer.parseInt(portString);
+            } catch (NumberFormatException t) {
+                log.error("Invalid port: " + portString);
+                return 78; // "configuration error"
+            }
+        }
+
+        Server service;
         try {
-            Server service = new Server(Integer.parseInt(portString), "/trsst");
+            service = new Server(portOption, "feed", !clearOption);
+            if (apiOption || guiOption) {
+                service.getServletContextHandler().addServlet(
+                        new ServletHolder(new AppServlet(!apiOption)), "/*");
+            }
             System.err.println("Services now available at: "
                     + service.getServiceURL());
-        } catch (NumberFormatException t) {
-            log.error("Invalid port: " + portString);
-            return 78; // "configuration error"
         } catch (Exception e) {
             log.error("Could not start server: " + e);
             return 71; // "system error"
+        }
+
+        // attempt GUI mode
+        if (guiOption) {
+            try {
+                AppMain.main(new String[] { service.getServiceURL().toString() });
+            } catch (Throwable t) {
+                log.error("Could not launch UI client", t);
+            }
         }
         return 0; // "OK"
     }
@@ -912,11 +963,9 @@ public class Command {
     }
 
     private void printPortUsage() {
-        Options options = new Options();
-        options.addOption(helpOption);
         HelpFormatter formatter = new HelpFormatter();
         formatter.setSyntaxPrefix("");
-        formatter.printHelp("port <portnumber>", options);
+        formatter.printHelp("port [<portnumber>]", portOptions);
     }
 
     private void printPostUsage() {

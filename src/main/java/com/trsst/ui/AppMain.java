@@ -55,8 +55,13 @@ public class AppMain extends javafx.application.Application {
 
     private WebView webView;
     private static AppleEvents appleEvents;
+    private static String serviceUrl;
 
     public static void main(String[] argv) {
+
+        if (argv.length > 0) {
+            serviceUrl = argv[0];
+        }
 
         // register osx-native event handlers if needed
         try {
@@ -68,15 +73,6 @@ public class AppMain extends javafx.application.Application {
             // probably wrong platform: ignore
             log.warn("Could not load osx events: " + t.getMessage());
         }
-
-        // try to set user-friendly client and server directories
-        String home = System.getProperty("user.home", ".");
-        File client = new File(home, "Trsst Keyfiles");
-        System.setProperty("com.trsst.client.storage", client.getAbsolutePath());
-        File server = new File(home, "Trsst System Cache");
-        System.setProperty("com.trsst.server.storage", server.getAbsolutePath());
-        // TODO: try to detect if launching from external volume like a flash
-        // drive and store on the local flash drive instead
 
         if (System.getProperty("com.trsst.server.relays") == null) {
             // if unspecified, default relay to home.trsst.com
@@ -118,8 +114,6 @@ public class AppMain extends javafx.application.Application {
         // if there were a mitm that happened to be serving on that port.
         enableAnonymousSSL();
 
-        AppClient appClient = new AppClient();
-
         stage.setTitle("trsst");
         webView = new WebView();
 
@@ -155,7 +149,7 @@ public class AppMain extends javafx.application.Application {
                     }
                 });
 
-        String url = appClient.getServer().getServiceURL().toString();
+        String url = serviceUrl;
         int i = url.lastIndexOf("/");
         if (i != -1) {
             url = url.substring(0, i);

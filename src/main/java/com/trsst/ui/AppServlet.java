@@ -40,22 +40,28 @@ import com.trsst.Common;
 /**
  * Private servlet for our private client. Exposes command-line client as a
  * servlet for "post" command only. Parameters "attach" and "home" are rejected.
- * Non-local clients are rejected.
+ * Non-local clients are rejected by default.
  */
 public class AppServlet extends HttpServlet {
 
     private static final long serialVersionUID = -8082699767921771750L;
     private static final String[] ALLOWED_FILES = { "boiler.css", "index.html",
             "favicon.ico", "jquery-1.10.1.js", "model.js", "composer.js",
-            "pollster.js", "renderer.js", "controller.js", "ui.css", "icon-256.png",
-            "icon-back.png", "note.svg", "note.png", "loading-on-white.gif",
-            "loading-on-gray.gif", "loading-on-orange.gif", "icon-rss.png" };
+            "pollster.js", "renderer.js", "controller.js", "ui.css",
+            "icon-256.png", "icon-back.png", "note.svg", "note.png",
+            "loading-on-white.gif", "loading-on-gray.gif",
+            "loading-on-orange.gif", "icon-rss.png" };
 
     private final Map<String, byte[]> resources;
-    private AppClient client;
+    private boolean restricted;
 
-    public AppServlet(AppClient client) {
-        this.client = client;
+    public AppServlet() {
+        this(true);
+    }
+
+    public AppServlet(boolean restricted) {
+
+        this.restricted = restricted;
 
         // load static resources
         resources = new HashMap<String, byte[]>();
@@ -81,7 +87,8 @@ public class AppServlet extends HttpServlet {
     public void doPost(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         // FLAG: limit access only to local clients
-        if (!request.getRemoteAddr().equals(request.getLocalAddr())) {
+        if (restricted
+                && !request.getRemoteAddr().equals(request.getLocalAddr())) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN,
                     "Non-local clients are not allowed.");
             return;
@@ -102,7 +109,8 @@ public class AppServlet extends HttpServlet {
                 if (path.startsWith("/pull/")) {
                     path = path.substring("/pull/".length());
                     response.setContentType("application/atom+xml; type=feed; charset=utf-8");
-                    //System.out.println("doPull: " + request.getParameterMap());
+                    // System.out.println("doPull: " +
+                    // request.getParameterMap());
                     args.add("pull");
                     if (request.getParameterMap().size() > 0) {
                         boolean first = true;
@@ -132,7 +140,8 @@ public class AppServlet extends HttpServlet {
                     args.add(path);
 
                 } else if (path.startsWith("/post")) {
-                    //System.out.println("doPost: " + request.getParameterMap());
+                    // System.out.println("doPost: " +
+                    // request.getParameterMap());
                     args.add("post");
 
                     try { // h/t http://stackoverflow.com/questions/2422468
@@ -144,8 +153,8 @@ public class AppServlet extends HttpServlet {
                                 // process regular form field
                                 String name = item.getFieldName();
                                 String value = item.getString().trim();
-//                                System.out.println("AppServlet: " + name
-//                                        + " : " + value);
+                                // System.out.println("AppServlet: " + name
+                                // + " : " + value);
                                 if (value.length() > 0) {
                                     // FLAG: don't allow "home" (server-abuse)
                                     // FLAG: don't allow "attach" (file-system
@@ -191,15 +200,12 @@ public class AppServlet extends HttpServlet {
                         return;
                     }
                 }
-                // home is always our private local server
-                args.add("--host");
-                args.add(client.getServer().getServiceURL().toString());
 
                 // send post data if any to command input stream
                 if (inStream != null) {
                     args.add("--attach");
                 }
-                //System.out.println(args);
+                // System.out.println(args);
 
                 PrintStream outStream = new PrintStream(
                         response.getOutputStream());
