@@ -175,7 +175,7 @@ public class Command {
     private Options mergedOptions;
     private Options postOptions;
     private Option helpOption;
-    private boolean format = true;
+    private boolean format = false;
 
     @SuppressWarnings("static-access")
     private void buildOptions(String[] argv, PrintStream out, InputStream in) {
