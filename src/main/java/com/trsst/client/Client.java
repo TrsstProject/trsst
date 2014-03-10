@@ -453,15 +453,15 @@ public class Client {
                         org.apache.abdera.model.Text.Type.HTML);
                 // FIXME: some readers only show type=html
             }
+            
             if (options.mentions != null) {
                 for (String s : options.mentions) {
-                    entry.addSimpleExtension(new QName(Common.NS_URI,
-                            Common.MENTION, Common.NS_ABBR), s);
+                    entry.addCategory(Common.MENTION_URN, s, "Mention");
                 }
             }
             if (options.tags != null) {
                 for (String s : options.tags) {
-                    entry.addCategory(s);
+                    entry.addCategory(Common.TAG_URN, s, "Tag");
                 }
             }
 

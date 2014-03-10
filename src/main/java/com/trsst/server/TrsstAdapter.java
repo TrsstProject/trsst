@@ -46,6 +46,7 @@ import org.apache.abdera.i18n.iri.IRI;
 import org.apache.abdera.i18n.iri.IRISyntaxException;
 import org.apache.abdera.i18n.templates.Template;
 import org.apache.abdera.model.AtomDate;
+import org.apache.abdera.model.Category;
 import org.apache.abdera.model.Content;
 import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
@@ -783,23 +784,27 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                     "http://activitystrea.ms/spec/1.0/", "verb", "activity"));
             if ("delete".equals(verb)) {
                 // get mentions
-                List<Element> mentions = entry.getExtensions(new QName(
-                        Common.NS_URI, Common.MENTION));
-                for (Element mention : mentions) {
-                    Entry deleted = null;
-                    try {
-                        deleted = deleteEntry(storage,
-                                Common.toFeedIdString(feed.getId()),
-                                Common.toEntryId(mention.getText()),
-                                Common.toEntryId(entry.getId()));
-                    } catch (IOException exc) {
-                        log.error("Could not delete entry: " + entry.getId(),
-                                exc);
-                    }
-                    if (deleted != null) {
-                        log.debug("Deleted entry: " + entry.getId());
-                    } else {
-                        log.error("Failed to delete entry: " + entry.getId());
+                List<Category> mentions = entry.getCategories();
+                for (Category mention : mentions) {
+                    IRI scheme = mention.getScheme();
+                    if (scheme != null && Common.MENTION_URN.equals(scheme.toString())) {
+                        Entry deleted = null;
+                        try {
+                            deleted = deleteEntry(storage,
+                                    Common.toFeedIdString(feed.getId()),
+                                    Common.toEntryId(mention.getTerm()),
+                                    Common.toEntryId(entry.getId()));
+                        } catch (IOException exc) {
+                            log.error(
+                                    "Could not delete entry: " + entry.getId(),
+                                    exc);
+                        }
+                        if (deleted != null) {
+                            log.debug("Deleted entry: " + entry.getId());
+                        } else {
+                            log.error("Failed to delete entry: "
+                                    + entry.getId());
+                        }
                     }
                 }
             }
@@ -1186,8 +1191,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                     "deleted");
 
             // add reference to deleting id
-            replacement.addSimpleExtension(new QName(Common.NS_URI,
-                    Common.MENTION), Common.toEntryUrn(feedId, deletingId));
+            replacement.addCategory(Common.MENTION_URN,
+                    Common.toEntryUrn(feedId, deletingId), "Mention");
 
             // write the entry
             storage.updateEntry(feedId, deletedId, replacement.getUpdated(),

@@ -14,6 +14,7 @@ import java.util.Set;
 import javax.xml.namespace.QName;
 
 import org.apache.abdera.Abdera;
+import org.apache.abdera.i18n.iri.IRI;
 import org.apache.abdera.model.Category;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
@@ -475,34 +476,33 @@ public class LuceneStorage implements Storage {
             }
             tags.add(verb);
 
-            // get mentions
-            List<Element> mentions = entry.getExtensions(new QName(
-                    Common.NS_URI, "mention", "trsst"));
-            if (mentions != null) {
-                String mention;
-                for (Element e : mentions) {
-                    mention = e.getText();
-                    if (mention != null) {
-                        mention = mention.trim();
-                        if (mention.startsWith(Common.FEED_URN_PREFIX)) {
-                            mention = mention.substring(Common.FEED_URN_PREFIX
-                                    .length());
-                        }
-                        if (mention.startsWith(Common.ENTRY_URN_PREFIX)) {
-                            mention = mention.substring(Common.ENTRY_URN_PREFIX
-                                    .length());
-                        }
-                        tags.add('@' + mention);
-                    }
-                }
-            }
-
             // get categories
             List<Category> categories = entry.getCategories();
-            if (mentions != null) {
+            if (categories != null) {
                 for (Category e : categories) {
-                    if (e.getText() != null) {
-                        tags.add('#' + e.getText().trim().toLowerCase());
+                    IRI scheme = e.getScheme();
+                    if (scheme != null
+                            && Common.TAG_URN.equals(scheme.toString())) {
+                        if (e.getTerm() != null) {
+                            tags.add('#' + e.getTerm().trim().toLowerCase());
+                        }
+                    } else if (scheme != null
+                            && Common.MENTION_URN.equals(scheme.toString())) {
+                        String mention = e.getTerm();
+                        if (mention != null) {
+                            mention = mention.trim();
+                            if (mention.startsWith(Common.FEED_URN_PREFIX)) {
+                                mention = mention
+                                        .substring(Common.FEED_URN_PREFIX
+                                                .length());
+                            }
+                            if (mention.startsWith(Common.ENTRY_URN_PREFIX)) {
+                                mention = mention
+                                        .substring(Common.ENTRY_URN_PREFIX
+                                                .length());
+                            }
+                            tags.add('@' + mention);
+                        }
                     }
                 }
             }
