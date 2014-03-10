@@ -265,7 +265,7 @@ public class Command {
         postOptions.addOption(o);
 
         o = new Option("r",
-                "Add a mention (aka reference) an activitystreams verb for this entry");
+                "Add a mention (aka reference)");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("id");
