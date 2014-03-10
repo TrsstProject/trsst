@@ -38,214 +38,221 @@ To run:
 Usage:
 
 	post [<id>] [--status <text>] [--encrypt <pubkey>]
-	 -a,--attach <file>      Attach the specified file, or - for std input
+	 -a,--attach             Attach the specified file, or - for std input
 	 -b,--base <url>         Set base URL for this feed
 	 -c,--content <text>     Specify entry content on command line
 	 -e,--encrypt <pubkey>   Encrypt entry for specified public key
-	 -g,--tag <text>         Add a tag (aka category)
-	 -i,--icon <url>         Set as this feed's icon or specify url
-	 -k,--key <file>         Use the key store at the specified path
-	 -l,--logo <url>         Set as this feed's logo or specify url
+	 -g,--tag <text>         Add a tag
+	 -i,--icon               Set as this feed's icon or specify url
+	 -l,--logo               Set as this feed's logo or specify url
 	 -m,--mail <email>       Set this feed's author email
 	 -n,--name <text>        Set this feed's author name
-	    --subtitle <text>    Set this feed's subtitle
-	    --vanity <prefix>    Generate feed id with specified prefix
+		--subtitle <text>    Set this feed's subtitle
+		--vanity <prefix>    Generate feed id with specified prefix
 	 -p,--pass <text>        Specify passphrase on the command line
-	 -r,--mention <id>       Add a mention (aka reference)
+	 -r,--mention <id>       Add a mention
 	 -s,--status <text>      Specify status update on command line
 	 -t,--title <text>       Set this feed's title
 	 -u,--url <url>          Attach the specified url to the new entry
 	 -v,--verb <verb>        Specify an activitystreams verb for this entry
-	
+
 	pull <id>...
 	 -d,--decrypt <id>   Decrypt entries as specified recipient id
 	 -h,--host <url>     Set host server for this operation
-	
+
 	push <url> <id>...
-	
-	port <portnumber>
+	 -d,--decrypt <id>   Decrypt entries as specified recipient id
+	 -h,--host <url>     Set host server for this operation
+
+	port [<portnumber>]
+		--api     Expose REST API
+		--clear   Turn off SSL
+		--gui     Launch embedded GUI
 	
 
 Example: start a server.
 
 	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar port 8181
-	Services now available at: http://192.168.1.21:8181/trsst
+	
+	Services now available at: https://192.168.1.5:8181/feed
 
 Example: create a new empty feed.
 
 	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar post
 	
-	Starting temporary service at: http://192.168.1.15:51703
+	Starting temporary service at: http://192.168.1.5:51341
 	Generating new feed id... 
-	New feed id created: 1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN
-	Default file persistence serving from: /Users/mpowers/trsstd
-	wrote: /Users/mpowers/trsstd/1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN/feed.xml
+	New feed id created: M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1
 	<?xml version="1.0"?>
-	<feed xmlns="http://www.w3.org/2005/Atom" xmlns:trsst="http://trsst.com/spec/0.1" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xml:base="http://192.168.1.15:51703/1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN/" xml:space="default">
-	  <updated>2013-12-31T22:59:04.938Z</updated>
-	  <trsst:sign>MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEA3aN-CC-s-AF9bfKVEHymDysyVr5jv0MfzPhZgpUL7nZP2IFWB6Ep0reX-RjHjoCAryPQvg9CtSO7mYvuv1DTg</trsst:sign>
-	  <trsst:encrypt>MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAELKEY57QzrH4bPLpxWeaEwMqy771D1OgsTZ8QEPxOvUZthmRBtMjH_u7Epsfrl-VU-chdBTlZjB5-Pk-DAbllRg</trsst:encrypt>
-	  <id>urn:feed:1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN</id>
+	<feed xmlns="http://www.w3.org/2005/Atom" xmlns:trsst="http://trsst.com/spec/0.1" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xml:space="default">
+	  <updated>2014-03-10T20:34:13.440Z</updated>
+	  <trsst:sign>
+	  MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEvzJUjrJSRS0NHsKq1yHur5xdhH35ao4IVTDF_WuwZti3AiAt2gZ8Sehp83PV8yD9ONlw5-DiXYbgY5PUgJTVcQ</trsst:sign>
+	  <trsst:encrypt>
+	  MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE9FJDVs846H1ne1G5upDY8CIgF_HhmCILl-967JRQTjYTzRVwHMz5mFakwOKdYBcea9Q_1wLL1L-nqWznUh_uQg</trsst:encrypt>
+	  <id>urn:feed:M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1</id>
 	  <ds:Signature>
-	    <ds:SignedInfo>
-	      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-	      <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
-	      <ds:Reference URI="">
-	        <ds:Transforms>
-	          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
-	          <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
-	        </ds:Transforms>
-	        <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
-	        <ds:DigestValue>flQs7WOaYbOnv7R+P1cXqCh/pl8=</ds:DigestValue>
-	      </ds:Reference>
-	    </ds:SignedInfo>
-	    <ds:SignatureValue>
-	pKxbZwV1oMh3thk5G221LrD0AY2sUEdM2WT7C0BkoRFce0Ml1000CpX7ZKfRAsILDuJbrbJBONRA
-	UTxVUU7dPA==
-	</ds:SignatureValue>
+		<ds:SignedInfo>
+		  <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+		  <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
+		  <ds:Reference URI="">
+			<ds:Transforms>
+			  <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+			  <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+			</ds:Transforms>
+			<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+			<ds:DigestValue>
+			GK1D1kLSydLFRXCHJnPk2p9LjUQ=</ds:DigestValue>
+		  </ds:Reference>
+		</ds:SignedInfo>
+		<ds:SignatureValue>
+		CGjdfB+n6uAjIDQ8UCp+GMyjlP4OazvIwzoHKZ2FL8dRGK7PVfLq/dPaGt2SysHHlmCKNhmvQ2BE
+		2+hQAUtQ7g==</ds:SignatureValue>
 	  </ds:Signature>
 	</feed>
 
 Example: create a new post on a preexisting feed.
 
-	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar post --status "First Post" 145qkKDkkeDA93Va4vSLePdmp6okkXeD9U
+	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar post --status "First Post" M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1
 	
-	Starting temporary service at: http://192.168.1.15:51777
-	Obtaining keys for feed id: 1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN
-	Using existing account id: 1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN
-	Default file persistence serving from: /Users/mpowers/trsstd
-	wrote: /Users/mpowers/trsstd/1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN/feed.xml
-	wrote: /Users/mpowers/trsstd/1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN/1434ae49026.atom
+	Starting temporary service at: http://192.168.1.5:51371
+	Obtaining keys for feed id: M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1
+	Using existing account id: M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1
 	<?xml version="1.0"?>
-	<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xml:base="http://192.168.1.15:51703/1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN/" xml:space="default">
-	  <updated>2013-12-31T23:02:09.702Z</updated>
-	  <id>urn:feed:1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN</id>
-	  <sign xmlns="http://trsst.com/spec/0.1">MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEA3aN-CC-s-AF9bfKVEHymDysyVr5jv0MfzPhZgpUL7nZP2IFWB6Ep0reX-RjHjoCAryPQvg9CtSO7mYvuv1DTg</sign>
-	  <encrypt xmlns="http://trsst.com/spec/0.1">MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEA3aN-CC-s-AF9bfKVEHymDysyVr5jv0MfzPhZgpUL7nZP2IFWB6Ep0reX-RjHjoCAryPQvg9CtSO7mYvuv1DTg</encrypt>
+	<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xml:space="default" xml:base="http://192.168.1.5:51371/M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1">
+	  <updated>2014-03-10T20:35:03.379Z</updated>
+	  <id>urn:feed:M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1</id>
+	  <sign xmlns="http://trsst.com/spec/0.1">
+	  MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEvzJUjrJSRS0NHsKq1yHur5xdhH35ao4IVTDF_WuwZti3AiAt2gZ8Sehp83PV8yD9ONlw5-DiXYbgY5PUgJTVcQ</sign>
+	  <encrypt xmlns="http://trsst.com/spec/0.1">
+	  MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE9FJDVs846H1ne1G5upDY8CIgF_HhmCILl-967JRQTjYTzRVwHMz5mFakwOKdYBcea9Q_1wLL1L-nqWznUh_uQg</encrypt>
 	  <ds:Signature>
-	    <ds:SignedInfo>
-	      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-	      <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
-	      <ds:Reference URI="">
-	        <ds:Transforms>
-	          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
-	          <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
-	        </ds:Transforms>
-	        <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
-	        <ds:DigestValue>A+ggpFsmDX0HEIdbnmYZpoblXyU=</ds:DigestValue>
-	      </ds:Reference>
-	    </ds:SignedInfo>
-	    <ds:SignatureValue>
-	g2ZswWUBw9V4AX2aa9crrL1jZDTfL9Ujaxeio8TBzY7qRGulKruactJMjA8iYdq+Yo94p2/DnWlP
-	/weWS78LSA==
-	</ds:SignatureValue>
+		<ds:SignedInfo>
+		  <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+		  <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
+		  <ds:Reference URI="">
+			<ds:Transforms>
+			  <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+			  <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+			</ds:Transforms>
+			<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+			<ds:DigestValue>
+			n/4ocrBhhFr/9+uIzmKkGQ0ufbk=</ds:DigestValue>
+		  </ds:Reference>
+		</ds:SignedInfo>
+		<ds:SignatureValue>
+		68l6RxoG8ZAs3QvRs3HNeQipHE/QYuRD9jhqfZzoJO2PzfdCJ9DU2/XdDEwFBJzp96fJjW/fmQWI
+		VEuQa+GBQw==</ds:SignatureValue>
 	  </ds:Signature>
 	  <entry>
-	    <updated>2013-12-31T23:02:09.702Z</updated>
-	    <id>urn:entry:1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN/1434ae49026</id>
-	    <published>2013-12-31T23:02:09.702Z</published>
-	    <title type="text">First Post</title>
-	    <ds:Signature>
-	      <ds:SignedInfo>
-	        <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-	        <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
-	        <ds:Reference URI="">
-	          <ds:Transforms>
-	            <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
-	            <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
-	          </ds:Transforms>
-	          <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
-	          <ds:DigestValue>+v4zR9aLrGbMfSbCeFBdoMMFUOw=</ds:DigestValue>
-	        </ds:Reference>
-	      </ds:SignedInfo>
-	      <ds:SignatureValue>
-	3m2rfxx9PfaL2MPXMB12ATGnTkxtuFC8fY1f0cvXevPFopC9b/c7RiuZ9fysex0MJVB+z+O4xXrw
-	C7qLIIRQsw==
-	</ds:SignatureValue>
-	    </ds:Signature>
+		<updated>2014-03-10T20:35:03.379Z</updated>
+		<id>
+		urn:entry:M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1:144adb4ae53</id>
+		<published>2014-03-10T20:35:03.379Z</published>
+		<title type="text">First Post</title>
+		<rights type="text">attribution, no derivatives, revoked if
+		deleted</rights>
+		<ds:Signature>
+		  <ds:SignedInfo>
+			<ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+			<ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
+			<ds:Reference URI="">
+			  <ds:Transforms>
+				<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+				<ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+			  </ds:Transforms>
+			  <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+			  <ds:DigestValue>
+			  fghpP3mG0nzB5Sj4kyqlNbRGsDY=</ds:DigestValue>
+			</ds:Reference>
+		  </ds:SignedInfo>
+		  <ds:SignatureValue>
+		  ys+J0FryCApGD/juC20q9YrbVTIH5wQqmhgvuFmYZdBlhEVpIUg6XaFNbjc4eiAnxMs5r1qACp9n
+		  NB1GrL7MuQ==</ds:SignatureValue>
+		</ds:Signature>
 	  </entry>
 	</feed>
 
 Example: create an encrypted post on a preexisting feed.
 
-	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar post --status "Secret Post" 145qkKDkkeDA93Va4vSLePdmp6okkXeD9U
+	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar post --status "Secret Post" M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1
 	-- encrypt MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEQn1eOiToQlurH0gIE0AsBTJNBF1jrOSSIr8i4RSRdvx7dtkD1hre0vgPabJMLH9QktK6AYhl31xkf3xqp_mPxw
 
-	Starting temporary service at: http://192.168.1.15:51929
-	Obtaining keys for feed id: 1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN
-	Using existing account id: 1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN
-	Default file persistence serving from: /Users/mpowers/trsstd
-	wrote: /Users/mpowers/trsstd/1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN/feed.xml
-	wrote: /Users/mpowers/trsstd/1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN/1434ae883ea.atom
+	Starting temporary service at: http://192.168.1.5:51384
+	Obtaining keys for feed id: M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1
+	Using existing account id: M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1
 	<?xml version="1.0"?>
-	<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xml:base="http://192.168.1.15:51703/1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN/" xml:space="default">
-	  <updated>2013-12-31T23:06:28.714Z</updated>
-	  <id>urn:feed:1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN</id>
-	  <sign xmlns="http://trsst.com/spec/0.1">MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEA3aN-CC-s-AF9bfKVEHymDysyVr5jv0MfzPhZgpUL7nZP2IFWB6Ep0reX-RjHjoCAryPQvg9CtSO7mYvuv1DTg</sign>
-	  <encrypt xmlns="http://trsst.com/spec/0.1">MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEA3aN-CC-s-AF9bfKVEHymDysyVr5jv0MfzPhZgpUL7nZP2IFWB6Ep0reX-RjHjoCAryPQvg9CtSO7mYvuv1DTg</encrypt>
+	<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xml:space="default" xml:base="http://192.168.1.5:51371/M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1">
+	  <updated>2014-03-10T20:37:10.244Z</updated>
+	  <id>urn:feed:M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1</id>
+	  <sign xmlns="http://trsst.com/spec/0.1">
+	  MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEvzJUjrJSRS0NHsKq1yHur5xdhH35ao4IVTDF_WuwZti3AiAt2gZ8Sehp83PV8yD9ONlw5-DiXYbgY5PUgJTVcQ</sign>
+	  <encrypt xmlns="http://trsst.com/spec/0.1">
+	  MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE9FJDVs846H1ne1G5upDY8CIgF_HhmCILl-967JRQTjYTzRVwHMz5mFakwOKdYBcea9Q_1wLL1L-nqWznUh_uQg</encrypt>
 	  <ds:Signature>
-	    <ds:SignedInfo>
-	      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-	      <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
-	      <ds:Reference URI="">
-	        <ds:Transforms>
-	          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
-	          <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
-	        </ds:Transforms>
-	        <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
-	        <ds:DigestValue>vLauOLLIYysNltvUH/U4G0EIkFU=</ds:DigestValue>
-	      </ds:Reference>
-	    </ds:SignedInfo>
-	    <ds:SignatureValue>
-	aSJQ7rveKmyaA8ys9+H7vphTxqdwzMMe63JbAVd86anJe6u7/y+GTX3i0X6VmYpKptegCZiMNll1
-	F5v0nKxKLQ==
-	</ds:SignatureValue>
+		<ds:SignedInfo>
+		  <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+		  <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
+		  <ds:Reference URI="">
+			<ds:Transforms>
+			  <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+			  <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+			</ds:Transforms>
+			<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+			<ds:DigestValue>
+			5KBNuLZ9TTbN0UL65hFSjLN+myE=</ds:DigestValue>
+		  </ds:Reference>
+		</ds:SignedInfo>
+		<ds:SignatureValue>
+		aCS1AhKl29Pdlcgs6SRhI6oNhEWpak1/8Ft8CrgwTF/qjh7Bcy3H7UjiBC97YI2bHZcedV5Z0BRf
+		htGt6UCGUQ==</ds:SignatureValue>
 	  </ds:Signature>
 	  <entry>
-	    <id>urn:entry:1MbwHVXTVF3qnqgKdiZzN3iguKMxbUakbN/1434ae883ea</id>
-	    <updated>2013-12-31T23:06:28.714Z</updated>
-	    <published>2013-12-31T23:06:28.714Z</published>
-	    <predecessor xmlns="http://trsst.com/spec/0.1">
-	3m2rfxx9PfaL2MPXMB12ATGnTkxtuFC8fY1f0cvXevPFopC9b/c7RiuZ9fysex0MJVB+z+O4xXrw
-	C7qLIIRQsw==
-	</predecessor>
-	    <title type="text">Encrypted content</title>
-	    <content type="text/xml">
-	      <EncryptedData xmlns="http://www.w3.org/2001/04/xmlenc#">
-	        <CipherData>
-	          <CipherValue>BPPENTmBtJChpI0jTaqdTNjrG0ACsM5OsA8a8Sd8zgctLJi8EMM1TPEEqrT3kXoaE1ue5
-	          faDzPJay97MNf5dArdGBE0nhHQKadwBHkuM1gsuOXedG31RkKnenMBteVZukGBu8oaRHV-DXyO_K7hkbQH
-	          SFW2wZrSfTB9P5POGgOZSwonjQzOSoKBeSwheJa8cECvNbv-LWfwYsYWtO2_-xyQrg9bF1I4Wrx69-7UdY
-	          hG8OD6EtY-kT1iaUEU3aTcmSBesc0yLBCSyHWKBRCbI_b5q0-mSHG-ZVM_S_EixIxJkjtktBvFulKs68YC
-	          h8D4psDlvas5Zs1zVZYWbBwMZ1xZ6YBwrmgamIiSlhUW0ZFvd1fDsbiyjV6cqeGkv64HFuXbJzFOL7n6AW
-	          uHiBQsHlj_8Py1nQBNRDumitnvlCzGUz-kQ9YVfK540s_HlJNsEdR_7aUH7s58JMxDDcVeEjiiexA2mXxy
-	          BkZIze4yyFSfQFEH8k-tjmdGcDtANpbScnGcD1TYuJGKWmTcbxuBJ4nSsI7Lo9K7ec7lx-OcHpQ0c3gAHf
-	          vTmPRmuFonzwcMLxDWjHiQVGKIM0HoqWEMZXQxUSu6MSj33THcNV-OaBzaWJW8sxK1gU4NkYn7b7QdTatq
-	          j7CCoii-SjbvRUR1VmT_apsegIQjgBu6n8VTFcOeKo3PfXo4HVCRtDi5mKdKKC4jL4nrEaAy-CzF0ur2A5
-	          yEA8EAfXol12DGYw5jcePSf
-	          </CipherValue>
-	        </CipherData>
-	      </EncryptedData>
-	    </content>
-	    <ds:Signature>
-	      <ds:SignedInfo>
-	        <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-	        <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
-	        <ds:Reference URI="">
-	          <ds:Transforms>
-	            <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
-	            <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
-	          </ds:Transforms>
-	          <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
-	          <ds:DigestValue>ZSLW4QPiHrUFM7bvDdRMO7qPLeM=</ds:DigestValue>
-	        </ds:Reference>
-	      </ds:SignedInfo>
-	      <ds:SignatureValue>
-	6mfoXo2TTlMbamVzOPiEpoYtX6w3/M9Cpu5P+bG9hs2s5GbLG49Fk/JloVfAsk/UnSimzmlVJZGB
-	BdaQbWXrzQ==
-	</ds:SignatureValue>
-	    </ds:Signature>
+		<id>
+		urn:entry:M4QovUyLYdyMy2ZB4s7BwLztwYcyJqrJ1:144adb69de4</id>
+		<updated>2014-03-10T20:37:10.244Z</updated>
+		<published>2014-03-10T20:37:10.244Z</published>
+		<predecessor xmlns="http://trsst.com/spec/0.1">
+		ys+J0FryCApGD/juC20q9YrbVTIH5wQqmhgvuFmYZdBlhEVpIUg6XaFNbjc4eiAnxMs5r1qACp9n
+		NB1GrL7MuQ==</predecessor>
+		<title type="text">Encrypted content</title>
+		<content type="application/xenc+xml">
+		  <EncryptedData xmlns="http://www.w3.org/2001/04/xmlenc#">
+			<CipherData>
+			  <CipherValue>
+			  BO8MZ3_KSnwnTD3g0apIsP6GnmzF4RrXMhVXV7VgcqBYuITqfAcKwR6s0rjb0BBGRrtxuiiqz6dIDbRGcTSuxVdIgTPcWMvDsixO-I6wnQTT5KXl6_DhoIO_perg9ap0cT-dTi6qS-mKdaN0ADqf3E6vTsgpGTt3h_8mNQCYo9baJbobFgdmzjRi75KIMyXijA</CipherValue>
+			</CipherData>
+		  </EncryptedData>
+		  <EncryptedData xmlns="http://www.w3.org/2001/04/xmlenc#">
+			<CipherData>
+			  <CipherValue>
+			  BAr8zcyj6SrI0T70_-U44V4edUxB9jNNaNLfFumWrL-yj_DoOm-DcDy4lwW3SnjqeFb-_at-72bb-mPrmaMnbAk6CVVfHDgg4pRDTriBQiCxwX8VDlCA5ileCdX0qi40c2NTgsEGS7IWwmnHwfIGj5_C7bmeyiIEhB9PiU_v7t-KRXrNPblcNarZ3Gbsu71SJw</CipherValue>
+			</CipherData>
+		  </EncryptedData>
+		  <EncryptedData xmlns="http://www.w3.org/2001/04/xmlenc#">
+			<CipherData>
+			  <CipherValue>
+			  nxTxeHPGnONdAEvpWtClWbA7C5SQsAdjFeleXDnMrOPb8YqTuAy_Uc4d39ycT7aoMmZlH1VWPfWyjJq43azenQbtmluNaw1ABxRvI8yWfNJZYb6fIxDQLL4en_bQ9GW5Z2epJuPU0IxU4gj99YZ_hOjyO5jpOnUO7shoTt8CRvRdtoEqI8QGT8-nmJyIg4wNMeLRTEcQ503dekG8ks6TrFGkrYAa5nlDMxrlAe_2etfr1eBDctgHkk18gCFTjO18Ydjx955DzsbZHqmnqok4eom6SNVdkHXWjQMt4bhWgJWFDjnwpaYoiqcms8upDNope6G98sib8vNX6Muw8liEq787xy4LMLbS6fbMPHzHDYV7yZV1xKA4YRKV99mWkENnhmjGrNjMrV5WVmBg_8VU2h4FicGkYtBl3mPD_Q967-CyTJlwdNWmtrECascazcdSROI7fpB0ZDnE9gdNPUlUC6YACXemjYRCY1OFyOwiVBFX8UhqR9CLsb0KzQtC_WOavNpGneZoPEO3hGVyQusawYb4ESZumuDPLSYkm6TTiRBxxlgCgmWu45zBNidOmDy2ARzq_f-aEozbKyzDJEy7hR-jXWbRrxvVUV24eiJd0gV8c7AEJYT6edXnO2PXbEjR3Itl-JOBec4k8Y2dTkUDXvdO1u1hk6uZ_oD1-RizQVo</CipherValue>
+			</CipherData>
+		  </EncryptedData>
+		</content>
+		<ds:Signature>
+		  <ds:SignedInfo>
+			<ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+			<ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1"/>
+			<ds:Reference URI="">
+			  <ds:Transforms>
+				<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+				<ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+			  </ds:Transforms>
+			  <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+			  <ds:DigestValue>
+			  1Izt6hPxvZExmTWiSPT5QbMuoKs=</ds:DigestValue>
+			</ds:Reference>
+		  </ds:SignedInfo>
+		  <ds:SignatureValue>
+		  iUFSwxDvxti1hjDFgmux7NPrk3PEEFAnhNnNqlad2VB42iir2Xl8RPcEZA1Sne7Rc51b376E9Iy0
+		  qT5shelegQ==</ds:SignatureValue>
+		</ds:Signature>
 	  </entry>
 	</feed>
-	
-
