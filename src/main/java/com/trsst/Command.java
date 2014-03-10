@@ -175,7 +175,7 @@ public class Command {
     private Options mergedOptions;
     private Options postOptions;
     private Option helpOption;
-    private boolean format = false;
+    private boolean format = true;
 
     @SuppressWarnings("static-access")
     private void buildOptions(String[] argv, PrintStream out, InputStream in) {
@@ -265,14 +265,14 @@ public class Command {
         postOptions.addOption(o);
 
         o = new Option("r",
-                "Add a mention (aka reference)");
+                "Add a mention");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("id");
         o.setLongOpt("mention");
         postOptions.addOption(o);
 
-        o = new Option("g", "Add a tag (aka category)");
+        o = new Option("g", "Add a tag");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("text");

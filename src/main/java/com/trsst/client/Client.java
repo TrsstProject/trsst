@@ -720,7 +720,6 @@ public class Client {
 
         // set logo and/or icon
         if (contentIds.length > 0) {
-            System.out.println(entry + " : " + contentIds);
             String url = Common.toEntryIdString(entry.getId()) + '/'
                     + contentIds[0];
             if (feedOptions.asIcon) {

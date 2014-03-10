@@ -1121,7 +1121,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 // WORKAROUND:
                 // loading the stream and making our own parser works
                 byte[] bytes = Common.readFully(request.getInputStream());
-                System.out.println(new String(bytes, "UTF-8"));
+                //System.out.println(new String(bytes, "UTF-8"));
                 Feed incomingFeed = (Feed) Abdera.getInstance().getParser()
                         .parse(new ByteArrayInputStream(bytes)).getRoot();
 
