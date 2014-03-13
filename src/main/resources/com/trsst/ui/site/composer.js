@@ -30,22 +30,22 @@
 			e.preventDefault();
 			self.form.submit();
 		});
-		
+
 		var attach = this.form.find(".attach");
 		var input = this.form.find("input[type='file']");
 		attach.click(function(e) {
 			e.preventDefault();
-			input[0].value=""; // clear any preexisting value
+			input[0].value = ""; // clear any preexisting value
 			input.change();
 			input.click();
 		});
 		input.on('change', function(e) {
 			// grab file name so the UI can display it
 			var value = input[0].value;
-			if ( value !== undefined ) {
+			if (value !== undefined) {
 				var i = value.lastIndexOf('\\');
-				if ( i !== -1 ) {
-					value = value.substring(i+1);
+				if (i !== -1) {
+					value = value.substring(i + 1);
 				}
 				attach.attr("file", value);
 			}
@@ -60,7 +60,8 @@
 	 */
 	Composer.prototype.onSubmit = function() {
 		console.log("onSubmit: ");
-		if ("" === this.form.find("textarea").val().trim()) {
+		var value = this.form.find("textarea").val().trim();
+		if ("" === value) {
 			console.log("Not posting because nothing to send.");
 		} else {
 			var self = this;
@@ -73,6 +74,42 @@
 				// TODO: copy mentions when we display them
 				formData.append("mention", entry.attr("entry"));
 				formData.append("verb", "reply");
+			}
+
+			// find tags and mentions
+			var i;
+			var match;
+			var matches = value.match(/([\@\#]\w*)/g);
+			if (matches) {
+				for (i in matches) {
+					match = matches[i];
+					if (match.charAt(0) === '@') {
+						match = match.substring(1);
+						var feeds = model.findFollowedFeedsMatching(match);
+						// if we matched exactly one
+						if (feeds.length === 1) {
+							// create a mention
+							var id = $(feeds[0]).children("id").text();
+							if (id) {
+								formData.append("mention", id);
+							} else {
+								console.log("Could not match mention: " + match);
+								console.log(feeds[0]);
+							}
+						}
+					} else {
+						// otherwise hash->tag
+						formData.append("tag", match.substring(1));
+					}
+				}
+			}
+
+			var gruberUrlg = /\b((?:https?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))/ig;
+			matches = value.match(gruberUrlg);
+			if (matches) {
+				for (i in matches) {
+					formData.append("url", matches[i]);
+				}
 			}
 
 			self.form.addClass("pending");

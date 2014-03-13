@@ -61,8 +61,8 @@
 				authenticatedFollows = {};
 				model.getFollowsForFeedId(authenticatedUid, function(ids) {
 					for ( var id in ids) {
-						// used only for hash lookups
-						authenticatedFollows[ids[id]] = ids[id];
+						// used for hash lookups
+						authenticatedFollows[ids[id]] = null;
 					}
 					callback($(data));
 					model.notify(feedId);
@@ -354,6 +354,31 @@
 	};
 
 	/**
+	 * Returns an array of feed xml for each feed followed by the currently
+	 * authenticated user whose id or alias match the specified string prefix.
+	 * Returns only those feeds we have already fetched into cache, which is
+	 * almost always all feeds.
+	 */
+	model.findFollowedFeedsMatching = function(prefix) {
+		var results = [];
+		var result;
+		if (authenticatedFollows) {
+			for ( var id in authenticatedFollows) {
+				if (id.indexOf("urn:feed:" + prefix) === 0) {
+					result = readFeed(id);
+					if (result !== null) {
+						results.push(result);
+					} else {
+						console.log("findFollowedFeedsMatching: feed not yet fetched: " + id);
+						// TODO: fetch async? should not be very common
+					}
+				}
+			}
+		}
+		return results;
+	};
+
+	/**
 	 * Fetches all pages of results for the filter, and calls callback with an
 	 * array of objects specified by the selector.
 	 */
@@ -485,6 +510,9 @@
 					// we're done
 					callback(feedData);
 				}
+
+				// store a copy of this feed
+				writeFeed(feedData);
 			},
 			error : function(e) {
 				// error: we're done
@@ -495,6 +523,53 @@
 		});
 	};
 
+	var writeFeed = function(feedData) {
+		try {
+			feedData = $(feedData);
+			var id = feedData.children("id").text();
+			var value = new XMLSerializer().serializeToString(feedData[0]);
+			window.sessionStorage.setItem(id, value);
+		} catch (e) {
+			console.log("Could not write feed: ");
+			console.log(feedData);
+			console.log(e);
+		}
+	};
+
+	var readFeed = function(feedId) {
+		try {
+			var value = window.sessionStorage.getItem(feedId);
+			if (value) {
+				value = $(value)[0]; // convert to xml
+			}
+		} catch (e) {
+			value = null;
+			console.log("Could not read feed: ");
+			console.log(feedData);
+			console.log(e);
+		}
+		return value;
+	};
+
+	/**
+	 * Returns the most recent copy of a feed from cache, fetching from server
+	 * if not found.
+	 */
+	model.getFeed = function(feedId, callback) {
+		var feed = readFeed(feedId);
+		if (feed) {
+			callback(feed);
+		} else {
+			model.pull({
+				id : feedId
+			}, callback);
+		}
+	};
+
+	/**
+	 * Utility to resolve a given url based on the xml:base of the specified
+	 * element.
+	 */
 	model.resolveUrl = function(url, element) {
 		var base;
 		// if there's an element to resolve

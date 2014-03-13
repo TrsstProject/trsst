@@ -211,7 +211,7 @@
 		entryElement.find(".feed-id span").text(feedData.children("id").text().substring("urn:feed:".length));
 
 		var titleConverted = entryData.find("title").text();
-		titleConverted = convertToHtml(titleConverted);
+		titleConverted = convertToHtml(entryData, titleConverted);
 		entryElement.find(".title span").html(titleConverted);
 
 		// summary: sandboxed iframe
@@ -295,16 +295,47 @@
 		return entryElement;
 	};
 
+	var mentionsExp = /([\@]\w+)/g;
+	var hashtagsExp = /([\#]\w+)/g;
 	var gruberUrl = /\b((?:https?:\/\/|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))/i;
 	var inlineStyle = '<base target="_blank"/><style>* { font-family: sans-serif; font-size: 13px !important; } img { display: block; width: 100%; float:left; height: auto; margin-bottom: 30px; }</style>';
 
 	/** Used to highlight links in urls and respect linebreaks. */
-	var convertToHtml = function(text) {
+	var convertToHtml = function(entryData, text) {
 		if (text.indexOf("htt") !== -1) {
 			// actually is a bit faster to prequalify before applying regex
 			text = text.replace(gruberUrl, '<a target="_blank" href="$1">$1</a>');
 		}
-		text = text.trim().replace(/\n/g, "<br>");
+
+		var i;
+		var match;
+		var matches;
+
+		// link hashtags
+		matches = text.match(hashtagsExp);
+		if (matches) {
+			for (i in matches) {
+				match = matches[i].substring(1); // remove #
+				text = text.replace(new RegExp(matches[i], 'g'), '<a href="/?tag=' + match + '">' + matches[i] + '</a>');
+			}
+		}
+
+		// link mentions
+		var id;
+		matches = text.match(mentionsExp);
+		if (matches) {
+			for (i in matches) {
+				match = matches[i].substring(1); // remove @
+				entryData.find("category[scheme='urn:com.trsst.mention']").each(function() {
+					id = $(this).attr("term");
+					if (id && id.indexOf("urn:feed:" + match) === 0) {
+						id = id.substring("urn:feed:".length);
+						text = text.replace(new RegExp(matches[i], 'g'), '<a href="/' + id + '">' + matches[i] + '</a>');
+					}
+				});
+			}
+		}
+
 		return text;
 	};
 
@@ -388,7 +419,8 @@
 			} else if (verb === "reply") {
 				// get last mention:
 				// this is the nearest parent in a tree of comments
-				var ref = entryXml.find("mention").last().text();
+				var ref = entryXml.find("category[scheme='urn:com.trsst.mention']").last().text();
+				//FIXME: need to modify to find last mentioned entry instead of last mention
 				if (ref) {
 					model.pull({
 						feedId : ref,
@@ -532,9 +564,11 @@
 		if (anchor.length !== 0) {
 			// trigger it
 			var href = anchor.attr("href");
-			if (href) {
+			if (href && href.indexOf("http") === 0) {
+				// open external urls in new window
 				window.open(href, "_blank");
 			} else {
+				// open relative urls in same page push state
 				href = anchor.closest(".entry").attr("entry");
 				if (href) {
 					href = controller.feedIdFromEntryUrn(href);
