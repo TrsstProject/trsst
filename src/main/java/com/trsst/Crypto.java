@@ -20,11 +20,8 @@ import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.ECPublicKey;
 import java.util.Arrays;
 
-import javax.crypto.Cipher;
 import javax.crypto.KeyAgreement;
 
 import org.apache.abdera.security.SecurityException;
@@ -32,20 +29,11 @@ import org.bouncycastle.crypto.BlockCipher;
 import org.bouncycastle.crypto.BufferedBlockCipher;
 import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.InvalidCipherTextException;
-import org.bouncycastle.crypto.agreement.ECDHBasicAgreement;
-import org.bouncycastle.crypto.digests.SHA1Digest;
-import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.crypto.engines.AESEngine;
-import org.bouncycastle.crypto.engines.IESEngine;
-import org.bouncycastle.crypto.generators.KDF2BytesGenerator;
-import org.bouncycastle.crypto.macs.HMac;
 import org.bouncycastle.crypto.paddings.BlockCipherPadding;
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.bouncycastle.crypto.paddings.ZeroBytePadding;
 import org.bouncycastle.crypto.params.KeyParameter;
-import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey;
-import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
-import org.bouncycastle.jcajce.provider.asymmetric.ec.IESCipher;
 
 /**
  * Shared utilities to try to keep the cryptography implementation in one place
@@ -76,23 +64,17 @@ public class Crypto {
             keyAgreement.init(privateKey);
             keyAgreement.doPhase(publicKey, true);
             byte[] sharedSecret = keyAgreement.generateSecret();
-//            System.out.println("sharedSecret:");
-//            System.out.println(Common.toHex(sharedSecret));
 
             // generate 512 bits using shared secret and entry id
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
             sha512.update(sharedSecret);
             sha512.update(ByteBuffer.allocate(8).putLong(entryId));
             byte[] sharedHash = sha512.digest();
-//            System.out.println("sharedHash:");
-//            System.out.println(Common.toHex(sharedHash));
 
             // calculate a digest of the input
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(input);
 
             // xor the key and the digest against the shared hash
-//            System.out.println("input:");
-//            System.out.println(Common.toHex(input));
             int i;
             result = new byte[64];
             for (i = 0; i < 32; i++) {
@@ -101,9 +83,6 @@ public class Crypto {
             for (i = 0; i < 32; i++) {
                 result[i + 32] = (byte) (digest[i] ^ sharedHash[i + 32]);
             }
-//            System.out.println("encoded:");
-//            System.out.println(Common.toHex(result));
-//            System.out.println();
         } catch (Exception e) {
             log.error("Error while encrypting element", e);
             throw new SecurityException(e);
@@ -133,43 +112,29 @@ public class Crypto {
             keyAgreement.init(privateKey);
             keyAgreement.doPhase(publicKey, true);
             byte[] sharedSecret = keyAgreement.generateSecret();
-//            System.out.println("sharedSecret:");
-//            System.out.println(Common.toHex(sharedSecret));
 
             // generate 512 bits using shared secret and entry id
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
             sha512.update(sharedSecret);
             sha512.update(ByteBuffer.allocate(8).putLong(entryId));
             byte[] sharedHash = sha512.digest();
-//            System.out.println("sharedHash:");
-//            System.out.println(Common.toHex(sharedHash));
 
             // xor the key and the digest against the shared hash
-//            System.out.println("input:");
-//            System.out.println(Common.toHex(input));
             int i;
             byte[] decoded = new byte[64];
             for (i = 0; i < 64; i++) {
                 decoded[i] = (byte) (input[i] ^ sharedHash[i]);
             }
-//            System.out.println("decoded:");
-//            System.out.println(Common.toHex(decoded));
 
             // calculate digest of the decoded key
             MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
             sha256.update(decoded, 0, 32);
             byte[] digest = sha256.digest();
-//            System.out.println("compared:");
-//            System.out.print("                                ");
-//            System.out.print("                                ");
-//            System.out.println(Common.toHex(digest));
 
             // verify that the digest of first 32 bytes matches last 32 bytes
             for (i = 0; i < 32; i++) {
                 if (digest[i] != decoded[i + 32]) {
                     // incorrectly decoded: we're not the intended recipient
-//                    System.out.println("failed: " + i);
-//                    System.out.println();
                     return null;
                 }
             }
