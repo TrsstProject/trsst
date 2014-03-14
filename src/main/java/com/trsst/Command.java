@@ -264,8 +264,7 @@ public class Command {
         o.setLongOpt("verb");
         postOptions.addOption(o);
 
-        o = new Option("r",
-                "Add a mention");
+        o = new Option("r", "Add a mention");
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("id");
@@ -915,8 +914,8 @@ public class Command {
                 options.encryptWith(recipientKeys,
                         new EntryOptions().setStatus("Encrypted content"));
             }
-            result = client.post(signingKeys, encryptionKeys.getPublic(),
-                    options, feedOptions);
+            result = client.post(signingKeys, encryptionKeys, options,
+                    feedOptions);
         } catch (IllegalArgumentException e) {
             log.error("Invalid request: " + id + " : " + e.getMessage(), e);
             return 76; // "remote error"

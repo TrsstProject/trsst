@@ -116,95 +116,132 @@ public class Client {
                 // decrypt one of the elements into an AES key to decrypt the
                 // encrypted entry itself
 
+                QName publicEncryptName = new QName(Common.NS_URI,
+                        Common.ENCRYPT);
+                QName publicSignName = new QName(Common.NS_URI, Common.SIGN);
                 QName encryptedDataName = new QName(
                         "http://www.w3.org/2001/04/xmlenc#", "EncryptedData");
                 QName cipherDataName = new QName(
                         "http://www.w3.org/2001/04/xmlenc#", "CipherData");
                 QName cipherValueName = new QName(
                         "http://www.w3.org/2001/04/xmlenc#", "CipherValue");
+
                 String encodedBytes;
                 byte[] decodedBytes;
-                Element cipherData, cipherValue, result;
+                Element publicKeyElement, cipherData, cipherValue, result;
                 List<Element> encryptedElements = content.getElements();
                 int lastIndex = encryptedElements.size() - 1;
                 Element element;
+                PublicKey publicKey = null;
                 byte[] decryptedKey = null;
 
-                // TODO: if we're the author, we can start loop at (lastIndex-1)
+                publicKeyElement = feed.getFirstChild(publicEncryptName);
+                if (publicKeyElement == null) {
+                    // fall back on signing key
+                    publicKeyElement = feed.getFirstChild(publicSignName);
+                }
+                if (publicKeyElement != null
+                        && publicKeyElement.getText() != null) {
+                    try {
+                        publicKey = Common.toPublicKeyFromX509(publicKeyElement
+                                .getText());
+                    } catch (GeneralSecurityException gse) {
+                        log.error("Could not parse public key: "
+                                + publicKeyElement);
+                    }
+                }
 
-                for (int i = 0; i < encryptedElements.size(); i++) {
-                    element = encryptedElements.get(i);
-                    if (encryptedDataName.equals(element.getQName())) {
-                        cipherData = element.getFirstChild(cipherDataName);
-                        if (cipherData != null) {
-                            cipherValue = cipherData
-                                    .getFirstChild(cipherValueName);
-                            if (cipherValue != null) {
-                                encodedBytes = cipherValue.getText();
-                                if (encodedBytes != null) {
-                                    decodedBytes = new Base64()
-                                            .decode(encodedBytes);
-                                    if (i != lastIndex) {
-                                        // if we're not at the last index
-                                        // (the payload) so we should attempt
-                                        // to decrypt this AES key
-                                        for (PrivateKey decryptionKey : decryptionKeys) {
+                if (publicKey != null) {
+
+                    // TODO: if we're the author, we can start loop at
+                    // (lastIndex-1)
+                    for (int i = 0; i < encryptedElements.size(); i++) {
+                        element = encryptedElements.get(i);
+                        if (encryptedDataName.equals(element.getQName())) {
+                            cipherData = element.getFirstChild(cipherDataName);
+                            if (cipherData != null) {
+                                cipherValue = cipherData
+                                        .getFirstChild(cipherValueName);
+                                if (cipherValue != null) {
+                                    encodedBytes = cipherValue.getText();
+                                    if (encodedBytes != null) {
+                                        decodedBytes = new Base64()
+                                                .decode(encodedBytes);
+                                        if (i != lastIndex) {
+                                            // if we're not at the last index
+                                            // (the payload) so we should
+                                            // attempt
+                                            // to decrypt this AES key
+                                            for (PrivateKey decryptionKey : decryptionKeys) {
+                                                try {
+                                                    decryptedKey = Crypto
+                                                            .decryptKeyWithECDH(
+                                                                    decodedBytes,
+                                                                    entry.getUpdated()
+                                                                            .getTime(),
+                                                                    publicKey,
+                                                                    decryptionKey);
+                                                    if (decryptedKey != null) {
+                                                        // success:
+                                                        // skip to lastIndex
+                                                        i = lastIndex - 1;
+                                                        break;
+                                                    }
+                                                } catch (SecurityException e) {
+                                                    // key did not fit
+                                                    log.trace(
+                                                            "Could not decrypt key: "
+                                                                    + entry.getId(),
+                                                            e);
+                                                } catch (Throwable t) {
+                                                    log.warn(
+                                                            "Error while decrypting key on entry: "
+                                                                    + entry.getId(),
+                                                            t);
+                                                }
+                                            }
+                                        } else if (decryptedKey != null) {
+                                            // if we're at the last index
+                                            // (the payload) and we have an
+                                            // AES key: attempt to decrypt
                                             try {
-                                                decryptedKey = Crypto
-                                                        .decryptIES(
-                                                                decodedBytes,
-                                                                decryptionKey);
-                                                // success:
-                                                // skip to lastIndex
-                                                i = lastIndex - 1;
+                                                result = decryptElementAES(
+                                                        decodedBytes,
+                                                        decryptedKey);
+                                                for (Element ee : encryptedElements) {
+                                                    ee.discard();
+                                                }
+                                                content.setValueElement(result);
+                                                break;
                                             } catch (SecurityException e) {
-                                                // key did not fit
-                                                log.trace(
-                                                        "Could not decrypt key: "
+                                                log.error(
+                                                        "Key did not decrypt element: "
                                                                 + entry.getId(),
                                                         e);
                                             } catch (Throwable t) {
                                                 log.warn(
-                                                        "Error while decrypting key on entry: "
+                                                        "Could not decrypt element on entry: "
                                                                 + entry.getId(),
                                                         t);
                                             }
                                         }
-                                    } else if (decryptedKey != null) {
-                                        // if we're at the last index
-                                        // (the payload) and we have an
-                                        // AES key: attempt to decrypt
-                                        try {
-                                            result = decryptElementAES(
-                                                    decodedBytes, decryptedKey);
-                                            for (Element ee : encryptedElements) {
-                                                ee.discard();
-                                            }
-                                            content.setValueElement(result);
-                                            break;
-                                        } catch (SecurityException e) {
-                                            log.error(
-                                                    "Key did not decrypt element: "
-                                                            + entry.getId(), e);
-                                        } catch (Throwable t) {
-                                            log.warn(
-                                                    "Could not decrypt element on entry: "
-                                                            + entry.getId(), t);
-                                        }
+                                    } else {
+                                        log.warn("No cipher text for entry: "
+                                                + entry.getId());
                                     }
                                 } else {
-                                    log.warn("No cipher text for entry: "
+                                    log.warn("No cipher value for entry: "
                                             + entry.getId());
                                 }
                             } else {
-                                log.warn("No cipher value for entry: "
+                                log.warn("No cipher data for entry: "
                                         + entry.getId());
                             }
-                        } else {
-                            log.warn("No cipher data for entry: "
-                                    + entry.getId());
                         }
                     }
+
+                } else {
+                    log.error("No public key for feed: " + feed.getId());
                 }
             }
         }
@@ -220,7 +257,8 @@ public class Client {
      * @return a Feed containing the latest entries for this feed id.
      */
     public Feed pull(String urn) {
-        AbderaClient client = new AbderaClient(Abdera.getInstance(), Common.getBuildString());
+        AbderaClient client = new AbderaClient(Abdera.getInstance(),
+                Common.getBuildString());
 
         if (urn.startsWith("urn:feed:")) {
             urn = urn.substring("urn:feed:".length());
@@ -346,7 +384,7 @@ public class Client {
      * @throws GeneralSecurityException
      * @throws contentKey
      */
-    public Feed post(KeyPair signingKeys, PublicKey encryptionKey,
+    public Feed post(KeyPair signingKeys, KeyPair encryptionKeys,
             EntryOptions options, FeedOptions feedOptions) throws IOException,
             SecurityException, GeneralSecurityException, Exception {
         // inlining all the steps to help implementors and porters (and
@@ -392,7 +430,7 @@ public class Client {
             signatureElement.discard();
         }
         feed.addExtension(new QName(Common.NS_URI, Common.ENCRYPT)).setText(
-                Common.toX509FromPublicKey(encryptionKey));
+                Common.toX509FromPublicKey(encryptionKeys.getPublic()));
         feed.setId(Common.toFeedUrn(feedId));
         feed.setMustPreserveWhitespace(false);
 
@@ -453,7 +491,7 @@ public class Client {
                         org.apache.abdera.model.Text.Type.HTML);
                 // FIXME: some readers only show type=html
             }
-            
+
             if (options.mentions != null) {
                 for (String s : options.mentions) {
                     entry.addCategory(Common.MENTION_URN, s, "Mention");
@@ -619,17 +657,15 @@ public class Client {
                     // enforce the convention:
                     // last encrypted key is for ourself
 
-                    keys.remove(encryptionKey); // move to end if exists
-                    keys.add(encryptionKey);
-                    // if we're the only key in the list
-                    if (keys.size() == 1) {
-                        // add ourself again to hide that fact
-                        keys.add(encryptionKey);
-                    }
+                    keys.remove(encryptionKeys.getPublic()); // move to end if
+                                                             // exists
+                    keys.add(encryptionKeys.getPublic());
 
                     // encrypt content key separately for each recipient
                     for (PublicKey recipient : keys) {
-                        byte[] bytes = Crypto.encryptIES(contentKey, recipient);
+                        byte[] bytes = Crypto.encryptKeyWithECDH(contentKey,
+                                feed.getUpdated().getTime(), recipient,
+                                encryptionKeys.getPrivate());
                         String encoded = new Base64(0, null, true)
                                 .encodeToString(bytes);
                         writer.startElement("EncryptedData",
@@ -775,36 +811,6 @@ public class Client {
         options.setPublicKey(signingKeys.getPublic());
         options.setSigningKey(signingKeys.getPrivate());
         return options;
-    }
-
-    public static byte[] encryptElementIES(Element element, PublicKey publicKey)
-            throws SecurityException {
-        byte[] after = null;
-        try {
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            element.writeTo(output);
-            byte[] before = output.toByteArray();
-            after = Crypto.encryptIES(before, publicKey);
-        } catch (Exception e) {
-            log.error("Error while encrypting element", e);
-            throw new SecurityException(e);
-        }
-        return after;
-    }
-
-    public static Element decryptElementIES(byte[] data, PrivateKey privateKey)
-            throws SecurityException {
-        Element result;
-
-        try {
-            byte[] after = Crypto.decryptIES(data, privateKey);
-            ByteArrayInputStream input = new ByteArrayInputStream(after);
-            result = Abdera.getInstance().getParser().parse(input).getRoot();
-        } catch (Exception e) {
-            log.error("Error while decrypting: ", e);
-            throw new SecurityException(e);
-        }
-        return result;
     }
 
     public static byte[] encryptElementAES(Element element, byte[] secretKey)

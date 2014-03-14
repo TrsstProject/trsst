@@ -13,6 +13,7 @@ import org.apache.abdera.Abdera;
 import org.apache.abdera.model.Element;
 import org.apache.abdera.model.Entry;
 import org.apache.abdera.model.Feed;
+import org.bouncycastle.util.Arrays;
 
 import com.google.common.io.Files;
 import com.trsst.client.Client;
@@ -103,8 +104,8 @@ public class TrsstTest extends TestCase {
                                     .toX509FromPublicKey(publicKey))));
 
             // generate feed with no entries
-            feed = client.post(signingKeys, encryptionKeys.getPublic(),
-                    new EntryOptions(), new FeedOptions());
+            feed = client.post(signingKeys, encryptionKeys, new EntryOptions(),
+                    new FeedOptions());
             assertNotNull("Generating empty feed", feed);
             assertEquals("Empty feed retains id",
                     Common.fromFeedUrn(feed.getId()), feedId);
@@ -136,7 +137,7 @@ public class TrsstTest extends TestCase {
             feedId = Common.toFeedId(signingKeys.getPublic());
 
             // generate feed with entry
-            feed = client.post(signingKeys, encryptionKeys.getPublic(),
+            feed = client.post(signingKeys, encryptionKeys,
                     new EntryOptions().setStatus("First Post!"),
                     new FeedOptions());
             assertNotNull("Generating feed with entry", feed);
@@ -179,16 +180,21 @@ public class TrsstTest extends TestCase {
             assertNull("Verification fails with edited entry", feed);
 
             // encryption roundtrip
-            String test = entry.toString();
-            KeyPair b = Common.generateEncryptionKeyPair();
-            byte[] bytes = Client.encryptElementIES(entry, b.getPublic());
-            Element element = Client.decryptElementIES(bytes, b.getPrivate());
-            assertEquals("IES Encryption round trip test", test,
-                    element.toString());
-
             byte[] key = Crypto.generateAESKey();
+            long timestamp = System.currentTimeMillis();
+            KeyPair a = Common.generateEncryptionKeyPair();
+            KeyPair b = Common.generateEncryptionKeyPair();
+            byte[] bytes = Crypto.encryptKeyWithECDH(key, timestamp,
+                    a.getPublic(), b.getPrivate());
+            byte[] decrypted = Crypto.decryptKeyWithECDH(bytes, timestamp,
+                    b.getPublic(), a.getPrivate());
+            assertTrue("ECDH Encryption round trip test",
+                    Arrays.areEqual(key, decrypted));
+
+            // serialized entry encryption roundtrip
+            String test = entry.toString();
             bytes = Client.encryptElementAES(entry, key);
-            element = Client.decryptElementAES(bytes, key);
+            Element element = Client.decryptElementAES(bytes, key);
             assertEquals("AES Encryption round trip test", test,
                     element.toString());
 
@@ -207,7 +213,7 @@ public class TrsstTest extends TestCase {
             // generate entry with full options
             feed = client.post(
                     signingKeys,
-                    encryptionKeys.getPublic(),
+                    encryptionKeys,
                     new EntryOptions()
                             .setStatus("Second Post!")
                             .setVerb("post")
@@ -257,7 +263,7 @@ public class TrsstTest extends TestCase {
                     .toString();
             feed = client
                     .post(signingKeys,
-                            encryptionKeys.getPublic(),
+                            encryptionKeys,
                             new EntryOptions().setVerb("delete").setMentions(
                                     new String[] { firstIdToDelete,
                                             secondIdToDelete }),
@@ -285,7 +291,7 @@ public class TrsstTest extends TestCase {
             for (int i = 0; i < 15; i++) {
                 feed = client.post(
                         signingKeys,
-                        encryptionKeys.getPublic(),
+                        encryptionKeys,
                         new EntryOptions()
                                 .setStatus("Multipost!")
                                 .setVerb("post")
@@ -304,7 +310,7 @@ public class TrsstTest extends TestCase {
             for (int i = 0; i < 15; i++) {
                 feed = client.post(
                         signingKeys,
-                        encryptionKeys.getPublic(),
+                        encryptionKeys,
                         new EntryOptions()
                                 .setStatus("Multipost!")
                                 .setVerb("post")
@@ -316,7 +322,7 @@ public class TrsstTest extends TestCase {
                         new FeedOptions());
                 entry = feed.getEntries().get(0);
             }
-            feed = client.pull(Common.fromFeedUrn(feed.getId())+"?count=25");
+            feed = client.pull(Common.fromFeedUrn(feed.getId()) + "?count=25");
             assertTrue("Feed has only first page of entries", (25 == feed
                     .getEntries().size()));
 
@@ -341,7 +347,7 @@ public class TrsstTest extends TestCase {
             // generate encrypted entry
             feed = client
                     .post(signingKeys,
-                            encryptionKeys.getPublic(),
+                            encryptionKeys,
                             new EntryOptions()
                                     .setStatus("This is the encrypted entry")
                                     .setBody("This is the encrypted body")

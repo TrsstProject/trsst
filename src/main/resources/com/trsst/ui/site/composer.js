@@ -76,6 +76,9 @@
 				formData.append("verb", "reply");
 			}
 
+			// determine public or private
+			var encrypted = this.form.find("select[name='encrypt'] option:selected").hasClass("private");
+
 			// find tags and mentions
 			var i;
 			var match;
