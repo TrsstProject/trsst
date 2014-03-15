@@ -492,14 +492,30 @@ public class Client {
                 // FIXME: some readers only show type=html
             }
 
+            // generate proof-of-work stamp for this feed id and entry id
+            Element stampElement = entry.addExtension(new QName(Common.NS_URI,
+                    Common.STAMP));
+            stampElement.setText(Crypto.computeStamp(Common.STAMP_BITS, entry
+                    .getUpdated().getTime(), feedId));
+
             if (options.mentions != null) {
                 for (String s : options.mentions) {
                     entry.addCategory(Common.MENTION_URN, s, "Mention");
+                    stampElement = entry.addExtension(new QName(Common.NS_URI,
+                            Common.STAMP));
+                    stampElement.setText(Crypto.computeStamp(Common.STAMP_BITS,
+                            entry.getUpdated().getTime(), s));
+                    // stamp is required for each mention
                 }
             }
             if (options.tags != null) {
                 for (String s : options.tags) {
                     entry.addCategory(Common.TAG_URN, s, "Tag");
+                    stampElement = entry.addExtension(new QName(Common.NS_URI,
+                            Common.STAMP));
+                    stampElement.setText(Crypto.computeStamp(Common.STAMP_BITS,
+                            entry.getUpdated().getTime(), s));
+                    // stamp is required for each tag
                 }
             }
 

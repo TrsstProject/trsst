@@ -28,6 +28,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyFactory;
@@ -41,6 +42,7 @@ import java.security.spec.ECGenParameterSpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Date;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
@@ -84,6 +86,8 @@ public class Common {
     public static final String KEY_EXTENSION = ".p12";
     public static final String VERB_DELETE = "delete";
     public static final String VERB_DELETED = "deleted";
+    public static final String STAMP = "stamp";
+    public static final int STAMP_BITS = 20;
 
     /**
      * Default public rights are like CC ND BY but with added right of

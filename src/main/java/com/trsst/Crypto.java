@@ -15,12 +15,16 @@
  */
 package com.trsst;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 
 import javax.crypto.KeyAgreement;
 
@@ -48,11 +52,13 @@ public class Crypto {
      * encrypts those 64 bytes with the sha-512 hash of the ECDH shared secret
      * and the entry id.
      * 
-     * @param input 32 byte key to be encrypted
+     * @param input
+     *            32 byte key to be encrypted
      * @param publicKey
      * @param privateKey
      * @return
-     * @throws SecurityException if unexpected error
+     * @throws SecurityException
+     *             if unexpected error
      */
     public static byte[] encryptKeyWithECDH(byte[] input, long entryId,
             PublicKey publicKey, PrivateKey privateKey)
@@ -97,11 +103,13 @@ public class Crypto {
      * so, returns the first 32 bytes of the decrypted content. Otherwise, then
      * this key was not intended for us, and returns null.
      * 
-     * @param input 64 byte input to be decrypted
+     * @param input
+     *            64 byte input to be decrypted
      * @param publicKey
      * @param privateKey
      * @return the original 32 byte input, or null if unintended recipient.
-     * @throws SecurityException if unexpected error
+     * @throws SecurityException
+     *             if unexpected error
      */
     public static byte[] decryptKeyWithECDH(byte[] input, long entryId,
             PublicKey publicKey, PrivateKey privateKey)
@@ -207,6 +215,136 @@ public class Crypto {
             System.arraycopy(output, 0, truncatedOutput, 0, outputLength);
             return truncatedOutput;
         }
+    }
+
+    /**
+     * Computes hashcash proof-of-work stamp for the given input and
+     * bitstrength. Servers can choose which bitstrength they accept, but
+     * we recommend at least 20.  The colon ":" is a delimiter in hashcash
+     * so we replace all occurances in a token with ".".  
+     * 
+     * This machine is calculating stamps at a mean rate of 340ms, 694ms,
+     * 1989ms, 4098ms, and 6563ms for bits of 19, 20, 21, 22, and 23
+     * respectively.
+     * 
+     * @param bitstrength
+     *            number of leading zero bits to find
+     * @param timestamp
+     *            the timestamp/entry-id of the enclosing entry
+     * @param token
+     *            a feed-id or mention-id or tag
+     * @return
+     */
+    public static final String computeStamp(int bitstrength, long timestamp,
+            String token) {
+        try {
+            if (token.indexOf(':') != -1) {
+                token = token.replace(":", ".");
+            }
+            String formattedDate = new SimpleDateFormat("YYMMDD")
+                    .format(new Date(timestamp));
+            String prefix = "1:" + Integer.toString(bitstrength) + ":"
+                    + formattedDate + ":" + token + "::"
+                    + Long.toHexString(timestamp) + ":";
+            int masklength = bitstrength / 8;
+            byte[] prefixBytes = prefix.getBytes("UTF-8");
+            MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
+
+            int i;
+            int b;
+            byte[] hash;
+            long counter = 0;
+            while (true) {
+                sha1.update(prefixBytes);
+                sha1.update(Long.toHexString(counter).getBytes());
+                hash = sha1.digest(); // 20 bytes long
+                for (i = 0; i < 20; i++) {
+                    b = (i < masklength) ? 0 : 255 >> (bitstrength % 8);
+                    if (b != (b | hash[i])) {
+                        // no match; keep trying
+                        break;
+                    }
+                    if (i == masklength) {
+                        // we're a match: return the stamp
+                        // System.out.println(Common.toHex(hash));
+                        return prefix + Long.toHexString(counter);
+                    }
+                }
+                counter++;
+                // keep going forever until we find it
+            }
+        } catch (UnsupportedEncodingException e) {
+            log.error("No string encoding found: ", e);
+        } catch (NoSuchAlgorithmException e) {
+            log.error("No hash algorithm found: ", e);
+        }
+        log.error("Exiting without stamp: should never happen");
+        return null;
+    }
+
+    /**
+     * Verifies the specified hashcash proof-of-work stamp for the given
+     * timestamp and token.
+     * 
+     * @return true if verified, false if failed or invalid.
+     */
+    public static final boolean verifyStamp(String stamp, long timestamp,
+            String token) {
+        String[] fields = stamp.split(":");
+
+        if (fields.length != 7) {
+            log.info("verifyStamp: invalid number of fields: " + fields.length);
+            return false;
+        }
+
+        if (!"1".equals(fields[0])) {
+            log.info("verifyStamp: invalid version: " + fields[0]);
+            return false;
+        }
+
+        int bitstrength;
+        try {
+            bitstrength = Integer.parseInt(fields[1]);
+        } catch (NumberFormatException e) {
+            log.info("verifyStamp: invalid bit strength: " + fields[1]);
+            return false;
+        }
+
+        String formattedDate = new SimpleDateFormat("YYMMDD").format(new Date(
+                timestamp));
+        if (!formattedDate.equals(fields[2])) {
+            log.info("verifyStamp: invalid date: " + fields[2]);
+            return false;
+        }
+
+        if (!token.equals(fields[3])) {
+            log.info("verifyStamp: invalid token: " + fields[3]);
+            return false;
+        }
+
+        // other fields are ignored;
+        // now verify hash:
+        try {
+            int b;
+            byte[] hash = MessageDigest.getInstance("SHA-1").digest(
+                    stamp.getBytes("UTF-8"));
+            for (int i = 0; i < 20; i++) {
+                b = (i < bitstrength / 8) ? 0 : 255 >> (bitstrength % 8);
+                if (b != (b | hash[i])) {
+                    return false;
+                }
+                if (i == bitstrength / 8) {
+                    // stamp is verified
+                    return true;
+                }
+            }
+        } catch (UnsupportedEncodingException e) {
+            log.error("No string encoding found: ", e);
+        } catch (NoSuchAlgorithmException e) {
+            log.error("No hash algorithm found: ", e);
+        }
+
+        return false;
     }
 
     private final static org.slf4j.Logger log = org.slf4j.LoggerFactory
