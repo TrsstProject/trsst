@@ -163,9 +163,7 @@
 					}
 				}
 			});
-			if (feedData) {
-				self.renderLater();
-			}
+			self.renderLater();
 		}
 		return result;
 	};
@@ -196,9 +194,6 @@
 		}
 
 		console.log("rendering: ");
-		if (getPendingCount() === 0) {
-			$("body").removeClass("pending");
-		}
 		var self = this;
 		// console.log(self.allEntryElements);
 		self.renderCoalescence = null;
@@ -248,14 +243,10 @@
 
 	var incrementPendingCount = function() {
 		pollster.incrementPendingCount();
-		if (getPendingCount() > 2) {
-			$("body").addClass("pending");
-		}
 	};
 
 	var decrementPendingCount = function() {
 		pollster.decrementPendingCount();
-		// body class "pending" removed on render
 	};
 
 	var shallowCopy = function(obj) {

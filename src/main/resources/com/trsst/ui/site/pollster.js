@@ -113,10 +113,16 @@
 
 	pollster.incrementPendingCount = function() {
 		concurrentFetchCount++;
+		if (concurrentFetchCount > 2) {
+			$("body").addClass("pending");
+		}
 	};
 
 	pollster.decrementPendingCount = function() {
 		concurrentFetchCount--;
+		if (concurrentFetchCount === 0) {
+			$("body").removeClass("pending");
+		}
 	};
 
 	/**
@@ -150,16 +156,16 @@
 
 		var self = this;
 		pollster.incrementPendingCount();
-		console.log("concurrentFetchCount: inc:" + concurrentFetchCount);
+		console.log("concurrentFetchCount: inc:" + pollster.getPendingCount());
 		var stringifiedQuery = JSON.stringify(query); 
-		console.log("Sent:     " + concurrentFetchCount + " : " + stringifiedQuery);
+		console.log("Sent:     " + pollster.getPendingCount() + " : " + stringifiedQuery);
 		model.pull(query, function(feedData) {
-			concurrentFetchCount--;
-			console.log("concurrentFetchCount: dec:" + concurrentFetchCount);
+			pollster.decrementPendingCount();
+			console.log("concurrentFetchCount: dec:" + pollster.getPendingCount());
 			if (!feedData) {
-				console.log("Not found: " + concurrentFetchCount + " : " + JSON.stringify(query));
+				console.log("Not found: " + pollster.getPendingCount() + " : " + JSON.stringify(query));
 			} else {
-				//console.log("Received: " + concurrentFetchCount + " : " + JSON.stringify(query));
+				//console.log("Received: " + pollster.getPendingCount() + " : " + JSON.stringify(query));
 
 				// call each subscriber's notify function
 				for ( var i in subscribers) {
@@ -274,7 +280,7 @@
 	 * queue.
 	 */
 	var onTick = function() {
-		if (concurrentFetchCount < 5) {
+		if (pollster.getPendingCount() < 5) {
 			// console.log("onTick");
 			var task;
 			var time = new Date().getTime();
