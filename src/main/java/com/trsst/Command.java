@@ -131,6 +131,12 @@ public class Command {
             }
         }
 
+        // if unspecified, default relay to home.trsst.com
+        if (System.getProperty("com.trsst.server.relays") == null) {
+            System.setProperty("com.trsst.server.relays",
+                    "http://home.trsst.com/feed");
+        }
+
         // default to user-friendlier file names
         String home = System.getProperty("user.home", ".");
         if (System.getProperty("com.trsst.client.storage") == null) {
