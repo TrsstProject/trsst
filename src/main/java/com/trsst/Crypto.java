@@ -241,7 +241,7 @@ public class Crypto {
             if (token.indexOf(':') != -1) {
                 token = token.replace(":", ".");
             }
-            String formattedDate = new SimpleDateFormat("YYMMDD")
+            String formattedDate = new SimpleDateFormat("YYMMdd")
                     .format(new Date(timestamp));
             String prefix = "1:" + Integer.toString(bitstrength) + ":"
                     + formattedDate + ":" + token + "::"
@@ -310,7 +310,7 @@ public class Crypto {
             return false;
         }
 
-        String formattedDate = new SimpleDateFormat("YYMMDD").format(new Date(
+        String formattedDate = new SimpleDateFormat("YYMMdd").format(new Date(
                 timestamp));
         if (!formattedDate.equals(fields[2])) {
             log.info("verifyStamp: invalid date: " + fields[2]);
