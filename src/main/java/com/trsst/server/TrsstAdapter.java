@@ -859,7 +859,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 // RSS feeds don't have millisecond precision
                 // so we need to add it to avoid duplicate ids
                 if (timestamp % 1000 == 0) {
-                    timestamp = timestamp + existing.hashCode() % 1000;
+                    // need a deterministic source
+                    String hash = existing.toString() + entry.getTitle();
+                    timestamp = timestamp + hash.hashCode() % 1000;
                 }
 
                 try {
@@ -915,9 +917,6 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     /**
      * Converts from RSS parser's read-only Feed to a mutable Feed.
      */
-    /**
-     * Converts from RSS parser's read-only Feed to a mutable Feed.
-     */
     protected Feed convertFromRSS(String feedId, Feed feed) {
         Feed result = Abdera.getInstance().newFeed();
 
@@ -969,7 +968,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 try {
                     existing = entry.getId();
                 } catch (IRISyntaxException irie) {
-                    // EFF's entry id's have spaces
+                    // EFF's entry ids have spaces
                     // "<guid isPermaLink="false">78822 at https://www.eff.org</guid>"
                 }
                 if (existing == null) {
@@ -984,7 +983,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                     timestamp = timestamp + hash.hashCode() % 1000;
                 }
                 converted.setId(Common.toEntryUrn(feedId, timestamp));
-                converted.setUpdated(entry.getUpdated());
+                converted.setUpdated(new Date(timestamp));
                 converted.setPublished(entry.getPublished());
                 converted.setTitle(entry.getTitle());
 
