@@ -288,7 +288,7 @@ public class TrsstTest extends TestCase {
             // "Second Post!", entry.getTitle() );
 
             // make sure we're retaining all entries
-            for (int i = 0; i < 15; i++) {
+            for (int i = 0; i < 2; i++) {
                 feed = client.post(
                         signingKeys,
                         encryptionKeys,
@@ -304,10 +304,10 @@ public class TrsstTest extends TestCase {
                 entry = feed.getEntries().get(0);
             }
             feed = client.pull(Common.fromFeedUrn(feed.getId()));
-            assertTrue("Feed has all entries", (18 == feed.getEntries().size()));
+            assertTrue("Feed has all entries", (5 == feed.getEntries().size()));
 
-            // make sure server is paginating (in this case at 25 by default)
-            for (int i = 0; i < 15; i++) {
+            // make sure server is paginating 
+            for (int i = 0; i < 5; i++) {
                 feed = client.post(
                         signingKeys,
                         encryptionKeys,
@@ -322,8 +322,8 @@ public class TrsstTest extends TestCase {
                         new FeedOptions());
                 entry = feed.getEntries().get(0);
             }
-            feed = client.pull(Common.fromFeedUrn(feed.getId()) + "?count=25");
-            assertTrue("Feed has only first page of entries", (25 == feed
+            feed = client.pull(Common.fromFeedUrn(feed.getId()) + "?count=3");
+            assertTrue("Feed has only first page of entries", (3 == feed
                     .getEntries().size()));
 
             // test pull of a single entry
@@ -352,10 +352,9 @@ public class TrsstTest extends TestCase {
                                     .setStatus("This is the encrypted entry")
                                     .setBody("This is the encrypted body")
                                     .setContentUrl("http://www.trsst.com")
-                                    .encryptWith(
-                                            new PublicKey[] {
-                                                    recipientKeys.getPublic(),
-                                                    encryptionKeys.getPublic() },
+                                    .encryptFor(
+                                            new String[] { feed.getId()
+                                                    .toString() },
                                             new EntryOptions()
                                                     .setMentions(
                                                             new String[] {

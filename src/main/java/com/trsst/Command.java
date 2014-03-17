@@ -25,7 +25,6 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyStore;
@@ -832,23 +831,26 @@ public class Command {
             return 73; // "can't create output error"
         }
 
-        PublicKey[] recipientKeys = null;
+        String[] recipientIds = null;
         if (recipients != null) {
-            recipientKeys = new PublicKey[recipients.length];
+            LinkedList<String> keys = new LinkedList<String>();
             for (int i = 0; i < recipients.length; i++) {
-                try {
-                    if ("-".equals(recipients[i])) {
-                        // "-" is shorthand for self-encrypt
-                        recipientKeys[i] = encryptionKeys.getPublic();
-                    } else {
-                        recipientKeys[i] = Common
-                                .toPublicKeyFromX509(recipients[i]);
+                if ("-".equals(recipients[i])) {
+                    // "-" is shorthand for encrypt for mentioned ids
+                    if (mentions != null) {
+                        for (String mention : mentions) {
+                            if (Common.isFeedId(mention)) {
+                                keys.add(mention);
+                            }
+                        }
                     }
-                } catch (GeneralSecurityException e) {
-                    log.error("Could not parse recipient key: " + recipients[i]);
-                    return 73; // "can't create output error"
+                } else if (Common.isFeedId(recipients[i])) {
+                    keys.add(recipients[i]);
+                } else {
+                    log.warn("Could not parse recipient id: " + recipients[i]);
                 }
             }
+            recipientIds = keys.toArray(new String[0]);
         }
 
         // handle binary attachment
@@ -916,9 +918,11 @@ public class Command {
                     feedOptions.setLogoURL(logo);
                 }
             }
-            if (recipientKeys != null) {
-                options.encryptWith(recipientKeys,
-                        new EntryOptions().setStatus("Encrypted content"));
+            if (recipientIds != null) {
+                EntryOptions publicEntry = new EntryOptions().setStatus(
+                        "Encrypted content").setVerb("encrypt");
+                // TODO: add duplicate mentions to outside of envelope
+                options.encryptFor(recipientIds, publicEntry);
             }
             result = client.post(signingKeys, encryptionKeys, options,
                     feedOptions);

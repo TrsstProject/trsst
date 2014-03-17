@@ -26,7 +26,6 @@ import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -521,7 +520,7 @@ public class Client {
 
             // generate an AES256 key for encrypting
             byte[] contentKey = null;
-            if (options.recipientKeys != null) {
+            if (options.recipientIds != null) {
                 contentKey = Crypto.generateAESKey();
             }
 
@@ -612,7 +611,7 @@ public class Client {
                 }
             }
 
-            if (options.recipientKeys == null) {
+            if (options.recipientIds == null) {
                 // public post
                 entry.setRights(Common.RIGHTS_NDBY_REVOCABLE);
             } else {
@@ -664,17 +663,30 @@ public class Client {
                     } else {
                         writer.writeTitle(""); // empty title
                     }
-
+                    
                     writer.startContent("application/xenc+xml");
 
                     List<PublicKey> keys = new LinkedList<PublicKey>();
-                    keys.addAll(Arrays.asList(options.recipientKeys));
+                    for (String id : options.recipientIds) {
+                        // for each recipient
+                        Feed recipientFeed = pull(id);
+                        if (recipientFeed != null) {
+                            // fetch encryption key
+                            Element e = recipientFeed.getExtension(new QName(
+                                    Common.NS_URI, Common.ENCRYPT));
+                            if (e == null) {
+                                // fall back to signing key
+                                e = recipientFeed.getExtension(new QName(
+                                        Common.NS_URI, Common.SIGN));
+                            }
+                            keys.add(Common.toPublicKeyFromX509(e.getText()));
+                        }
+                    }
 
                     // enforce the convention:
+                    keys.remove(encryptionKeys.getPublic());
+                    // move to end if exists;
                     // last encrypted key is for ourself
-
-                    keys.remove(encryptionKeys.getPublic()); // move to end if
-                                                             // exists
                     keys.add(encryptionKeys.getPublic());
 
                     // encrypt content key separately for each recipient
@@ -724,7 +736,7 @@ public class Client {
                     // System.out.println(stringWriter.toString());
                 } catch (Throwable t) {
                     log.error("Unexpected error while encrypting, exiting: "
-                            + options.recipientKeys, t);
+                            + options.recipientIds, t);
                     t.printStackTrace();
                     throw new IllegalArgumentException("Unexpected error: " + t);
                 }

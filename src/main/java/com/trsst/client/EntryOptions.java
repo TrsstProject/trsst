@@ -1,7 +1,6 @@
 package com.trsst.client;
 
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -20,7 +19,7 @@ public class EntryOptions {
     String url;
     String[] mentions;
     String[] tags;
-    PublicKey[] recipientKeys;
+    String[] recipientIds;
     PrivateKey[] decryptionKeys;
     EntryOptions publicOptions;
     private List<String> mimetype = new LinkedList<String>();
@@ -47,7 +46,7 @@ public class EntryOptions {
         tags = null;
         mimetype = null;
         content = null;
-        recipientKeys = null;
+        recipientIds = null;
         decryptionKeys = null;
         publicOptions = null;
     }
@@ -213,8 +212,8 @@ public class EntryOptions {
     /**
      * @return the recipientKey
      */
-    public PublicKey[] getRecipientKeys() {
-        return recipientKeys;
+    public String[] getRecipientKeys() {
+        return recipientIds;
     }
 
     /**
@@ -225,10 +224,10 @@ public class EntryOptions {
      *            encrypts this entry using the specified public key so that
      *            only that key's owner can read it.
      */
-    public EntryOptions encryptWith(PublicKey[] recipientKey,
+    public EntryOptions encryptFor(String[] recipientKey,
             EntryOptions publicOptions) {
         this.publicOptions = publicOptions;
-        this.recipientKeys = recipientKey;
+        this.recipientIds = recipientKey;
         return this;
     }
 

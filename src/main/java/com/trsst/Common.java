@@ -252,7 +252,10 @@ public class Common {
         }
     }
 
-    public static boolean isAccountId(String id) {
+    public static boolean isFeedId(String id) {
+        if (id.startsWith(FEED_URN_PREFIX)) {
+            id = id.substring(FEED_URN_PREFIX.length());
+        }
         return (decodeChecked(id) != null);
     }
 
