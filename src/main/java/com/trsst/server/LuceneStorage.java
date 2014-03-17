@@ -309,7 +309,7 @@ public class LuceneStorage implements Storage {
                 if (tag.startsWith(Common.ENTRY_URN_PREFIX)) {
                     tag = tag.substring(Common.ENTRY_URN_PREFIX.length());
                 }
-                search = search + " tag:\"" + tag + "\"";
+                search = search + " tag:\"" + tag.toLowerCase() + "\"";
             }
         }
         if (mentions != null) {
@@ -327,7 +327,7 @@ public class LuceneStorage implements Storage {
                 search = search + " tag:\"" + mention + "\"";
             }
         }
-        search = "feed:\"" + feedId + "\"" + search.toLowerCase();
+        search = "feed:\"" + feedId + "\"" + search;
         StandardQueryParser parser = new StandardQueryParser();
         parser.setDefaultOperator(StandardQueryConfigHandler.Operator.AND);
         return parser.parse(search, "text");
