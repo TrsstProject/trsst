@@ -428,12 +428,12 @@
 			} else if (verb === "reply") {
 				// get last mention:
 				// this is the nearest parent in a tree of comments
-				var ref = entryXml.find("category[scheme='urn:com.trsst.mention']").last().text();
+				var ref = entryXml.find("category[scheme='urn:com.trsst.mention']").last().attr("term");
 				// FIXME: need to modify to find last mentioned entry instead of
 				// last mention
 				if (ref) {
 					model.pull({
-						feedId : ref,
+						feedId : model.feedIdFromEntryUrn(ref)+'/'+model.entryIdFromEntryUrn(ref),
 						count : 1
 					}, function(feedData) {
 						if (feedData && feedData.length > 0) {
