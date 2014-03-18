@@ -161,8 +161,6 @@
 		console.log("Sent:     " + pollster.getPendingCount() + " : " + stringifiedQuery);
 		var currentTask = task;
 		model.pull(query, function(feedData) {
-			pollster.decrementPendingCount();
-			console.log("concurrentFetchCount: dec:" + pollster.getPendingCount());
 			if (!feedData) {
 				console.log("Not found: " + pollster.getPendingCount() + " : " + JSON.stringify(query));
 			} else {
@@ -229,6 +227,9 @@
 
 				insertTaskIntoSortedQueue(currentTask);
 			}
+			pollster.decrementPendingCount();
+			console.log("concurrentFetchCount: dec:" + pollster.getPendingCount());
+
 		});
 		return true; // task was handled
 	};

@@ -176,9 +176,12 @@
 		var self = this;
 		if (self.renderCoalescence) {
 			window.clearInterval(self.renderCoalescence);
+		} else {
+			incrementPendingCount();
 		}
 		self.renderCoalescence = setTimeout(function() {
 			//console.log("renderingLater: ");
+			decrementPendingCount();
 			self.renderCoalescence = null;
 			self.renderNow();
 		}, 750);
