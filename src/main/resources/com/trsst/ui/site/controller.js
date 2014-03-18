@@ -164,11 +164,18 @@
 		// clone entry template
 		var entryElement = $(entryTemplate).clone();
 		var entryId = entryData.find("id").text();
+		var feedId = model.feedIdFromEntryUrn(entryId);
 		if (entryId.indexOf("urn:entry:http") > -1) {
 			entryElement.addClass("external");
 		}
 		entryElement.attr("entry", entryId);
 		entryElement.removeAttr("id");
+		
+		// mark if ours
+		var currentAccountId = model.getAuthenticatedAccountId();
+		if ( currentAccountId && currentAccountId.indexOf(feedId) !== -1 ) {
+			entryElement.addClass("own");
+		}
 
 		// mark with encryption status
 		if (contentEncryption) {
@@ -455,12 +462,17 @@
 			var entryId;
 			if ($(event.target).parents('.repost').length !== 0) {
 				entryId = entryElement.attr("entry");
-				if (entryElement.hasClass("reposted")) {
-					entryElement.removeClass("reposted");
-					model.unrepostEntry(entryId);
-				} else {
+				if (!entryElement.hasClass("reposted")) {
 					entryElement.addClass("reposted");
 					model.repostEntry(entryElement.attr("entry"));
+				}
+				return;
+			}
+			if ($(event.target).parents(".delete").length !== 0) {
+				entryId = entryElement.attr("entry");
+				if (!entryElement.hasClass("deleted")) {
+					entryElement.addClass("deleted");
+					model.deleteEntry(entryElement.attr("entry"));
 				}
 				return;
 			}

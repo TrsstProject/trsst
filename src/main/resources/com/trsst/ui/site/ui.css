@@ -728,11 +728,11 @@ body.pending #homeRenderer:empty:before {
 
 .entry .action {
 	font-size: 90%;
-	margin: 0px 16px 0px 0px;
+	margin: 0px 0px 0px 16px;
 	display: inline-block;
 	float: right;	
 	position: relative;
-	top:6px; /* ugh: due to composer min height */
+	top: 6px; /* ugh: due to composer min height */
 }
 .entry.expanded .action {
 	margin-bottom: 4px
@@ -750,8 +750,22 @@ body.pending #homeRenderer:empty:before {
 	color: #999;
 }
 
+.action.delete {
+	display: none;
+}
+.entry.own .action.delete {
+	display: inherit;
+}
+.action.delete span:after {
+	content: 'Delete';
+}
+.deleted .action.delete span:after {
+	content: 'Deleted';
+}
+
 .action.like {
 	margin-right: 4px;
+	display: none;
 }
 .action.like span:after {
 	content: 'Like';
@@ -789,7 +803,7 @@ body.pending #homeRenderer:empty:before {
 .entry.content-encrypted {
 	display: none;
 }
-.entry.verb-deleted {
+.entry.verb-deleted, .entry.deleted {
 	opacity: 0.5;
 }
 .entry.verb-deleted .content:before {

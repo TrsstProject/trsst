@@ -122,7 +122,7 @@
 	model.feedIdFromEntryUrn = function(entryUrn) {
 		return entryUrn.substring("urn:entry:".length, entryUrn.lastIndexOf(":"));
 	};
-
+	
 	/**
 	 * Attempts to authenticate the specified id and password, calling callback
 	 * with feedData on success, or null on failure.
@@ -169,7 +169,7 @@
 			formData.append("mention", entryId);
 			pushFeed(authenticatedUid, authenticatedPwd, formData, function(feedData) {
 				console.log("Reposted: " + entryId);
-				model.notify(feedIdFromEntryId(entryId));
+				model.notify(model.feedIdFromEntryUrn(entryId));
 			});
 		}
 	};
@@ -180,7 +180,7 @@
 	model.unrepostEntry = function(entryId) {
 		if (authenticatedUid) {
 			model.pull({
-				feedId : feedIdFromEntryId(entryId),
+				feedId : model.feedIdFromEntryUrn(entryId),
 				verb : "repost",
 				mention : entryId
 			}, function(feedData) {
@@ -204,7 +204,7 @@
 			formData.append("mention", entryId);
 			pushFeed(authenticatedUid, authenticatedPwd, formData, function(feedData) {
 				console.log("Liked: " + entryId);
-				model.notify(feedIdFromEntryId(entryId));
+				model.notify(model.feedIdFromEntryUrn(entryId));
 			});
 		}
 	};
@@ -215,7 +215,7 @@
 	model.unlikeEntry = function(entryId) {
 		if (authenticatedUid) {
 			model.pull({
-				feedId : feedIdFromEntryId(entryId),
+				feedId : model.feedIdFromEntryUrn(entryId),
 				verb : "like",
 				mention : entryId
 			}, function(feedData) {
@@ -224,18 +224,6 @@
 				});
 			});
 		}
-	};
-
-	var feedIdFromEntryId = function(entryId) {
-		var result = entryId;
-		if (entryId.indexOf("urn:entry:") === 0) {
-			result = result.substring("urn:entry:");
-		}
-		var index = result.indexOf(":");
-		if (index !== -1) {
-			result = result.substring(0, index);
-		}
-		return result;
 	};
 
 	/**
@@ -550,13 +538,13 @@
 			if (value) {
 				value = $(value)[0]; // convert to xml
 			}
+			return value;
 		} catch (e) {
-			value = null;
 			console.log("Could not read feed: ");
 			console.log(feedData);
 			console.log(e);
+			return null;
 		}
-		return value;
 	};
 
 	/**
