@@ -353,7 +353,9 @@
 			var verb = entryXml.find("verb").text();
 			var e;
 			if (type !== undefined) {
-				if (type.indexOf("video/") === 0) {
+				if (type === "text") {
+					// pass through
+				} else if (type.indexOf("video/") === 0) {
 					e = $("<video controls preload='none'><source></audio>");
 					e.find("source").attr("src", src);
 					e.find("source").attr("type", type);
@@ -376,7 +378,7 @@
 							feedId : src,
 							count : 0
 						}, function(feedData) {
-							if (feedData.length > 0) {
+							if (feedData && feedData.length > 0) {
 								// following entry appears above followed feed
 								createElementForFeedData(feedData).appendTo($(viewElement).closest(".entry"));
 							} else {
@@ -390,7 +392,7 @@
 							feedId : src,
 							count : 1
 						}, function(feedData) {
-							if (feedData.length > 0) {
+							if (feedData && feedData.length > 0) {
 								// reposting entry appears above reposted entry
 								var entryData = $(feedData).children("entry").first();
 								createElementForEntryData(feedData, entryData).appendTo($(viewElement).closest(".entry"));
@@ -412,7 +414,7 @@
 					e.find("iframe").attr("tmpdoc", inlineStyle + contentElement.text());
 					// tmpdoc becomes srcdoc when expanded
 					$(viewElement).append(e);
-				} else {
+				} else if (type) {
 					console.log("Unrecognized content type:" + type);
 					// console.log(this);
 				}
@@ -420,13 +422,14 @@
 				// get last mention:
 				// this is the nearest parent in a tree of comments
 				var ref = entryXml.find("category[scheme='urn:com.trsst.mention']").last().text();
-				//FIXME: need to modify to find last mentioned entry instead of last mention
+				// FIXME: need to modify to find last mentioned entry instead of
+				// last mention
 				if (ref) {
 					model.pull({
 						feedId : ref,
 						count : 1
 					}, function(feedData) {
-						if (feedData.length > 0) {
+						if (feedData && feedData.length > 0) {
 							// replying entry appears under mention entry
 							var entryData = $(feedData).children("entry").first();
 							createElementForEntryData(feedData, entryData).prependTo($(viewElement).closest(".entry"));
@@ -437,8 +440,8 @@
 				} else {
 					console.log("Unexpected mention type for reply: " + ref);
 				}
-			} else {
-				console.log("Missing content type:" + type);
+			} else if (type) {
+				console.log("Unrecognized content type:" + type);
 				// console.log(this);
 			}
 		}
@@ -521,6 +524,7 @@
 					}
 				}
 				// go there
+				event.preventDefault();
 				controller.pushState("/" + url);
 			}
 			return;
@@ -536,6 +540,7 @@
 					url = encodeURIComponent(url);
 				}
 				// go there
+				event.preventDefault();
 				controller.pushState("/" + url);
 			}
 			return;
@@ -567,16 +572,21 @@
 			if (href && href.indexOf("http") === 0) {
 				// open external urls in new window
 				window.open(href, "_blank");
+			} else if (href && href.indexOf("/") === 0) {
+				// go there
+				event.preventDefault();
+				controller.pushState(href);
 			} else {
 				// open relative urls in same page push state
 				href = anchor.closest(".entry").attr("entry");
 				if (href) {
-					href = controller.feedIdFromEntryUrn(href);
+					href = model.feedIdFromEntryUrn(href);
 					// escape parameterized urns
 					if (href.indexOf("?") !== -1) {
 						href = encodeURIComponent(href);
 					}
 					// go there
+					event.preventDefault();
 					controller.pushState("/" + href);
 				} else {
 					console.log("Unrecognized anchor:");
@@ -602,14 +612,6 @@
 		} else {
 			// do nothing (for now)
 		}
-	};
-
-	controller.entryIdFromEntryUrn = function(entryUrn) {
-		return entryUrn.substring(entryUrn.lastIndexOf(":") + 1);
-	};
-
-	controller.feedIdFromEntryUrn = function(entryUrn) {
-		return entryUrn.substring("urn:entry:".length, entryUrn.lastIndexOf(":"));
 	};
 
 	var getCurrentAccountId = function() {
@@ -1092,8 +1094,8 @@
 				if (uid && uid.indexOf(path) !== -1) {
 					$("body").addClass("page-self");
 				}
-				var entryContainer = $("#entryContainer");
-				entryContainer.empty();
+				var homeRenderer = $("#homeRenderer");
+				homeRenderer.empty();
 
 				pathname = pathname.substring(1); // trim leading slash
 				model.pull({
@@ -1101,10 +1103,10 @@
 					count : 1
 				}, function(feedData) {
 					$("body").removeClass("pending");
-					if (feedData.length > 0) {
+					if (feedData && feedData.length > 0) {
 						// replying entry appears under mention entry
 						var entryData = $(feedData).children("entry").first();
-						createElementForEntryData(feedData, entryData).prependTo(entryContainer).click();
+						createElementForEntryData(feedData, entryData).prependTo(homeRenderer).click();
 						// click to expand
 					} else {
 						console.log("Could not fetch requested entry: " + pathname);
@@ -1122,9 +1124,9 @@
 
 				// delay load for followed feeds
 				var loadRecommendations = function() {
-					$("#followsContainer").empty();
+					$("#followsRenderer").empty();
 					var element = $("<div></div>");
-					$("#followsContainer").append(element);
+					$("#followsRenderer").append(element);
 					var renderer = new FeedRenderer(createElementForFeedData, element);
 					renderers.push(renderer);
 					if (path !== TRSST_WELCOME) {
@@ -1148,12 +1150,29 @@
 				};
 
 				// page owner
-				renderer = new FeedRenderer(customCreateElementForFeedData, $("#feedContainer"));
+				renderer = new FeedRenderer(customCreateElementForFeedData, $("#profileRenderer"));
 				renderer.addFeed(path);
 				renderers.push(renderer);
 
+				// page owner conversation
+				renderer = new EntryRenderer(createElementForEntryData, $("#messageRenderer"));
+				if (uid) {
+					// add all entries that mention us
+					renderer.addEntries({
+						feedId : path,
+						mention : uid
+					});
+					// add all encrypted entries
+					renderer.addEntries({
+						feedId : path,
+						verb : "encrypt"
+					});
+					// only the ones we can decode will show up
+				}
+				renderers.push(renderer);
+
 				// page owner's entries
-				renderer = new EntryRenderer(createElementForEntryData, $("#entryContainer"));
+				renderer = new EntryRenderer(createElementForEntryData, $("#homeRenderer"));
 				renderer.addFeed(path);
 				renderers.push(renderer);
 			}
@@ -1172,12 +1191,12 @@
 			}
 
 			// this is the "home" feed
-			renderer = new FeedRenderer(createElementForFeedData, $("#feedContainer"));
+			renderer = new FeedRenderer(createElementForFeedData, $("#profileRenderer"));
 			renderers.push(renderer);
 			renderer.addFeed(id);
 
 			// our followed feeds
-			renderer = new EntryRenderer(createElementForEntryData, $("#entryContainer"));
+			renderer = new EntryRenderer(createElementForEntryData, $("#homeRenderer"));
 			renderers.push(renderer);
 			renderer.addFeed(id);
 			if (id !== TRSST_WELCOME) {
@@ -1186,10 +1205,10 @@
 			renderer.addFeedFollows(id);
 
 			// delay load for recommended feeds
-			$("#followsContainer").empty();
+			$("#followsRenderer").empty();
 			window.setTimeout(function() {
 				var element = $("<div></div>");
-				$("#followsContainer").append(element);
+				$("#followsRenderer").append(element);
 				var renderer = new FeedRenderer(createElementForFeedData, element);
 				renderers.push(renderer);
 				renderer.addFeedFollows(id);

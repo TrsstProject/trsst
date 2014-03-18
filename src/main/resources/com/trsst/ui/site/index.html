@@ -82,7 +82,7 @@
 		<div class="main wrapper clearfix">
 
 			<aside>
-				<div id="feedContainer"></div>
+				<div id="profileRenderer" class="renderer profile-renderer"></div>
 				<div class="private messaging">
 					<form class="private composer">
 						<img />
@@ -99,9 +99,9 @@
 							<option selected class="private">&#8226; Private</option>
 						</select>
 					</form>
-					<div id="messageContainer"></div>
+					<div id="messageRenderer"></div>
 				</div>
-				<div id="followsContainer"></div>
+				<div id="followsRenderer"></div>
 			</aside>
 
 			<article>
@@ -120,7 +120,9 @@
 						<option value="-" class="private">&#8226; Private</option>
 					</select>
 				</form>
-				<div id="entryContainer"></div>
+				<div id="entryRenderer" class="renderer entry-renderer"></div>
+				<div id="feedRenderer" class="renderer feed-renderer"></div>
+				<div id="homeRenderer" class="renderer home-renderer"></div>
 			</article>
 
 		</div>

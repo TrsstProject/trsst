@@ -159,6 +159,7 @@
 		console.log("concurrentFetchCount: inc:" + pollster.getPendingCount());
 		var stringifiedQuery = JSON.stringify(query); 
 		console.log("Sent:     " + pollster.getPendingCount() + " : " + stringifiedQuery);
+		var currentTask = task;
 		model.pull(query, function(feedData) {
 			pollster.decrementPendingCount();
 			console.log("concurrentFetchCount: dec:" + pollster.getPendingCount());
@@ -176,9 +177,9 @@
 				resultCache[stringifiedQuery] = feedData;
 				var entries = feedData.children("entry");
 				if (entries.length > 0) {
-					task.latestEntry = entries.first();
-					task.latestEntryId = controller.entryIdFromEntryUrn(task.latestEntry.children("id").text());
-					task.latestFeed = feedData;
+					currentTask.latestEntry = entries.first();
+					currentTask.latestEntryId = model.entryIdFromEntryUrn(currentTask.latestEntry.children("id").text());
+					currentTask.latestFeed = feedData;
 					// remember latest feed *with entries*
 				}
 
@@ -186,9 +187,9 @@
 				var now = new Date().getTime();
 				var updated;
 				var diff;
-				if (task.latestEntry) {
+				if (currentTask.latestEntry) {
 					// use latest entry update if we can
-					updated = Date.parse(task.latestEntry.find("entry updated").first().text());
+					updated = Date.parse(currentTask.latestEntry.find("entry updated").first().text());
 					if (!updated) {
 						console.log("Error: could not parse entry date: " + Date.parse($(feedData).children("entry updated").text()));
 					}
@@ -210,23 +211,23 @@
 					diff = 60 * 60 * 1000; // default to 1 hour
 				}
 
-				if (task.lastFetched === 0) {
+				if (currentTask.lastFetched === 0) {
 					// first time fetch:
 					// fetch again asap
-					task.noFetchBefore = 0;
-					console.log("rescheduled: " + task.query.feedId + " : asap");
+					currentTask.noFetchBefore = 0;
+					console.log("rescheduled: " + currentTask.query.feedId + " : asap");
 				} else {
 					// fetch on a sliding delay
 					diff = Math.max(6, Math.min(diff, Math.floor(Math.pow(diff / 60000, 1 / 3) * 20000)));
-					task.noFetchBefore = now + diff;
+					currentTask.noFetchBefore = now + diff;
 					// schedule fetch for cube root of the number of elapsed
 					// minutes
-					console.log("rescheduled: " + task.query.feedId + " : " + Math.floor((now - updated) / 1000) + "s : " + Math.floor(diff / 1000 / 60) + "m " + Math.floor((diff / 1000) % 60) + "s");
+					console.log("rescheduled: " + currentTask.query.feedId + " : " + Math.floor((now - updated) / 1000) + "s : " + Math.floor(diff / 1000 / 60) + "m " + Math.floor((diff / 1000) % 60) + "s");
 				}
-				task.lastUpdate = updated;
-				task.lastFetched = now;
+				currentTask.lastUpdate = updated;
+				currentTask.lastFetched = now;
 
-				insertTaskIntoSortedQueue(task);
+				insertTaskIntoSortedQueue(currentTask);
 			}
 		});
 		return true; // task was handled

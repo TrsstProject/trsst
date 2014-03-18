@@ -30,7 +30,7 @@
 	AbstractRenderer.prototype.addDataToFeedContainer = function(feedData) {
 		var id = feedData.children("id").text();
 		var updated = feedData.children("updated").text();
-		console.log("addDataToFeedContainer: " + id);
+		//console.log("addDataToFeedContainer: " + id);
 		this.feedContainer.find("[feed='" + id + "']").remove();
 		var element = this.feedFactory(feedData);
 		element[0].updated = updated;
@@ -56,11 +56,11 @@
 		if (element) {
 			// insert it into our list
 			var current = element.attr("entry");
-			var currentFeedId = controller.feedIdFromEntryUrn(current);
-			var currentEntryId = controller.entryIdFromEntryUrn(current);
+			var currentFeedId = model.feedIdFromEntryUrn(current);
+			var currentEntryId = model.entryIdFromEntryUrn(current);
 			// extract hex timestamp
 			current = current.substring(current.lastIndexOf(":") + 1);
-			console.log("addDataToEntryContainer: " + current);
+			//console.log("addDataToEntryContainer: " + current);
 			var placedBefore;
 			var duplicate;
 			var children = this.allEntryElements;
@@ -68,8 +68,8 @@
 			var i = 0;
 			$.each(children, function(index) {
 				var existing = $(this).attr("entry");
-				var existingFeedId = controller.feedIdFromEntryUrn(existing);
-				var existingEntryId = controller.entryIdFromEntryUrn(existing);
+				var existingFeedId = model.feedIdFromEntryUrn(existing);
+				var existingEntryId = model.entryIdFromEntryUrn(existing);
 				// hex timestamps compare lexicographically
 				if (currentEntryId === existingEntryId) {
 					if (currentFeedId === existingFeedId) {
@@ -130,7 +130,7 @@
 	 * Called by pollster to update our contents with the specified feed.
 	 */
 	AbstractRenderer.prototype.notify = function(feedData, query) {
-		console.log("notify: " + query);
+		console.log("notify: " + JSON.stringify(query));
 		this.addEntriesFromFeed(feedData, query);
 	};
 
@@ -172,13 +172,13 @@
 	 * Called to prompt a non-urgent rendering of our elements to the display.
 	 */
 	AbstractRenderer.prototype.renderLater = function() {
-		console.log("renderLater");
+		//console.log("renderLater: ");
 		var self = this;
 		if (self.renderCoalescence) {
 			window.clearInterval(self.renderCoalescence);
 		}
 		self.renderCoalescence = setTimeout(function() {
-			console.log("renderingLater");
+			//console.log("renderingLater: ");
 			self.renderCoalescence = null;
 			self.renderNow();
 		}, 750);
@@ -193,7 +193,7 @@
 			return;
 		}
 
-		console.log("rendering: ");
+		//console.log("rendering: ");
 		var self = this;
 		// console.log(self.allEntryElements);
 		self.renderCoalescence = null;
@@ -261,7 +261,7 @@
 		// if ( true ) return;
 		elem = $(elem);
 		var entryUrn = elem.attr("entry");
-		var entryId = controller.entryIdFromEntryUrn(entryUrn);
+		var entryId = model.entryIdFromEntryUrn(entryUrn);
 		// get query from element if any
 		var query = elem[0].query;
 		if (!query) {
@@ -294,7 +294,6 @@
 			}
 		}, function(feedData) {
 			/* fetch partial */
-			decrementPendingCount();
 			if (!feedData) {
 				console.log("fetchPrevious: partial: not found: " + JSON.stringify(query));
 			} else {
@@ -305,6 +304,7 @@
 					return true;
 				} else {
 					// we're done: exit
+					decrementPendingCount();
 					return false;
 				}
 			}

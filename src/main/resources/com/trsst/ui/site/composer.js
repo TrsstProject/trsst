@@ -65,19 +65,29 @@
 			console.log("Not posting because nothing to send.");
 		} else {
 			var self = this;
-			var formData = new FormData(self.form[0]);
+
+			// determine public or private
+			var encrypted = this.form.find("select[name='encrypt'] option:selected").hasClass("private");
+
+			var entry = this.form.closest(".entry");
+			if (entry.length === 1) {
+				// if replying to an encrypted entry
+				if ( !encrypted && entry.hasClass("encrypted") ) {
+					var privateOption = this.form.find("select[name='encrypt'] option.private");
+					// force this entry to be encrypted
+					privateOption.attr("value", "-");
+					privateOption.select();
+				}
+			}
 
 			// copy mentions from enclosed reply
-			var entry = this.form.closest(".entry");
+			var formData = new FormData(self.form[0]);
 			if (entry.length === 1) {
 				// var mentions =
 				// TODO: copy mentions when we display them
 				formData.append("mention", entry.attr("entry"));
 				formData.append("verb", "reply");
 			}
-
-			// determine public or private
-			var encrypted = this.form.find("select[name='encrypt'] option:selected").hasClass("private");
 
 			// find tags and mentions
 			var i;

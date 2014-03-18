@@ -115,6 +115,14 @@
 		return result;
 	};
 
+	model.entryIdFromEntryUrn = function(entryUrn) {
+		return entryUrn.substring(entryUrn.lastIndexOf(":") + 1);
+	};
+
+	model.feedIdFromEntryUrn = function(entryUrn) {
+		return entryUrn.substring("urn:entry:".length, entryUrn.lastIndexOf(":"));
+	};
+
 	/**
 	 * Attempts to authenticate the specified id and password, calling callback
 	 * with feedData on success, or null on failure.
@@ -462,7 +470,7 @@
 				path = path.substring("urn:feed:".length);
 			}
 			if (filterObject.entryId) {
-				path = path + '/' + controller.entryIdFromEntryUrn(filterObject.entryId);
+				path = path + '/' + model.entryIdFromEntryUrn(filterObject.entryId);
 				delete filterObject.entryId;
 			}
 		} else {

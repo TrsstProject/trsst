@@ -105,7 +105,6 @@ article>.composer textarea {
 aside .private.messaging
 {
 	position: relative;
-	padding: 0px 18px;
 	padding-bottom: 36px;
 	background: #fff;
 	border-radius:8px;
@@ -117,7 +116,7 @@ aside .private.messaging:before
 	padding: 18px 18px;
 	position: absolute;
 	border-bottom: 1px solid #ddd;
-	content: 'Direct Messages';
+	content: 'Conversations';
 	font-weight: bold;
 	font-size: 20px;
 	top: 0px;
@@ -128,7 +127,7 @@ aside .private.messaging:after
 {
 	padding: 12px 18px;
 	position: absolute;
-	border-top: 1px solid #ddd;
+	/*border-top: 1px solid #ddd;*/
 	content: ' ';
 	font-weight: bold;
 	bottom: 0px;
@@ -136,8 +135,13 @@ aside .private.messaging:after
 	right: 0px;
 }
 
-aside> .private.messaging .composer {
+aside>.private.messaging>.composer {
+	padding: 18px;
 	padding-top: 64px;
+}
+
+aside>.private.messaging .feed {
+	background: inherit;
 }
 
 
@@ -211,7 +215,7 @@ h1.title span {
 
 /* @group Article/Content area */
 
-#entryContainer {
+#homeRenderer {
 	position: relative;
 	background-color: #fff;
 	padding-top: 50px;
@@ -219,7 +223,7 @@ h1.title span {
 	border-radius: 6px;
 }
 
-#entryContainer:before {
+#homeRenderer:before {
 	content: 'Recent Activity';
 	font-weight: bold;
 	font-size: 20px;
@@ -228,25 +232,25 @@ h1.title span {
 	top: 18px;
 	color: black;
 }
-.page-home #entryContainer:before {
+.page-home #homeRenderer:before {
 	content: 'Live Stream';
 }
 
-body.pending #entryContainer:empty:before {
+body.pending #homeRenderer:empty:before {
 	content: 'Loading...';
 }
-#entryContainer:empty:before {
+#homeRenderer:empty:before {
 	top: 28px;
 	left: 24px;
 	content: 'No entries found';
 	color: #aaa;
 }
-.page-home.signed-in #entryContainer:empty {
+.page-home.signed-in #homeRenderer:empty {
 	/* don't show "Not Found" for new accounts */
 	display: none;
 }
 
-.pending #entryContainer:not(:empty):after {
+.pending #homeRenderer:not(:empty):after {
 	display: block;
 	position: absolute;
 	bottom: 4px;
@@ -259,7 +263,7 @@ body.pending #entryContainer:empty:before {
 	background-size: cover;
 }
 
-#feedContainer {
+#profileRenderer {
 	border-radius: 6px;
 }
 
@@ -364,8 +368,8 @@ body.pending #entryContainer:empty:before {
 .signed-in .main .feed .follow {
 	display: inherit;
 }
-.page-home aside #feedContainer .feed .follow,
-.page-self aside #feedContainer .feed .follow
+.page-home aside #profileRenderer .feed .follow,
+.page-self aside #profileRenderer .feed .follow
 {
 /* everyone follows themselves implicitly */
 	display: none !important;
@@ -534,6 +538,10 @@ body.pending #entryContainer:empty:before {
 	background: -webkit-linear-gradient(top,  rgba(255,255,255,1) 0%,rgba(247,247,247,1) 50%,rgba(239,239,239,1) 100%); 
 }
 
+.reply.composer select {
+	display: none;
+}
+
 .composer button:active, .composer select:active {
 	background: -webkit-linear-gradient(top,  rgba(209,209,209,1) 0%,rgba(203,203,203,1) 50%,rgba(196,196,196,1) 100%); 
 }
@@ -631,6 +639,7 @@ body.pending #entryContainer:empty:before {
 	margin-top: -40px;
 	padding-top: 4px;
 	padding-bottom: 16px;
+	width: 100%;
 }
 .entry.expanded .composer,
 .entry.commented .composer
@@ -640,6 +649,7 @@ body.pending #entryContainer:empty:before {
 	pointer-events: inherit;
 	opacity: 1;
 }
+
 /* @end */
 
 /* @end */
@@ -721,6 +731,8 @@ body.pending #entryContainer:empty:before {
 	margin: 0px 16px 0px 0px;
 	display: inline-block;
 	float: right;	
+	position: relative;
+	top:6px; /* ugh: due to composer min height */
 }
 .entry.expanded .action {
 	margin-bottom: 4px
@@ -1568,7 +1580,7 @@ body .footer-container .wrapper {
 
 /* @group Follows Container */
 
-aside #followsContainer {
+aside #followsRenderer {
 	border-radius: 8px;
 	padding-top: 53px;
 	background-color: #fff;
@@ -1576,7 +1588,7 @@ aside #followsContainer {
 	overflow: hidden;
 }
 
-aside #followsContainer:before
+aside #followsRenderer:before
 {
 	padding: 18px 18px;
 	position: absolute;
@@ -1591,21 +1603,21 @@ aside #followsContainer:before
 	color: #000;
 	border-bottom: 1px solid #ddd;
 }
-.page-home aside #followsContainer:before {
+.page-home aside #followsRenderer:before {
 	content: 'You might follow';
 }
-.page-self aside #followsContainer:before {
+.page-self aside #followsRenderer:before {
 	content: 'You are following';
 }
 
-aside #followsContainer>div {
+aside #followsRenderer>div {
 	height: 360px;
 	overflow-x: hidden;
 	overflow-y: scroll;
 	margin-right: -18px;
 }
 
-aside div#followsContainer .feed {
+aside div#followsRenderer .feed {
 	border-radius: 0px;
 	background: #fff;
 	text-align: left;
@@ -1614,17 +1626,17 @@ aside div#followsContainer .feed {
 	padding-right: 36px;
 	min-height: 90px
 }
-aside div#followsContainer .feed .title {
+aside div#followsRenderer .feed .title {
 	color: #000;
 	font-size: 130%;
 	margin-left: 88px;
 	margin-top: 8px;
 	margin-bottom: 4px;
 }
-aside div#followsContainer .feed .subtitle {
+aside div#followsRenderer .feed .subtitle {
 	display: none;
 }
-aside div#followsContainer .feed .feed-id {
+aside div#followsRenderer .feed .feed-id {
 	font-size: 85%;
 	margin-left: 88px;
 	margin-bottom: 4px;
@@ -1633,20 +1645,20 @@ aside div#followsContainer .feed .feed-id {
 	text-overflow: ellipsis;
 }
 
-aside div#followsContainer .feed .follow {
+aside div#followsRenderer .feed .follow {
 	left: 88px;
 	text-align: left;
 	position: relative;
 }
-aside div#followsContainer .feed .logo {
+aside div#followsRenderer .feed .logo {
 	display: none;
 }
-aside div#followsContainer .feed .icon {
+aside div#followsRenderer .feed .icon {
 	margin: 8px;
 	position: absolute;
 }
 
-aside div#followsContainer:empty {
+aside div#followsRenderer:empty {
 	display: none;
 }
 
@@ -1664,16 +1676,16 @@ body.page-entry.pending article {
 	display: none;
 }
 
-body.page-entry #followsContainer {
+body.page-entry #followsRenderer {
 	display: none;
 }
 
-body.page-entry #entryContainer {
+body.page-entry #homeRenderer {
 	padding: 0px;
 	border-radius: 24px;
 }
 
-body.page-entry #entryContainer section {
+body.page-entry #homeRenderer section {
 	overflow: visible;
 	position: relative;
 	margin-left: -40px;
@@ -1681,11 +1693,11 @@ body.page-entry #entryContainer section {
 	top: 12px;
 }
 
-body.page-entry #entryContainer div.content img {
+body.page-entry #homeRenderer div.content img {
 	position: relative;
 }
 
-body.page-entry #entryContainer:before {
+body.page-entry #homeRenderer:before {
 	content: '';
 	font-weight: bold;
 	font-size: 20px;
@@ -1694,13 +1706,13 @@ body.page-entry #entryContainer:before {
 	top: 18px;
 	color: black;
 }
-body.page-entry #entryContainer:empty:before {
+body.page-entry #homeRenderer:empty:before {
 	top: 28px;
 	left: 24px;
 	content: 'No entry found';
 	color: #aaa;
 }
-body.page-entry.pending #entryContainer:empty:before {
+body.page-entry.pending #homeRenderer:empty:before {
 	content: 'Loading...';
 }
 
@@ -1808,7 +1820,7 @@ body {
 aside {
 	padding-bottom: 0px !important;
 }
-aside div#followsContainer {
+aside div#followsRenderer {
 	display: none;
 }
 
