@@ -1830,6 +1830,18 @@ div.main.wrapper {
 	width: 100%;
 }
 
+aside #profileRenderer div.feed {
+	margin-bottom: 0px;
+	margin-top: -8px;
+	background-color: #555;
+}
+.header-container {
+	background-color: #222;
+}
+aside .private.messaging {
+	display: none !important;
+}
+
 }
 /* @end */
 
