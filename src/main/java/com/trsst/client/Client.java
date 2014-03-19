@@ -186,7 +186,7 @@ public class Client {
                                                         i = lastIndex - 1;
                                                         break;
                                                     }
-                                                } catch (SecurityException e) {
+                                                } catch (GeneralSecurityException e) {
                                                     // key did not fit
                                                     log.trace(
                                                             "Could not decrypt key: "

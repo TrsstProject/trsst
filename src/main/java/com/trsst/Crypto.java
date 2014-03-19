@@ -17,6 +17,7 @@ package com.trsst;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -29,14 +30,12 @@ import java.util.Date;
 import javax.crypto.KeyAgreement;
 
 import org.apache.abdera.security.SecurityException;
-import org.bouncycastle.crypto.BlockCipher;
 import org.bouncycastle.crypto.BufferedBlockCipher;
 import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.engines.AESEngine;
-import org.bouncycastle.crypto.paddings.BlockCipherPadding;
+import org.bouncycastle.crypto.modes.CBCBlockCipher;
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
-import org.bouncycastle.crypto.paddings.ZeroBytePadding;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 /**
@@ -62,7 +61,7 @@ public class Crypto {
      */
     public static byte[] encryptKeyWithECDH(byte[] input, long entryId,
             PublicKey publicKey, PrivateKey privateKey)
-            throws SecurityException {
+            throws GeneralSecurityException {
         assert input.length == 32; // 256 bit key
         byte[] result = null;
         try {
@@ -89,9 +88,9 @@ public class Crypto {
             for (i = 0; i < 32; i++) {
                 result[i + 32] = (byte) (digest[i] ^ sharedHash[i + 32]);
             }
-        } catch (Exception e) {
-            log.error("Error while encrypting element", e);
-            throw new SecurityException(e);
+        } catch (GeneralSecurityException e) {
+            log.error("Error while encrypting key", e);
+            throw e;
         }
         return result;
     }
@@ -113,13 +112,14 @@ public class Crypto {
      */
     public static byte[] decryptKeyWithECDH(byte[] input, long entryId,
             PublicKey publicKey, PrivateKey privateKey)
-            throws SecurityException {
+            throws GeneralSecurityException {
         assert input.length == 64; // 512 bit encrypted key
         try {
             KeyAgreement keyAgreement = KeyAgreement.getInstance("ECDH", "BC");
             keyAgreement.init(privateKey);
             keyAgreement.doPhase(publicKey, true);
             byte[] sharedSecret = keyAgreement.generateSecret();
+            assert sharedSecret.length >= 32; // require 32 bytes of secret
 
             // generate 512 bits using shared secret and entry id
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
@@ -147,9 +147,9 @@ public class Crypto {
                 }
             }
             return Arrays.copyOfRange(decoded, 0, 32);
-        } catch (Exception e) {
-            log.error("Error while decrypting element", e);
-            throw new SecurityException(e);
+        } catch (GeneralSecurityException e) {
+            log.error("Error while decrypting key", e);
+            throw new GeneralSecurityException(e);
         }
     }
 
@@ -172,13 +172,9 @@ public class Crypto {
     private static byte[] _cryptBytesAES(byte[] input, byte[] key,
             boolean forEncryption) throws InvalidCipherTextException {
         assert key.length == 32; // 32 bytes == 256 bits
-        CipherParameters cipherParameters = new KeyParameter(key);
-        BlockCipher blockCipher = new AESEngine();
-        BlockCipherPadding blockCipherPadding = new ZeroBytePadding();
-        BufferedBlockCipher bufferedBlockCipher = new PaddedBufferedBlockCipher(
-                blockCipher, blockCipherPadding);
-        return process(input, bufferedBlockCipher, cipherParameters,
-                forEncryption);
+        return process(input, new PaddedBufferedBlockCipher(new CBCBlockCipher(
+                new AESEngine())), new KeyParameter(key), forEncryption);
+        // note: using zero IV because we generate a new key for every message
     }
 
     // h/t Adam Paynter http://stackoverflow.com/users/41619/
@@ -219,9 +215,9 @@ public class Crypto {
 
     /**
      * Computes hashcash proof-of-work stamp for the given input and
-     * bitstrength. Servers can choose which bitstrength they accept, but
-     * we recommend at least 20.  The colon ":" is a delimiter in hashcash
-     * so we replace all occurances in a token with ".".  
+     * bitstrength. Servers can choose which bitstrength they accept, but we
+     * recommend at least 20. The colon ":" is a delimiter in hashcash so we
+     * replace all occurances in a token with ".".
      * 
      * This machine is calculating stamps at a mean rate of 340ms, 694ms,
      * 1989ms, 4098ms, and 6563ms for bits of 19, 20, 21, 22, and 23
