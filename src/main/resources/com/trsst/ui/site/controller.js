@@ -749,7 +749,7 @@
 		}
 		model.pull({
 			feedId : id,
-			count: 0
+			count : 0
 		}, function(feedData) {
 			var form = $(feedEditTemplate).clone();
 			var iconSrc = feedData.children("icon").text();
@@ -933,7 +933,7 @@
 				var currentId = result[id];
 				model.pull({
 					feedId : currentId,
-					count: 0
+					count : 0
 				}, createFeedMenuItem);
 			}
 		});
@@ -1065,6 +1065,13 @@
 		var href = $(string).find("link[rel='self']").attr("href");
 		controller.pushState("/" + href);
 	};
+	
+	var clearRenderers = function() {
+		for ( var i in renderers) {
+			renderers[i].dispose();
+		}
+		renderers = [];
+	}
 
 	var renderers = [];
 	var onPopulate = function() {
@@ -1076,10 +1083,6 @@
 		$(".util-browser-launcher a").attr("target", "_blank").attr("href", path);
 
 		console.log("onPopulate: " + host + " : " + path);
-		for ( var i in renderers) {
-			renderers[i].dispose();
-		}
-		renderers = [];
 
 		var j = path.indexOf(host);
 		if (j !== -1) {
@@ -1102,32 +1105,36 @@
 			var uid = model.getAuthenticatedAccountId();
 			var entry = /([^#?]*)\/([0-9a-fA-F]{11})/.exec(pathname);
 			if (entry !== null) {
+				clearRenderers();
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-feed");
 				$("body").addClass("page-entry");
 				if (uid && uid.indexOf(path) !== -1) {
 					$("body").addClass("page-self");
 				}
-				var entryRenderer = $("#entryRenderer");
-				entryRenderer.empty();
-
 				pathname = pathname.substring(1); // trim leading slash
-				model.pull({
-					feedId : pathname,
-					count : 1
-				}, function(feedData) {
-					$("body").removeClass("pending");
-					if (feedData && feedData.length > 0) {
-						// replying entry appears under mention entry
-						var entryData = $(feedData).children("entry").first();
-						createElementForEntryData(feedData, entryData).prependTo(entryRenderer).click();
-						// click to expand
-					} else {
-						console.log("Could not fetch requested entry: " + pathname);
-						// TODO: display a not-found message
-					}
-				});
+				var entryRenderer = $("#entryRenderer");
+				if (entryRenderer[0].pathname !== pathname) {
+					entryRenderer[0].pathname = pathname;
+					entryRenderer.empty();
+					model.pull({
+						feedId : pathname,
+						count : 1
+					}, function(feedData) {
+						$("body").removeClass("pending");
+						if (feedData && feedData.length > 0) {
+							// replying entry appears under mention entry
+							var entryData = $(feedData).children("entry").first();
+							createElementForEntryData(feedData, entryData).prependTo(entryRenderer).click();
+							// click to expand
+						} else {
+							console.log("Could not fetch requested entry: " + pathname);
+							// TODO: display a not-found message
+						}
+					});
+				}
 			} else {
+
 				// otherwise we're on a feed page
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-entry");
@@ -1136,63 +1143,73 @@
 					$("body").addClass("page-self");
 				}
 
-				// delay load for followed feeds
-				var loadRecommendations = function() {
-					$("#followsRenderer").empty();
-					var element = $("<div></div>");
-					$("#followsRenderer").append(element);
-					var renderer = new FeedRenderer(createElementForFeedData, element);
+				var feedRenderer = $("#feedRenderer");
+				if (feedRenderer[0].path !== path) {
+					feedRenderer[0].path = path;
+					clearRenderers();
+
+					// delay load for followed feeds
+					var followsRenderer = $("#followsRenderer");
+					var loadRecommendations = function() {
+						followsRenderer.empty();
+						var element = $("<div></div>");
+						followsRenderer.append(element);
+						var renderer = new FeedRenderer(createElementForFeedData, element);
+						renderers.push(renderer);
+						if (path !== TRSST_WELCOME) {
+							renderer.addFeed(TRSST_WELCOME);
+						}
+						renderer.addFeedFollows(path);
+					};
+
+					// some trickery to keep private composer in sync with feed
+					var customCreateElementForFeedData = function(feedData) {
+						// if first time: load recommendations
+						if (loadRecommendations && feedData && feedData.length > 0) {
+							loadRecommendations();
+							loadRecommendations = null;
+						}
+
+						// update form private encryption option with encryption
+						// key
+						var privateMessaging = $(document).find(".private.messaging");
+						privateMessaging.find("option.private").attr("value", feedData.find("id").text());
+						return createElementForFeedData(feedData);
+					};
+
+					// page owner
+					renderer = new FeedRenderer(customCreateElementForFeedData, $("#profileRenderer"));
+					renderer.addFeed(path);
 					renderers.push(renderer);
-					if (path !== TRSST_WELCOME) {
-						renderer.addFeed(TRSST_WELCOME);
+
+					// page owner conversation
+					renderer = new EntryRenderer(createElementForEntryData, $("#messageRenderer"));
+					if (uid) {
+						// add all entries that mention us
+						renderer.addEntries({
+							feedId : path,
+							mention : uid
+						});
+						// add all encrypted entries
+						renderer.addEntries({
+							feedId : path,
+							verb : "encrypt"
+						});
+						// only the ones we can decode will show up
 					}
-					renderer.addFeedFollows(path);
-				};
+					renderers.push(renderer);
 
-				// some trickery to keep private composer in sync with feed
-				var customCreateElementForFeedData = function(feedData) {
-					// if first time: load recommendations
-					if (loadRecommendations && feedData && feedData.length > 0) {
-						loadRecommendations();
-						loadRecommendations = null;
-					}
-
-					// update form private encryption option with encryption key
-					var privateMessaging = $(document).find(".private.messaging");
-					privateMessaging.find("option.private").attr("value", feedData.find("id").text());
-					return createElementForFeedData(feedData);
-				};
-
-				// page owner
-				renderer = new FeedRenderer(customCreateElementForFeedData, $("#profileRenderer"));
-				renderer.addFeed(path);
-				renderers.push(renderer);
-
-				// page owner conversation
-				renderer = new EntryRenderer(createElementForEntryData, $("#messageRenderer"));
-				if (uid) {
-					// add all entries that mention us
-					renderer.addEntries({
-						feedId : path,
-						mention : uid
-					});
-					// add all encrypted entries
-					renderer.addEntries({
-						feedId : path,
-						verb : "encrypt"
-					});
-					// only the ones we can decode will show up
+					// page owner's entries
+					renderer = new EntryRenderer(createElementForEntryData, feedRenderer);
+					renderer.addFeed(path);
+					renderers.push(renderer);
 				}
-				renderers.push(renderer);
-
-				// page owner's entries
-				renderer = new EntryRenderer(createElementForEntryData, $("#feedRenderer"));
-				renderer.addFeed(path);
-				renderers.push(renderer);
 			}
 
 		} else {
 			// otherwise: we're on the "home" page
+
+			clearRenderers();
 
 			$("body").addClass("page-home");
 			$("body").removeClass("page-entry");
@@ -1213,6 +1230,7 @@
 			var homeRenderer = $("#homeRenderer");
 			if (!homeRenderer[0].homeRendererId || homeRenderer[0].homeRendererId !== id) {
 				homeRenderer[0].homeRendererId = id;
+
 				if (homeRenderer[0].homeRendererInstance) {
 					homeRenderer[0].homeRendererInstance.dispose();
 				}
@@ -1223,7 +1241,7 @@
 				}
 				renderer.addFeedFollows(id);
 				homeRenderer[0].homeRendererInstance = renderer;
-				
+
 				// delay load for recommended feeds
 				$("#followingRenderer").empty();
 				window.setTimeout(function() {

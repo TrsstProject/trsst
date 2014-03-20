@@ -132,9 +132,6 @@
 	 * Called by pollster to update our contents with the specified feed.
 	 */
 	AbstractRenderer.prototype.notify = function(feedData, query) {
-		if ( query.feedId === "urn:feed:http://arstechnica.com/feed/") {
-			console.log( "set a breakpoint!");
-		}
 		console.log("notify: " + JSON.stringify(query));
 		this.addEntriesFromFeed(feedData, query);
 	};

@@ -281,9 +281,9 @@ article .renderer:empty:before {
 	content: 'No entries found';
 	color: #aaa;
 }
-.page-home.signed-in article .renderer:empty {
+.page-home.signed-in article .renderer:empty:before {
 	/* don't show "Not Found" for new accounts */
-	display: none;
+	content: 'No entries yet';
 }
 
 .pending article .renderer:not(:empty):after {
