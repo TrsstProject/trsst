@@ -170,10 +170,10 @@
 		}
 		entryElement.attr("entry", entryId);
 		entryElement.removeAttr("id");
-		
+
 		// mark if ours
 		var currentAccountId = model.getAuthenticatedAccountId();
-		if ( currentAccountId && currentAccountId.indexOf(feedId) !== -1 ) {
+		if (currentAccountId && currentAccountId.indexOf(feedId) !== -1) {
 			entryElement.addClass("own");
 		}
 
@@ -433,7 +433,7 @@
 				// last mention
 				if (ref) {
 					model.pull({
-						feedId : model.feedIdFromEntryUrn(ref)+'/'+model.entryIdFromEntryUrn(ref),
+						feedId : model.feedIdFromEntryUrn(ref) + '/' + model.entryIdFromEntryUrn(ref),
 						count : 1
 					}, function(feedData) {
 						if (feedData && feedData.length > 0) {
@@ -748,7 +748,8 @@
 			id = id.substring("urn:feed:".length);
 		}
 		model.pull({
-			feedId : id
+			feedId : id,
+			count: 0
 		}, function(feedData) {
 			var form = $(feedEditTemplate).clone();
 			var iconSrc = feedData.children("icon").text();
@@ -931,7 +932,8 @@
 				// fetch feed
 				var currentId = result[id];
 				model.pull({
-					feedId : currentId
+					feedId : currentId,
+					count: 0
 				}, createFeedMenuItem);
 			}
 		});
@@ -1106,8 +1108,8 @@
 				if (uid && uid.indexOf(path) !== -1) {
 					$("body").addClass("page-self");
 				}
-				var homeRenderer = $("#homeRenderer");
-				homeRenderer.empty();
+				var entryRenderer = $("#entryRenderer");
+				entryRenderer.empty();
 
 				pathname = pathname.substring(1); // trim leading slash
 				model.pull({
@@ -1118,7 +1120,7 @@
 					if (feedData && feedData.length > 0) {
 						// replying entry appears under mention entry
 						var entryData = $(feedData).children("entry").first();
-						createElementForEntryData(feedData, entryData).prependTo(homeRenderer).click();
+						createElementForEntryData(feedData, entryData).prependTo(entryRenderer).click();
 						// click to expand
 					} else {
 						console.log("Could not fetch requested entry: " + pathname);
@@ -1157,7 +1159,7 @@
 
 					// update form private encryption option with encryption key
 					var privateMessaging = $(document).find(".private.messaging");
-					privateMessaging.find("option.private").attr("value", feedData.find("encrypt").text());
+					privateMessaging.find("option.private").attr("value", feedData.find("id").text());
 					return createElementForFeedData(feedData);
 				};
 
@@ -1184,7 +1186,7 @@
 				renderers.push(renderer);
 
 				// page owner's entries
-				renderer = new EntryRenderer(createElementForEntryData, $("#homeRenderer"));
+				renderer = new EntryRenderer(createElementForEntryData, $("#feedRenderer"));
 				renderer.addFeed(path);
 				renderers.push(renderer);
 			}
@@ -1207,27 +1209,33 @@
 			renderers.push(renderer);
 			renderer.addFeed(id);
 
-			// our followed feeds
-			renderer = new EntryRenderer(createElementForEntryData, $("#homeRenderer"));
-			renderers.push(renderer);
-			renderer.addFeed(id);
-			if (id !== TRSST_WELCOME) {
-				renderer.addFeed(TRSST_WELCOME);
-			}
-			renderer.addFeedFollows(id);
-
-			// delay load for recommended feeds
-			$("#followsRenderer").empty();
-			window.setTimeout(function() {
-				var element = $("<div></div>");
-				$("#followsRenderer").append(element);
-				var renderer = new FeedRenderer(createElementForFeedData, element);
-				renderers.push(renderer);
-				renderer.addFeedFollows(id);
+			// some unsightly trickery to keep a singleton homeRenderer
+			var homeRenderer = $("#homeRenderer");
+			if (!homeRenderer[0].homeRendererId || homeRenderer[0].homeRendererId !== id) {
+				homeRenderer[0].homeRendererId = id;
+				if (homeRenderer[0].homeRendererInstance) {
+					homeRenderer[0].homeRendererInstance.dispose();
+				}
+				renderer = new EntryRenderer(createElementForEntryData, homeRenderer);
+				renderer.addFeed(id);
 				if (id !== TRSST_WELCOME) {
 					renderer.addFeed(TRSST_WELCOME);
 				}
-			}, 2000);
+				renderer.addFeedFollows(id);
+				homeRenderer[0].homeRendererInstance = renderer;
+				
+				// delay load for recommended feeds
+				$("#followingRenderer").empty();
+				window.setTimeout(function() {
+					var element = $("<div></div>");
+					$("#followingRenderer").append(element);
+					var renderer = new FeedRenderer(createElementForFeedData, element);
+					renderer.addFeedFollows(id);
+					if (id !== TRSST_WELCOME) {
+						renderer.addFeed(TRSST_WELCOME);
+					}
+				}, 2000);
+			}
 
 			// TESTING: high volume test
 			// "http://api.flickr.com/services/feeds/photos_public.gne" );

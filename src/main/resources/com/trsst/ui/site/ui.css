@@ -41,6 +41,42 @@ textarea, input[type=text], input[type=password] {
 	font-family: sans-serif;
 }
 
+/* @group Home/Feed/Entry pages */
+
+.feed-renderer,
+.home-renderer, 
+.profile-renderer, 
+.entry-renderer, 
+.following-renderer, 
+.follows-renderer 
+{
+	display: none;
+}
+.page-home .home-renderer {
+	display: inherit;
+}
+.page-home .profile-renderer {
+	display: inherit;
+}
+.page-home .following-renderer {
+	display: inherit;
+}
+.page-feed .profile-renderer {
+	display: inherit;
+}
+.page-feed .feed-renderer {
+	display: inherit;
+}
+.page-feed .follows-renderer {
+	display: inherit;
+}
+.page-entry .entry-renderer {
+	display: inherit;
+}
+
+
+/* @end */
+
 /* @group Public/Private Input Areas */
 
 article {
@@ -215,7 +251,7 @@ h1.title span {
 
 /* @group Article/Content area */
 
-#homeRenderer {
+article .renderer {
 	position: relative;
 	background-color: #fff;
 	padding-top: 50px;
@@ -223,7 +259,7 @@ h1.title span {
 	border-radius: 6px;
 }
 
-#homeRenderer:before {
+article .renderer:before {
 	content: 'Recent Activity';
 	font-weight: bold;
 	font-size: 20px;
@@ -232,25 +268,25 @@ h1.title span {
 	top: 18px;
 	color: black;
 }
-.page-home #homeRenderer:before {
+.page-home article .renderer:before {
 	content: 'Live Stream';
 }
 
-body.pending #homeRenderer:empty:before {
+body.pending article .renderer:empty:before {
 	content: 'Loading...';
 }
-#homeRenderer:empty:before {
+article .renderer:empty:before {
 	top: 28px;
 	left: 24px;
 	content: 'No entries found';
 	color: #aaa;
 }
-.page-home.signed-in #homeRenderer:empty {
+.page-home.signed-in article .renderer:empty {
 	/* don't show "Not Found" for new accounts */
 	display: none;
 }
 
-.pending #homeRenderer:not(:empty):after {
+.pending article .renderer:not(:empty):after {
 	display: block;
 	position: absolute;
 	bottom: 4px;
@@ -1594,7 +1630,7 @@ body .footer-container .wrapper {
 
 /* @group Follows Container */
 
-aside #followsRenderer {
+aside .feeds-renderer {
 	border-radius: 8px;
 	padding-top: 53px;
 	background-color: #fff;
@@ -1602,7 +1638,7 @@ aside #followsRenderer {
 	overflow: hidden;
 }
 
-aside #followsRenderer:before
+aside .feeds-renderer:before
 {
 	padding: 18px 18px;
 	position: absolute;
@@ -1617,21 +1653,21 @@ aside #followsRenderer:before
 	color: #000;
 	border-bottom: 1px solid #ddd;
 }
-.page-home aside #followsRenderer:before {
+.page-home aside .feeds-renderer:before {
 	content: 'You might follow';
 }
-.page-self aside #followsRenderer:before {
+.page-self aside .feeds-renderer:before {
 	content: 'You are following';
 }
 
-aside #followsRenderer>div {
+aside .feeds-renderer>div {
 	height: 360px;
 	overflow-x: hidden;
 	overflow-y: scroll;
 	margin-right: -18px;
 }
 
-aside div#followsRenderer .feed {
+aside div.feeds-renderer .feed {
 	border-radius: 0px;
 	background: #fff;
 	text-align: left;
@@ -1640,17 +1676,17 @@ aside div#followsRenderer .feed {
 	padding-right: 36px;
 	min-height: 90px
 }
-aside div#followsRenderer .feed .title {
+aside div.feeds-renderer .feed .title {
 	color: #000;
 	font-size: 130%;
 	margin-left: 88px;
 	margin-top: 8px;
 	margin-bottom: 4px;
 }
-aside div#followsRenderer .feed .subtitle {
+aside div.feeds-renderer .feed .subtitle {
 	display: none;
 }
-aside div#followsRenderer .feed .feed-id {
+aside div.feeds-renderer .feed .feed-id {
 	font-size: 85%;
 	margin-left: 88px;
 	margin-bottom: 4px;
@@ -1659,20 +1695,20 @@ aside div#followsRenderer .feed .feed-id {
 	text-overflow: ellipsis;
 }
 
-aside div#followsRenderer .feed .follow {
+aside div.feeds-renderer .feed .follow {
 	left: 88px;
 	text-align: left;
 	position: relative;
 }
-aside div#followsRenderer .feed .logo {
+aside div.feeds-renderer .feed .logo {
 	display: none;
 }
-aside div#followsRenderer .feed .icon {
+aside div.feeds-renderer .feed .icon {
 	margin: 8px;
 	position: absolute;
 }
 
-aside div#followsRenderer:empty {
+aside div.feeds-renderer:empty {
 	display: none;
 }
 
@@ -1690,16 +1726,16 @@ body.page-entry.pending article {
 	display: none;
 }
 
-body.page-entry #followsRenderer {
+body.page-entry .feeds-renderer {
 	display: none;
 }
 
-body.page-entry #homeRenderer {
+body.page-entry article .renderer {
 	padding: 0px;
 	border-radius: 24px;
 }
 
-body.page-entry #homeRenderer section {
+body.page-entry article .renderer section {
 	overflow: visible;
 	position: relative;
 	margin-left: -40px;
@@ -1707,11 +1743,11 @@ body.page-entry #homeRenderer section {
 	top: 12px;
 }
 
-body.page-entry #homeRenderer div.content img {
+body.page-entry article .renderer div.content img {
 	position: relative;
 }
 
-body.page-entry #homeRenderer:before {
+body.page-entry article .renderer:before {
 	content: '';
 	font-weight: bold;
 	font-size: 20px;
@@ -1720,13 +1756,13 @@ body.page-entry #homeRenderer:before {
 	top: 18px;
 	color: black;
 }
-body.page-entry #homeRenderer:empty:before {
+body.page-entry article .renderer:empty:before {
 	top: 28px;
 	left: 24px;
 	content: 'No entry found';
 	color: #aaa;
 }
-body.page-entry.pending #homeRenderer:empty:before {
+body.page-entry.pending article .renderer:empty:before {
 	content: 'Loading...';
 }
 
@@ -1834,7 +1870,7 @@ body {
 aside {
 	padding-bottom: 0px !important;
 }
-aside div#followsRenderer {
+aside div.feeds-renderer {
 	display: none;
 }
 

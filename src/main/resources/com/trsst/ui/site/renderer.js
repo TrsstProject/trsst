@@ -30,7 +30,7 @@
 	AbstractRenderer.prototype.addDataToFeedContainer = function(feedData) {
 		var id = feedData.children("id").text();
 		var updated = feedData.children("updated").text();
-		//console.log("addDataToFeedContainer: " + id);
+		// console.log("addDataToFeedContainer: " + id);
 		this.feedContainer.find("[feed='" + id + "']").remove();
 		var element = this.feedFactory(feedData);
 		element[0].updated = updated;
@@ -60,7 +60,7 @@
 			var currentEntryId = model.entryIdFromEntryUrn(current);
 			// extract hex timestamp
 			current = current.substring(current.lastIndexOf(":") + 1);
-			//console.log("addDataToEntryContainer: " + current);
+			// console.log("addDataToEntryContainer: " + current);
 			var placedBefore;
 			var duplicate;
 			var children = this.allEntryElements;
@@ -82,12 +82,14 @@
 					// insert before same or earlier time
 					placedBefore = this;
 					children.splice(index, 0, element);
+					console.log("Inserting element: " + element.attr("entry"));
 					return false; // break out
 				}
 			});
 			if (!placedBefore && !duplicate) {
 				// else: older than all existing entries: append
 				children.push(element);
+				console.log("Appending element: " + element.attr("entry"));
 			}
 		}
 		return element;
@@ -130,6 +132,9 @@
 	 * Called by pollster to update our contents with the specified feed.
 	 */
 	AbstractRenderer.prototype.notify = function(feedData, query) {
+		if ( query.feedId === "urn:feed:http://arstechnica.com/feed/") {
+			console.log( "set a breakpoint!");
+		}
 		console.log("notify: " + JSON.stringify(query));
 		this.addEntriesFromFeed(feedData, query);
 	};
@@ -148,6 +153,13 @@
 		if (self.entryContainer && self.entryFactory) {
 			var entries = feedData.find("entry");
 			var total = entries.length;
+			if (total > 5) {
+				// FIXME: forcing manual cap on result size
+				console.log("Server fail: returned more than 5 entries: " + total + " : " + feedData.children("id"));
+				total = 5;
+			}
+			// FIXME: forcing manual cap on result size
+			var counter = 0;
 			entries.each(function(index) {
 				var element = self.addDataToEntryContainer(feedData, this);
 				if (element) {
@@ -160,6 +172,7 @@
 						window.setTimeout(function() {
 							self.onScroll();
 						}, 500); // delay until screen finishes populating
+						return false; // break;
 					}
 				}
 			});
@@ -172,7 +185,7 @@
 	 * Called to prompt a non-urgent rendering of our elements to the display.
 	 */
 	AbstractRenderer.prototype.renderLater = function() {
-		//console.log("renderLater: ");
+		// console.log("renderLater: ");
 		var self = this;
 		if (self.renderCoalescence) {
 			window.clearInterval(self.renderCoalescence);
@@ -180,7 +193,7 @@
 			incrementPendingCount();
 		}
 		self.renderCoalescence = setTimeout(function() {
-			//console.log("renderingLater: ");
+			// console.log("renderingLater: ");
 			decrementPendingCount();
 			self.renderCoalescence = null;
 			self.renderNow();
@@ -195,8 +208,12 @@
 		if (this.disposed) {
 			return;
 		}
+		if (!$(this.entryContainer).is(':visible')) {
+			console.log("renderNow: not rendering because off-screen");
+			return;
+		}
 
-		//console.log("rendering: ");
+		// console.log("rendering: ");
 		var self = this;
 		// console.log(self.allEntryElements);
 		self.renderCoalescence = null;
@@ -261,7 +278,6 @@
 	};
 
 	AbstractRenderer.prototype.fetchPrevious = function(elem) {
-		// if ( true ) return;
 		elem = $(elem);
 		var entryUrn = elem.attr("entry");
 		var entryId = model.entryIdFromEntryUrn(entryUrn);
@@ -320,6 +336,10 @@
 	 */
 	AbstractRenderer.prototype.onScroll = function() {
 		var self = this;
+		if (!$(this.entryContainer).is(':visible')) {
+			console.log("onScroll: not rendering because off-screen");
+			return;
+		}
 		if (self.scrollCoalescence) {
 			window.clearInterval(self.scrollCoalescence);
 		}

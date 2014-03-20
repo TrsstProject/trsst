@@ -122,7 +122,7 @@
 	model.feedIdFromEntryUrn = function(entryUrn) {
 		return entryUrn.substring("urn:entry:".length, entryUrn.lastIndexOf(":"));
 	};
-	
+
 	/**
 	 * Attempts to authenticate the specified id and password, calling callback
 	 * with feedData on success, or null on failure.
@@ -477,11 +477,15 @@
 	};
 
 	var recursiveAjax = function(url, filterObject, callback, callbackPartial) {
+//		console.log("recursiveAjax: fetch: " + url + " : " + JSON.stringify(filterObject));
+//		if ( !filterObject || !filterObject.count ) {
+//			console.log("recursiveAjax: fetch: " + url + " : " + JSON.stringify(filterObject));
+//		}
 		$.ajax({
 			url : url,
 			data : filterObject,
-			success : function(data) {
-				var feedData = $(data).find("feed").first();
+			success : function(feedData) {
+				feedData = $(feedData).find("feed").first();
 				// handle pagination
 				var next = feedData.children("link[rel='next']").first().attr("href");
 				// if there's a next page
@@ -498,9 +502,19 @@
 					}
 					// if callbacks want us to continue
 					if (proceed) {
+						// process the link/next url
+						var serverPath = model.serverUrl+defaultBase+'/';
+						if (next.indexOf(serverPath) === 0 ) {
+							next = next.substring(serverPath.length);
+						}
+						var query;
+						var delimiter = next.indexOf('?');
+						if (delimiter !== -1) {
+							query = next.substring(delimiter + 1);
+							next = next.substring(0, delimiter);
+						}
 						// call for the next page
-						recursiveAjax(next, null, callback, callbackPartial);
-						// filter options are already baked into the url
+						recursiveAjax(defaultBase + '/' + next, query, callback, callbackPartial);
 					}
 				} else {
 					// we're done
@@ -522,6 +536,8 @@
 	var writeFeed = function(feedData) {
 		try {
 			feedData = $(feedData);
+			feedData = feedData.clone();
+			feedData.children("entry").remove();
 			var id = feedData.children("id").text();
 			var value = new XMLSerializer().serializeToString(feedData[0]);
 			window.sessionStorage.setItem(id, value);
