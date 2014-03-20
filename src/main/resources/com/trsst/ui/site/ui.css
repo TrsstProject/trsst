@@ -73,6 +73,21 @@ textarea, input[type=text], input[type=password] {
 .page-entry .entry-renderer {
 	display: inherit;
 }
+.page-external .following-renderer {
+	display: inherit;
+}
+.page-external .follows-renderer {
+	display: none;
+}
+.page-self div.private.messaging .composer {
+	/* don't display messager on own feed */
+	display: none;	
+}
+.page-self .following-renderer {
+	/* don't display messager on own feed */
+	display: inherit;	
+}
+
 
 
 /* @end */
@@ -114,7 +129,9 @@ article>.composer textarea {
 .public.composer {
 	display: none;	
 }
-.page-home .public.composer {
+.page-home .public.composer,
+.page-self .public.composer 
+{
 	display: inherit;
 }
 
@@ -123,6 +140,13 @@ article>.composer textarea {
 }
 .page-feed .private.messaging {
 	display: inherit;
+}
+
+.message-renderer {
+	min-height: 80px;
+}
+.message-renderer:empty:after {
+	xcontent: 'None';
 }
 
 /* @end */
@@ -198,10 +222,11 @@ body .header-container {
 	margin: 0px;
 	left: 0px;
 	z-index: 10;
-	border-bottom: 4px solid #ec5007;
+	border: none;
 	-webkit-box-shadow: 0 1px 10px #333;
     -moz-box-shadow: 0 1px 10px #333;
     box-shadow: 0 1px 10px #444;
+    opacity: 0.95;
 }
 
 body aside {
@@ -218,7 +243,6 @@ body aside {
 }
 
 .header-container a {
-	padding: 5px;
 	vertical-align: bottom;
 	bottom: 0px;
 }
@@ -464,10 +488,12 @@ article .renderer:empty:before {
 }
 
 .entry iframe {
-	width: 95%;
+	width: 100%;
 	height:  2000px;
 	margin-top: -4px;
 	margin-left: -8px;
+	padding-left: 12px;;
+	padding-right: 12px;
 }
 
 .entry .icon {
@@ -1333,6 +1359,7 @@ nav .menu-item.logout .title:after {
 	position: relative;
 	float: left;
 	background: none;
+	margin-left: -4px;
 }
 .back.menu-item .icon:after {
 	position: absolute;
@@ -1355,6 +1382,7 @@ nav .menu-item.logout .title:after {
 }
 .back.menu-item .title:after {
 	content: 'Back';
+	float: left;
 }
 
 /* @end */
@@ -1381,7 +1409,7 @@ nav .menu-item.logout .title:after {
 	position: absolute;
 	top: 65px;
 	left: 50%;
-	margin-left: -160px;
+	margin-left: -170px;
 	width: 260px;
 	background-color: #eee;
 	padding: 20px 30px;
@@ -1507,7 +1535,8 @@ nav .menu-item.logout .title:after {
 	right: 0px;
 	height: 34px;
 	z-index: 10;
-	border-top: 4px solid #ec5007;
+	border-top: none;
+	opacity: 0.95;
 }
 
 body .footer-container footer {
@@ -1633,6 +1662,7 @@ body .footer-container .wrapper {
 aside .feeds-renderer {
 	border-radius: 8px;
 	padding-top: 53px;
+	margin-bottom: 16px;
 	background-color: #fff;
 	position: relative;
 	overflow: hidden;
@@ -1653,10 +1683,12 @@ aside .feeds-renderer:before
 	color: #000;
 	border-bottom: 1px solid #ddd;
 }
-.page-home aside .feeds-renderer:before {
-	content: 'You might follow';
+aside div.following-renderer:before,
+aside div.following-renderer:before
+{
+	content: 'Noteworthy Feeds';
 }
-.page-self aside .feeds-renderer:before {
+.page-self aside .follows-renderer:before {
 	content: 'You are following';
 }
 
@@ -1739,7 +1771,7 @@ body.page-entry article .renderer section {
 	overflow: visible;
 	position: relative;
 	margin-left: -40px;
-	margin-right: 8px;;
+	margin-right: 8px;
 	top: 12px;
 }
 
@@ -1758,8 +1790,11 @@ body.page-entry article .renderer:before {
 }
 body.page-entry article .renderer:empty:before {
 	top: 28px;
-	left: 24px;
+	left: 0px;
+	width: 100%;
 	content: 'No entry found';
+	font-size: 200%;
+	text-align: center;
 	color: #aaa;
 }
 body.page-entry.pending article .renderer:empty:before {
@@ -1769,6 +1804,8 @@ body.page-entry.pending article .renderer:empty:before {
 body.page-entry .entry {
 	padding-top: 24px;
 	padding-bottom: 48px;
+	padding-left: 108px;
+	padding-right: 48px;
 }
 
 body.page-entry .entry .icon {
@@ -1871,7 +1908,7 @@ aside {
 	padding-bottom: 0px !important;
 }
 aside div.feeds-renderer {
-	display: none;
+	display: none !important;
 }
 
 div.main.wrapper {
@@ -1882,17 +1919,27 @@ div.main.wrapper {
 
 aside #profileRenderer div.feed {
 	margin-bottom: 0px;
-	margin-top: -8px;
+	margin-top: -12px;
 	background-color: #555;
 }
-.header-container {
+.header-container,
+.footer-container
+{
 	background-color: #222;
 }
 aside .private.messaging {
 	display: none !important;
 }
 
+.menu-item {
+	padding-left: 0px;
+	padding-right: 0px;
 }
+body.page-entry .entry {
+	margin-top: -12px;
+}
+}
+
 /* @end */
 
 

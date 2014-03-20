@@ -1065,15 +1065,14 @@
 		var href = $(string).find("link[rel='self']").attr("href");
 		controller.pushState("/" + href);
 	};
-	
-	var clearRenderers = function() {
-		for ( var i in renderers) {
-			renderers[i].dispose();
-		}
-		renderers = [];
-	}
 
-	var renderers = [];
+	var feedRenderer = new EntryRenderer(createElementForEntryData, $("#feedRenderer"));
+	var homeRenderer = new EntryRenderer(createElementForEntryData, $("#homeRenderer"));
+	var followsRenderer = new FeedRenderer(createElementForFeedData, $("#followsRenderer>div"));
+	var followingRenderer = new FeedRenderer(createElementForFeedData, $("#followingRenderer>div"));
+	var profileRenderer = new FeedRenderer(createElementForFeedData, $("#profileRenderer"));
+	var messageRenderer = new EntryRenderer(createElementForEntryData, $("#messageRenderer"));
+
 	var onPopulate = function() {
 		var host = window.location.host;
 		var path = window.location.toString();
@@ -1096,8 +1095,6 @@
 			$("body").removeClass("has-back");
 		}
 
-		var renderer;
-
 		// if we're not on the home page
 		if (path.trim().length > 1) {
 
@@ -1105,9 +1102,9 @@
 			var uid = model.getAuthenticatedAccountId();
 			var entry = /([^#?]*)\/([0-9a-fA-F]{11})/.exec(pathname);
 			if (entry !== null) {
-				clearRenderers();
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-feed");
+				$("body").removeClass("page-external");
 				$("body").addClass("page-entry");
 				if (uid && uid.indexOf(path) !== -1) {
 					$("body").addClass("page-self");
@@ -1142,77 +1139,56 @@
 				if (uid && uid.indexOf(path) !== -1) {
 					$("body").addClass("page-self");
 				}
+				
+				// if external feed
+				if ( path.indexOf("http") === 0 ) {
+					$("body").addClass("page-external");
+				} else {
+					$("body").removeClass("page-external");
+				}
 
-				var feedRenderer = $("#feedRenderer");
-				if (feedRenderer[0].path !== path) {
-					feedRenderer[0].path = path;
-					clearRenderers();
+				// if this is not the current path
+				if (feedRenderer.path !== path) {
 
-					// delay load for followed feeds
-					var followsRenderer = $("#followsRenderer");
-					var loadRecommendations = function() {
-						followsRenderer.empty();
-						var element = $("<div></div>");
-						followsRenderer.append(element);
-						var renderer = new FeedRenderer(createElementForFeedData, element);
-						renderers.push(renderer);
-						if (path !== TRSST_WELCOME) {
-							renderer.addFeed(TRSST_WELCOME);
-						}
-						renderer.addFeedFollows(path);
-					};
-
-					// some trickery to keep private composer in sync with feed
-					var customCreateElementForFeedData = function(feedData) {
-						// if first time: load recommendations
-						if (loadRecommendations && feedData && feedData.length > 0) {
-							loadRecommendations();
-							loadRecommendations = null;
-						}
-
-						// update form private encryption option with encryption
-						// key
-						var privateMessaging = $(document).find(".private.messaging");
-						privateMessaging.find("option.private").attr("value", feedData.find("id").text());
-						return createElementForFeedData(feedData);
-					};
+					// populate for this feed
+					feedRenderer.path = path;
 
 					// page owner
-					renderer = new FeedRenderer(customCreateElementForFeedData, $("#profileRenderer"));
-					renderer.addFeed(path);
-					renderers.push(renderer);
+					profileRenderer.reset();
+					profileRenderer.addFeed(path);
+
+					// page entries
+					feedRenderer.reset();
+					feedRenderer.addFeed(path);
+
+					// update private messaging id
+					var privateMessaging = $(document).find(".private.messaging");
+					privateMessaging.find("option.private").attr("value", feedData.find("id").text());
 
 					// page owner conversation
-					renderer = new EntryRenderer(createElementForEntryData, $("#messageRenderer"));
+					messageRenderer.reset();
 					if (uid) {
 						// add all entries that mention us
-						renderer.addEntries({
+						messageRenderer.addEntries({
 							feedId : path,
 							mention : uid
 						});
 						// add all encrypted entries
-						renderer.addEntries({
+						messageRenderer.addEntries({
 							feedId : path,
 							verb : "encrypt"
 						});
 						// only the ones we can decode will show up
 					}
-					renderers.push(renderer);
-
-					// page owner's entries
-					renderer = new EntryRenderer(createElementForEntryData, feedRenderer);
-					renderer.addFeed(path);
-					renderers.push(renderer);
 				}
 			}
 
 		} else {
 			// otherwise: we're on the "home" page
 
-			clearRenderers();
-
 			$("body").addClass("page-home");
 			$("body").removeClass("page-entry");
+			$("body").removeClass("page-external");
 			$("body").removeClass("page-feed");
 			$("body").removeClass("page-self");
 
@@ -1222,35 +1198,25 @@
 			}
 
 			// this is the "home" feed
-			renderer = new FeedRenderer(createElementForFeedData, $("#profileRenderer"));
-			renderers.push(renderer);
-			renderer.addFeed(id);
+			profileRenderer.reset();
+			profileRenderer.addFeed(id);
 
-			// some unsightly trickery to keep a singleton homeRenderer
-			var homeRenderer = $("#homeRenderer");
-			if (!homeRenderer[0].homeRendererId || homeRenderer[0].homeRendererId !== id) {
-				homeRenderer[0].homeRendererId = id;
+			if (homeRenderer.homeRendererId !== id) {
+				homeRenderer.homeRendererId = id;
 
-				if (homeRenderer[0].homeRendererInstance) {
-					homeRenderer[0].homeRendererInstance.dispose();
-				}
-				renderer = new EntryRenderer(createElementForEntryData, homeRenderer);
-				renderer.addFeed(id);
+				homeRenderer.reset();
+				homeRenderer.addFeed(id);
 				if (id !== TRSST_WELCOME) {
-					renderer.addFeed(TRSST_WELCOME);
+					homeRenderer.addFeed(TRSST_WELCOME);
 				}
-				renderer.addFeedFollows(id);
-				homeRenderer[0].homeRendererInstance = renderer;
+				homeRenderer.addFeedFollows(id);
 
 				// delay load for recommended feeds
-				$("#followingRenderer").empty();
+				followingRenderer.reset();
 				window.setTimeout(function() {
-					var element = $("<div></div>");
-					$("#followingRenderer").append(element);
-					var renderer = new FeedRenderer(createElementForFeedData, element);
-					renderer.addFeedFollows(id);
+					followingRenderer.addFeedFollows(id);
 					if (id !== TRSST_WELCOME) {
-						renderer.addFeed(TRSST_WELCOME);
+						followingRenderer.addFeed(TRSST_WELCOME);
 					}
 				}, 2000);
 			}
