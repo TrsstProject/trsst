@@ -175,6 +175,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
         } finally {
             transactionEnd(transaction, request, response);
         }
+        
         return response != null ? response : ProviderHelper.badrequest(request);
     }
 

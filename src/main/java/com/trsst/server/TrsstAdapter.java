@@ -787,7 +787,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 List<Category> mentions = entry.getCategories();
                 for (Category mention : mentions) {
                     IRI scheme = mention.getScheme();
-                    if (scheme != null && Common.MENTION_URN.equals(scheme.toString())) {
+                    if (scheme != null
+                            && Common.MENTION_URN.equals(scheme.toString())) {
                         Entry deleted = null;
                         try {
                             deleted = deleteEntry(storage,
@@ -1120,7 +1121,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 // WORKAROUND:
                 // loading the stream and making our own parser works
                 byte[] bytes = Common.readFully(request.getInputStream());
-                //System.out.println(new String(bytes, "UTF-8"));
+                // System.out.println(new String(bytes, "UTF-8"));
                 Feed incomingFeed = (Feed) Abdera.getInstance().getParser()
                         .parse(new ByteArrayInputStream(bytes)).getRoot();
 
@@ -1308,7 +1309,15 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
 
         // note: "default" to getPageSize was actually max page size
-        int length = ProviderHelper.getPageSize(context, "count", 100);
+        int length = ProviderHelper.getPageSize(context, "count", 25);
+        String _count = context.getParameter("count");
+        if (_count == null) {
+            if (context.getUri().toString().indexOf("count=") != -1) {
+                // BUG in abdera?
+                log.error("Abdera returning no count from valid count parameter: "
+                        + context.getUri());
+            }
+        }
         // int offset = ProviderHelper.getOffset(context, "page", length);
         int maxresults = 999; // arbitrary: clients that need larger should page
                               // themselves by date
@@ -1372,18 +1381,18 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         params.put("page", currentPage);
 
         String current = paging_template.expand(params);
-        current = request.getResolvedUri().resolve(current).toString();
+        //current = request.getResolvedUri().resolve(current).toString();
         feed.addLink(current, "current");
         if (totalCount > (currentPage + 1) * itemsPerPage) {
             params.put("page", currentPage + 1);
             String next = paging_template.expand(params);
-            next = request.getResolvedUri().resolve(next).toString();
+            //next = request.getResolvedUri().resolve(next).toString();
             feed.addLink(next, "next");
         }
         if (currentPage > 0) {
             params.put("page", currentPage - 1);
             String prev = paging_template.expand(params);
-            prev = request.getResolvedUri().resolve(prev).toString();
+            //prev = request.getResolvedUri().resolve(prev).toString();
             feed.addLink(prev, "previous");
         }
 
