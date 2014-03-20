@@ -86,19 +86,22 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
         // map paths to handlers
         RegexTargetResolver resolver = new OrderedRegexTargetResolver();
         resolver.setPattern("/service", TargetType.TYPE_SERVICE)
-                .setPattern("/(http[^#?]*)/([0-9a-fA-F]{11})", TargetType.TYPE_ENTRY,
-                        "collection", "entry") // external entry
+                .setPattern("/(http[^#?]*)/([0-9a-fA-F]{11})",
+                        TargetType.TYPE_ENTRY, "collection", "entry")
+                // external entry
                 .setPattern("/(http[^#?]*)", TargetType.TYPE_COLLECTION,
-                        "collection") // external feed
+                        "collection")
+                // external feed
                 .setPattern("/([^/#?]+)/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
                         TargetType.TYPE_MEDIA, "collection", "entry",
-                        "resource") 
+                        "resource")
                 .setPattern("/([^/#?]+)/([^/#?]+)(\\?[^#]*)?",
                         TargetType.TYPE_ENTRY, "collection", "entry")
-                .setPattern("/([^/#?]+);categories", 
+                .setPattern("/([^/#?]+);categories",
                         TargetType.TYPE_CATEGORIES, "collection")
                 .setPattern("/([^/#?;]+)(\\?[^#]*)?",
-                        TargetType.TYPE_COLLECTION, "collection");
+                        TargetType.TYPE_COLLECTION, "collection")
+                .setPattern("/", TargetType.TYPE_COLLECTION);
 
         super.setTargetResolver(resolver);
 
@@ -175,7 +178,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
         } finally {
             transactionEnd(transaction, request, response);
         }
-        
+
         return response != null ? response : ProviderHelper.badrequest(request);
     }
 
@@ -233,29 +236,45 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
      *            a hint for implementors
      * @return a TrsstAdapter for the specified feed id
      */
-    protected TrsstAdapter getAdapterForFeedId(RequestContext request)
+    protected TrsstAdapter getAdapterForFeedId(String feedId)
             throws IOException {
-        return new TrsstAdapter(request, getStorage());
+        return new TrsstAdapter(feedId, getStorage());
     }
 
     private static Storage sharedStorage;
 
     public CollectionAdapter getCollectionAdapter(RequestContext request) {
         String feedId = request.getTarget().getParameter("collection");
-        if (feedId != null) {
-            try {
-                TrsstAdapter result = idsToAdapters.get(feedId);
-                if (result == null) {
-                    result = getAdapterForFeedId(request);
-                    idsToAdapters.put(feedId, result);
+        if (feedId == null) {
+            // default to subdomain name if any
+            String host = request.getHeader("Host");
+            if (host != null) {
+                int i = host.lastIndexOf('.');
+                if (i != -1) {
+                    host = host.substring(0, i);
+                    i = host.lastIndexOf('.');
+                    if (i != -1) {
+                        host = host.substring(0, i);
+                        i = host.lastIndexOf('.');
+                        if (i == -1) {
+                            feedId = host.substring(0, i);
+                        }
+                    }
                 }
-                return result;
-            } catch (Throwable t) {
-                log.error("Not found: id: " + feedId, t);
-                return null;
             }
-        } else {
-            log.error("No id found: " + request.getTargetPath());
+        }
+        if (feedId == null) {
+            feedId = Common.ROOT_ALIAS;
+        }
+        try {
+            TrsstAdapter result = idsToAdapters.get(feedId);
+            if (result == null) {
+                result = getAdapterForFeedId(feedId);
+                idsToAdapters.put(feedId, result);
+            }
+            return result;
+        } catch (Throwable t) {
+            log.error("Not found: id: " + feedId, t);
             return null;
         }
     }

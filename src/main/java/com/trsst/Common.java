@@ -68,6 +68,7 @@ import org.w3c.tidy.Tidy;
  * @author mpowers
  */
 public class Common {
+    public static final String ROOT_ALIAS = "home";
     public static final String FEED_URN_PREFIX = "urn:feed:";
     public static final String ENTRY_URN_PREFIX = "urn:entry:";
     public static final String URN_SEPARATOR = ":";

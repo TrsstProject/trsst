@@ -115,11 +115,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @throws IOException
      *             for other kinds of persistence issues
      */
-    public TrsstAdapter(RequestContext request, Storage storage)
+    public TrsstAdapter(String feedId, Storage storage)
             throws FileNotFoundException, IOException {
-        persistence = storage;
-        feedId = Common.decodeURL(request.getTarget()
-                .getParameter("collection"));
+        this.persistence = storage;
+        this.feedId = feedId;
     }
 
     /**
