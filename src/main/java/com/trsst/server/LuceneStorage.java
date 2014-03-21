@@ -255,7 +255,8 @@ public class LuceneStorage implements Storage {
             Set<String> fields = new HashSet<String>();
             fields.add("entry"); // we only need the entry field
             for (ScoreDoc e : hits.scoreDocs) {
-                result[i++] = new IndexSearcher(reader).doc(e.doc).get("entry");
+                result[i++] = new IndexSearcher(reader).doc(e.doc).get("entry")
+                        .replace('-', ':');
             }
             return result;
         } catch (IOException e) {
@@ -327,7 +328,13 @@ public class LuceneStorage implements Storage {
                 search = search + " tag:\"" + mention + "\"";
             }
         }
-        search = "feed:\"" + feedId + "\"" + search;
+        if (feedId != null) {
+            search = "feed:\"" + feedId + "\"" + search;
+        }
+        System.out.println("buildTextQuery: " + search);
+        if ( search.trim().length() == 0 ) {
+            log.error("Unexpected search length: " + search );
+        }
         StandardQueryParser parser = new StandardQueryParser();
         parser.setDefaultOperator(StandardQueryConfigHandler.Operator.AND);
         return parser.parse(search, "text");

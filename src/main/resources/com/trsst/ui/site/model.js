@@ -123,6 +123,13 @@
 		return entryUrn.substring("urn:entry:".length, entryUrn.lastIndexOf(":"));
 	};
 
+	model.feedIdFromFeedUrn = function(feedUrn) {
+		if ( feedUrn.indexOf("urn:feed:") === 0 ) {
+			feedUrn = feedUrn.substring("urn:feed:".length);
+		}
+		return feedUrn;
+	};
+
 	/**
 	 * Attempts to authenticate the specified id and password, calling callback
 	 * with feedData on success, or null on failure.
@@ -573,7 +580,8 @@
 			callback(feed);
 		} else {
 			model.pull({
-				id : feedId
+				feedId : feedId,
+				count: 0
 			}, callback);
 		}
 	};

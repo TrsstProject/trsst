@@ -238,6 +238,9 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
      */
     protected TrsstAdapter getAdapterForFeedId(String feedId)
             throws IOException {
+        if (Common.ROOT_ALIAS.equals(feedId)) {
+            return new HomeAdapter(feedId, getStorage());
+        }
         return new TrsstAdapter(feedId, getStorage());
     }
 

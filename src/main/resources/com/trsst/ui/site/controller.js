@@ -199,23 +199,23 @@
 		var elementUI;
 		var elementData;
 
-		// icon (profile pic)
-		var iconSrc = computeMakeshiftIcon(feedData);
-		if (iconSrc) {
-			// if icon is specified
-			entryElement.find(".icon").last().css("background-image", "url('" + iconSrc + "')");
-			// some styles may choose to hide the foreground
-			// img
-			// entryElement.find(".icon
-			// img").attr("src", iconSrc);
+		// populate feed data
+//FIXME: for search results why does the entry's feed id belong the to aggregate feed?		
+		if (feedId === model.feedIdFromFeedUrn(feedData.children("id").text())) {
+			// use existing feed data
+			populateEntryElementWithFeedData(entryElement, feedData);
+		} else {
+			// otherwise aggregate feed: fetch feed data
+			model.getFeed(feedId, function(fetchedFeedData) {
+				if (fetchedFeedData) {
+					populateEntryElementWithFeedData(entryElement, fetchedFeedData);
+				} else {
+					console.log("Could not fetch feed data: " + feedId);
+					// fall back to aggregate feed data
+					populateEntryElementWithFeedData(entryElement, feedData);
+				}
+			});
 		}
-
-		entryElement.find(".feed-title span").text(feedData.children("title").text());
-		if (feedData.children("title").text().length === 0) {
-			// hint for css layout
-			entryElement.find(".feed-title").addClass("empty-text");
-		}
-		entryElement.find(".feed-id span").text(feedData.children("id").text().substring("urn:feed:".length));
 
 		var titleConverted = entryData.find("title").text();
 		titleConverted = convertToHtml(entryData, titleConverted);
@@ -300,6 +300,27 @@
 		entryElement.click(onEntryClick);
 
 		return entryElement;
+	};
+
+	var populateEntryElementWithFeedData = function(entryElement, feedData) {
+		// icon (profile pic)
+		var iconSrc = computeMakeshiftIcon(feedData);
+		if (iconSrc) {
+			// if icon is specified
+			entryElement.find(".icon").last().css("background-image", "url('" + iconSrc + "')");
+			// some styles may choose to hide the foreground
+			// img
+			// entryElement.find(".icon
+			// img").attr("src", iconSrc);
+		}
+
+		entryElement.find(".feed-title span").text(feedData.children("title").text());
+		if (feedData.children("title").text().length === 0) {
+			// hint for css layout
+			entryElement.find(".feed-title").addClass("empty-text");
+		}
+		entryElement.find(".feed-id span").text(feedData.children("id").text().substring("urn:feed:".length));
+
 	};
 
 	var mentionsExp = /([\@]\w+)/g;
@@ -1139,9 +1160,9 @@
 				if (uid && uid.indexOf(path) !== -1) {
 					$("body").addClass("page-self");
 				}
-				
+
 				// if external feed
-				if ( path.indexOf("http") === 0 ) {
+				if (path.indexOf("http") === 0) {
 					$("body").addClass("page-external");
 				} else {
 					$("body").removeClass("page-external");
@@ -1225,6 +1246,14 @@
 			// "http://api.flickr.com/services/feeds/photos_public.gne" );
 			// //
 		}
+
+		// first time only
+		if (!followingRenderer.homeId) {
+			// following renderer permanently shows home's recommendations
+			followingRenderer.homeId = TRSST_WELCOME;
+			followingRenderer.addFollows(TRSST_WELCOME);
+		}
+
 		// we can show the account menu now
 		$(document.body).removeClass("accounts-loading");
 	};

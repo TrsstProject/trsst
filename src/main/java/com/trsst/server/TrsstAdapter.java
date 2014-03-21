@@ -125,12 +125,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * Returns the current feed to service this request, fetching from the
      * current request, from local storage, or from remote peers as needed.
      */
-    private Feed currentFeed(RequestContext request) throws ParseException,
+    protected Feed currentFeed(RequestContext request) throws ParseException,
             FileNotFoundException, IOException {
         Feed feed = null;
         RequestContextWrapper wrapper = new RequestContextWrapper(request);
-        System.err.println(new Date().toString() + " "
-                + wrapper.getTargetPath());
 
         // fetch from request context
         feed = (Feed) wrapper.getAttribute(Scope.REQUEST, "com.trsst.Feed");
@@ -138,6 +136,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             // shortcut for very common case
             return feed;
         }
+
+        System.err.println(new Date().toString() + " "
+                + wrapper.getTargetPath());
 
         // if async fetch is allowed
         if (wrapper.getParameter("sync") == null) {
@@ -527,7 +528,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
     }
 
-    private static Document<Entry> getEntry(Storage storage, String feedId,
+    protected static Document<Entry> getEntry(Storage storage, String feedId,
             long entryId) {
         try {
             // NOTE: by this point currentFeed() will have fetched
@@ -871,7 +872,11 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                     entries.remove(entry);
                 } catch (FileNotFoundException e) {
                     // we don't already have it:
-                    entry.setId(Common.toEntryUrn(feedId, timestamp));
+                    // if it's not in trsst id format
+                    if (!existing.startsWith(Common.ENTRY_URN_PREFIX)) {
+                        // construct a trsst id for this entry
+                        entry.setId(Common.toEntryUrn(feedId, timestamp));
+                    }
                 }
             }
             // remove from feed parent
@@ -1244,7 +1249,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }.setStatus(200).setContentType(Constants.CAT_MEDIA_TYPE);
     }
 
-    private void fetchEntriesFromStorage(RequestContext context, Feed feed)
+    protected void fetchEntriesFromStorage(RequestContext context, Feed feed)
             throws FileNotFoundException, IOException {
         String searchTerms = (String) context.getAttribute(Scope.REQUEST,
                 "OpenSearch__searchTerms");
@@ -1318,16 +1323,26 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
         }
         // int offset = ProviderHelper.getOffset(context, "page", length);
-        int maxresults = 999; // arbitrary: clients that need larger should page
-                              // themselves by date
         String _page = context.getParameter("page");
         int page = (_page != null) ? Integer.parseInt(_page) : 0;
-        long[] entryIds = persistence.getEntryIdsForFeedId(feedId, 0,
-                maxresults, beginDate, endDate, searchTerms, mentions, tags,
-                verb);
-        addPagingLinks(context, feed, page, length, entryIds.length,
-                searchTerms, before, after, mentions, tags, verb);
-        int start = page * length;
+        int begin = page * length;
+        int total = addEntriesFromStorage(feed, begin, length, beginDate,
+                endDate, searchTerms, mentions, tags, verb);
+        addPagingLinks(context, feed, page, length, total, searchTerms, before,
+                after, mentions, tags, verb);
+    }
+
+    /**
+     * Adds entries to the specified feed for the specified search and paging
+     * parameters.
+     * 
+     * @return the total number of entries matching the query.
+     */
+    protected int addEntriesFromStorage(Feed feed, int start, int length,
+            Date after, Date before, String query, String[] mentions,
+            String[] tags, String verb) {
+        long[] entryIds = persistence.getEntryIdsForFeedId(feedId, 0, length,
+                after, before, query, mentions, tags, verb);
         int end = Math.min(entryIds.length, start + length);
         Document<Entry> document;
         for (int i = start; i < end; i++) {
@@ -1339,6 +1354,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                         + Long.toHexString(entryIds[i]));
             }
         }
+        return entryIds.length;
     }
 
     private void addPagingLinks(RequestContext request, Feed feed,
@@ -1380,18 +1396,18 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         params.put("page", currentPage);
 
         String current = paging_template.expand(params);
-        //current = request.getResolvedUri().resolve(current).toString();
+        // current = request.getResolvedUri().resolve(current).toString();
         feed.addLink(current, "current");
         if (totalCount > (currentPage + 1) * itemsPerPage) {
             params.put("page", currentPage + 1);
             String next = paging_template.expand(params);
-            //next = request.getResolvedUri().resolve(next).toString();
+            // next = request.getResolvedUri().resolve(next).toString();
             feed.addLink(next, "next");
         }
         if (currentPage > 0) {
             params.put("page", currentPage - 1);
             String prev = paging_template.expand(params);
-            //prev = request.getResolvedUri().resolve(prev).toString();
+            // prev = request.getResolvedUri().resolve(prev).toString();
             feed.addLink(prev, "previous");
         }
 
@@ -1407,9 +1423,6 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 "opensearch"), Integer.toString(itemsPerPage));
 
     }
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory
-            .getLogger(TrsstAdapter.class);
 
     public Map<String, String> getAlternateAccepts(RequestContext request) {
         if (accepts == null) {
@@ -1681,5 +1694,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
         return result;
     }
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory
+            .getLogger(TrsstAdapter.class);
 
 }

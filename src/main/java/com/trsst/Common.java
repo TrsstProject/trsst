@@ -169,10 +169,13 @@ public class Common {
         return root;
     }
 
-    public static final String toFeedIdString(Object feedUrn) {
-        String feedId = feedUrn.toString();
+    public static final String toFeedIdString(Object feedOrEntryUrn) {
+        String feedId = feedOrEntryUrn.toString();
         if (feedId.startsWith(FEED_URN_PREFIX)) {
             feedId = feedId.substring(FEED_URN_PREFIX.length());
+        } else if (feedId.startsWith(ENTRY_URN_PREFIX)) {
+            feedId = feedId.substring(ENTRY_URN_PREFIX.length());
+            feedId = feedId.substring(0, feedId.lastIndexOf(':'));
         }
         return feedId;
     }
