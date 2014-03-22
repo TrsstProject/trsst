@@ -53,6 +53,12 @@
 		feedElement.find(".author-uri span").text(feedData.children("author>uri").text());
 		feedElement.find(".author-uri a").attr("href", feedData.children("author>uri").text());
 
+		// mark if ours
+		var currentAccountId = model.getAuthenticatedAccountId();
+		if (currentAccountId && currentAccountId.indexOf(feedId) !== -1) {
+			feedElement.addClass("own");
+		}
+
 		// logo (backdrop)
 		var logoSrc = feedData.find("logo").text();
 		if (logoSrc) {
@@ -76,12 +82,8 @@
 
 		// handling for follow button
 		var followElement = feedElement.find(".follow");
-		if (model.isAuthenticatedFollowing(feedId)) {
-			followElement.addClass("following");
-		} else {
-			followElement.removeClass("following");
-		}
 		var followButton = followElement.find("button");
+		updateFollowElementForFeedId(followElement, feedId);
 		followButton.attr("disabled", false);
 		followButton.click(function(e) {
 			followButton.attr("disabled", true);
@@ -116,6 +118,14 @@
 		});
 
 		return feedElement;
+	};
+
+	var updateFollowElementForFeedId = function(followElement, feedId) {
+		if (model.isAuthenticatedFollowing(feedId)) {
+			$(followElement).addClass("following");
+		} else {
+			$(followElement).removeClass("following");
+		}
 	};
 
 	var computeMakeshiftIcon = function(feedData) {
@@ -158,9 +168,11 @@
 			} else {
 				// treat this as an "encrypted" verb
 				contentEncryption = "content-encrypted";
+				//return null; //NOTE: entry skipped
+				//FIXME: returning null is preventing incremental loading
 			}
 		}
-
+		
 		// clone entry template
 		var entryElement = $(entryTemplate).clone();
 		var entryId = entryData.find("id").text();
@@ -186,6 +198,10 @@
 		var verb = entryData.find("verb").text();
 		if (verb) {
 			entryElement.addClass("verb-" + verb);
+			if ( verb === "deleted" ) {
+				//return null; //NOTE: entry skipped
+				//FIXME: returning null is preventing incremental loading
+			}
 		}
 
 		// mark with signed status
@@ -200,7 +216,6 @@
 		var elementData;
 
 		// populate feed data
-//FIXME: for search results why does the entry's feed id belong the to aggregate feed?		
 		if (feedId === model.feedIdFromFeedUrn(feedData.children("id").text())) {
 			// use existing feed data
 			populateEntryElementWithFeedData(entryElement, feedData);
@@ -292,8 +307,7 @@
 
 		});
 
-		// populate form private encryption option with encryption key
-		entryElement.find("option.private").attr("value", feedData.find("encrypt").text());
+		// create composer
 		new Composer(entryElement.find("form"));
 
 		// catch all clicks on the entryElement
@@ -597,6 +611,12 @@
 			return;
 		}
 
+		// if target was the profile pic container
+		if ($(event.target).hasClass('icon')) {
+			event.target = $(event.target).find("img")[0];
+			// reset target to img and continue as internal anchor
+		}
+
 		// if target was an internal anchor
 		var anchor = $(event.target).closest('a');
 		if (anchor.length !== 0) {
@@ -699,6 +719,17 @@
 		$(".accounts .feed[feed='" + feedId + "']").addClass("selected-account");
 		$(document.body).removeClass("signed-out");
 		$(document.body).addClass("signed-in");
+
+		// force update of all already-loaded follow buttons
+		$(".feed section .follow").each(function() {
+			var followedId = $(this).parents(".feed").attr("feed");
+			updateFollowElementForFeedId(this, followedId);
+		});
+
+		// force refresh of feed page if we're on it
+		feedRenderer.path = null;
+
+		// refresh page
 		onPopulate();
 	};
 
@@ -1182,17 +1213,29 @@
 					feedRenderer.reset();
 					feedRenderer.addFeed(path);
 
+					// delay load for recommended feeds
+					followsRenderer.reset();
+					followsRenderer.addFeedFollows(path);
+					if (path !== TRSST_WELCOME) {
+						followingRenderer.addFeed(TRSST_WELCOME);
+					}
+
 					// update private messaging id
 					var privateMessaging = $(document).find(".private.messaging");
-					privateMessaging.find("option.private").attr("value", feedData.find("id").text());
+					privateMessaging.find("option.private").attr("value", path);
 
 					// page owner conversation
 					messageRenderer.reset();
 					if (uid) {
-						// add all entries that mention us
+						// add their entries that mention us
 						messageRenderer.addEntries({
 							feedId : path,
 							mention : uid
+						});
+						// add our entries that mention them
+						messageRenderer.addEntries({
+							feedId : uid,
+							mention : path
 						});
 						// add all encrypted entries
 						messageRenderer.addEntries({
@@ -1231,15 +1274,15 @@
 					homeRenderer.addFeed(TRSST_WELCOME);
 				}
 				homeRenderer.addFeedFollows(id);
+			}
 
-				// delay load for recommended feeds
-				followingRenderer.reset();
-				window.setTimeout(function() {
-					followingRenderer.addFeedFollows(id);
-					if (id !== TRSST_WELCOME) {
-						followingRenderer.addFeed(TRSST_WELCOME);
-					}
-				}, 2000);
+			// global conversation
+			messageRenderer.reset();
+			if (id !== TRSST_WELCOME) {
+				// add all our mentions
+				messageRenderer.addEntries({
+					mention : id
+				});
 			}
 
 			// TESTING: high volume test
@@ -1249,9 +1292,11 @@
 
 		// first time only
 		if (!followingRenderer.homeId) {
-			// following renderer permanently shows home's recommendations
-			followingRenderer.homeId = TRSST_WELCOME;
-			followingRenderer.addFollows(TRSST_WELCOME);
+			window.setTimeout(function() {
+				// following renderer permanently shows home's recommendations
+				followingRenderer.homeId = TRSST_WELCOME;
+				followingRenderer.addFeedFollows(TRSST_WELCOME);
+			}, 2000);
 		}
 
 		// we can show the account menu now

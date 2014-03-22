@@ -87,7 +87,24 @@ textarea, input[type=text], input[type=password] {
 	/* don't display messager on own feed */
 	display: inherit;	
 }
-
+.page-self div.private.messaging .composer {
+	/* don't display messager on own feed */
+	display: none;	
+}
+div.private.messaging .composer {
+	/* don't display messager at all for now */
+	display: none;	
+}
+div.private.messaging .message-renderer:after:empty {
+	content: 'No mentions yet.';
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	top: 60%;
+	font-size: 140%;
+	color: #ccc;
+	text-align: center;
+}
 
 
 /* @end */
@@ -139,7 +156,16 @@ article>.composer textarea {
 	display: none;
 }
 .page-feed .private.messaging {
+	/* show conversations with page owner */
 	display: inherit;
+}
+.page-home.signed-in .private.messaging {
+	/* show all mentions*/
+	display: inherit;
+}
+.page-home.signed-in .private.messaging .composer{
+	/* don't show on home */
+	display: none;
 }
 
 .message-renderer {
@@ -147,6 +173,9 @@ article>.composer textarea {
 }
 .message-renderer:empty:after {
 	xcontent: 'None';
+}
+.message-renderer .entry section{
+	padding-bottom: 8px;
 }
 
 /* @end */
@@ -165,6 +194,7 @@ article>.composer textarea {
 aside .private.messaging
 {
 	position: relative;
+	padding-top: 52px;
 	padding-bottom: 36px;
 	background: #fff;
 	border-radius:8px;
@@ -240,6 +270,7 @@ body aside {
 .footer-container,
 .main aside .feed {
     background: #444;
+	opacity: 0.95;
 }
 
 .header-container a {
@@ -346,6 +377,7 @@ article .renderer:empty:before {
 }
 
 .feed section {
+	padding: 1px;
 }
 
 .icon {
@@ -429,7 +461,8 @@ article .renderer:empty:before {
 	display: inherit;
 }
 .page-home aside #profileRenderer .feed .follow,
-.page-self aside #profileRenderer .feed .follow
+.page-self aside #profileRenderer .feed .follow,
+.feed.own .follow
 {
 /* everyone follows themselves implicitly */
 	display: none !important;
@@ -523,6 +556,14 @@ article .renderer:empty:before {
 .entry .feed-title.empty-text {
 	display: none;
 }
+/*
+div.own .feed-title span{
+	display: none;
+}
+div.own .feed-title:before {
+	content: 'You';
+}
+*/
 	
 .entry .feed-id {
 	display: inline-block;
@@ -604,6 +645,10 @@ article .renderer:empty:before {
 	background: -webkit-linear-gradient(top,  rgba(209,209,209,1) 0%,rgba(203,203,203,1) 50%,rgba(196,196,196,1) 100%); 
 }
 
+.composer button[disabled], .composer select[disabled] {
+	opacity: 0.5;
+}
+
 .composer select {
 	width: 65px;
 }
@@ -656,10 +701,7 @@ article .renderer:empty:before {
 	position: absolute;
 	content: attr(file);
 	left: 100%;
-	top: 50%;
-	margin-top: -25%;
-	margin-left: 8px;;
-	bottom: 0px;
+	margin-left: 8px;
 	width: 300%;
 	text-align: left;
 	overflow: hidden;
@@ -838,6 +880,10 @@ article .renderer:empty:before {
 .reposted .action.repost span:after {
 	content: 'Reposted';
 }
+.content-decrypted .action.repost {
+/* don't allow repost of decrypted content */
+	display: none;
+}
 
 .action.expand span:after {
 	content: 'More';
@@ -952,13 +998,16 @@ div.entry.verb-follow>div.feed .subtitle {
 }
 
 .entry .feed .title {
+	margin: 0px;
 	margin-left: 80px;
 	font-size: 110%;
 }
 .entry .feed .feed-id {
 	width: 100%;
 	font-size: 85%;
+	margin: 0px;
 	margin-left: 80px;
+	margin-bottom: 4px;
 }
 
 .entry .feed .follow {
@@ -1588,10 +1637,6 @@ body .footer-container .wrapper {
 	display: block;
 	height: 32px;
 	vertical-align: middle;
-	display: none;
-}
-.page-feed .footer-container .util-search form {
-	display: inherit;
 }
 .footer-container .util-search form input {
 	position: absolute;
@@ -1689,7 +1734,7 @@ aside div.following-renderer:before
 }
 
 aside .feeds-renderer>div {
-	height: 360px;
+	height: 375px;
 	overflow-x: hidden;
 	overflow-y: scroll;
 	margin-right: -18px;
@@ -1702,18 +1747,34 @@ aside div.feeds-renderer .feed {
 	border-bottom: 1px solid #ddd;
 	padding: 8px;
 	padding-right: 36px;
-	min-height: 90px
+	min-height: 70px;
+	margin: 0px;
+	margin-top: 4px;
 }
 aside div.feeds-renderer .feed .title {
 	color: #000;
-	font-size: 130%;
+	font-size: 120%;
+	line-height: 120%;
 	margin-left: 88px;
-	margin-top: 8px;
-	margin-bottom: 4px;
+	margin-top: 4px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
 }
 aside div.feeds-renderer .feed .subtitle {
+	color: #000;
+	position: absolute;
+	left: 96px;
+	right: 48px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+.signed-in aside div.feeds-renderer .feed .subtitle {
+	/* show follow button instead */
 	display: none;
 }
+
 aside div.feeds-renderer .feed .feed-id {
 	font-size: 85%;
 	margin-left: 88px;
@@ -1724,15 +1785,15 @@ aside div.feeds-renderer .feed .feed-id {
 }
 
 aside div.feeds-renderer .feed .follow {
-	left: 88px;
+	left: 92px;
 	text-align: left;
-	position: relative;
 }
 aside div.feeds-renderer .feed .logo {
 	display: none;
 }
 aside div.feeds-renderer .feed .icon {
 	margin: 8px;
+	margin-top: 0px;
 	position: absolute;
 }
 
@@ -1824,8 +1885,8 @@ body.page-entry .entry .feed-id {
 }
 body.page-entry .entry .title {
 	display: block;
+	margin-left: 8px;
 	margin-top: 24px;
-	margin-bottom: 16px;
 	font-size: 28px;
 	line-height: 32px;
 	font-weight: lighter;
