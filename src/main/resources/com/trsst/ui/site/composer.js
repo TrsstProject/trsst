@@ -65,23 +65,22 @@
 			console.log("Not posting because nothing to send.");
 		} else {
 			var self = this;
+			var formData = new FormData(self.form[0]);
 
 			// determine public or private
 			var encrypted = this.form.find("select[name='encrypt'] option:selected").hasClass("private");
-
 			var entry = this.form.closest(".entry");
+			
 			if (entry.length === 1) {
 				// if replying to an encrypted entry
-				if ( !encrypted && entry.hasClass("encrypted") ) {
+				if ( !encrypted && entry.hasClass("content-decrypted") ) {
 					var privateOption = this.form.find("select[name='encrypt'] option.private");
-					// force this entry to be encrypted
-					privateOption.attr("value", "-");
-					privateOption.select();
+					// force this entry to be encrypted for all mentions
+					formData.append("encrypt", "-");
 				}
 			}
 
 			// copy mentions from enclosed reply
-			var formData = new FormData(self.form[0]);
 			if (entry.length === 1) {
 				// var mentions =
 				// TODO: copy mentions when we display them
@@ -126,15 +125,16 @@
 			}
 
 			self.form.addClass("pending");
-			self.form.find("button").attr("disabled", true);
+			self.form.find("button").attr("disabled", "disabled");
 			model.updateFeed(formData, function(feedData) {
 				self.form.removeClass("pending");
-				self.form.find("button").attr("disabled", false);
+				self.form.find("button").removeAttr("disabled");
 				if (feedData) {
 					// success
 					console.log("updateFeed: result: ");
 					console.log(feedData);
 					self.form[0].reset();
+					self.form.find(".attach").removeAttr("file");
 					self.form.removeClass("error");
 				} else {
 					// error
