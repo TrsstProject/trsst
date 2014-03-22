@@ -153,8 +153,8 @@ public class AppServlet extends HttpServlet {
                                 // process regular form field
                                 String name = item.getFieldName();
                                 String value = item.getString().trim();
-                                 System.out.println("AppServlet: " + name
-                                 + " : " + value);
+//                                 System.out.println("AppServlet: " + name
+//                                 + " : " + value);
                                 if (value.length() > 0) {
                                     // FLAG: don't allow "home" (server-abuse)
                                     // FLAG: don't allow "attach" (file-system
