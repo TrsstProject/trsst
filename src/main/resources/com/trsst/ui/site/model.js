@@ -333,7 +333,7 @@
 	 */
 	model.isAuthenticatedFollowing = function(feedId) {
 		if (authenticatedFollows) {
-			if (authenticatedFollows[feedId]) {
+			if (authenticatedFollows[feedId] !== undefined) {
 				return true;
 			}
 		}
@@ -347,7 +347,8 @@
 	model.getFollowsForFeedId = function(id, callback) {
 		fetchFilterWithSelector({
 			feedId : id,
-			verb : "follow"
+			verb : "follow",
+			count: 999
 		}, "feed content", function(results) {
 			for ( var i in results) {
 				results[i] = $(results[i]).attr("src");
