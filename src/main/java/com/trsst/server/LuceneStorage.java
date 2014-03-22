@@ -331,7 +331,6 @@ public class LuceneStorage implements Storage {
         if (feedId != null) {
             search = "feed:\"" + feedId + "\"" + search;
         }
-        System.out.println("buildTextQuery: " + search);
         if ( search.trim().length() == 0 ) {
             log.error("Unexpected search length: " + search );
         }

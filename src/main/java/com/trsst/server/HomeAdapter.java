@@ -164,6 +164,18 @@ public class HomeAdapter extends TrsstAdapter {
         return entryIds.length;
     }
 
+    /**
+     * Counts entries specified search parameters.
+     * 
+     * @return the total number of entries matching the query.
+     */
+    @Override
+    protected int countEntriesFromStorage(Date after, Date before,
+            String query, String[] mentions, String[] tags, String verb) {
+        return persistence.getEntryCount(after, before, query, mentions, tags,
+                verb);
+    }
+
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory
             .getLogger(TrsstAdapter.class);
 

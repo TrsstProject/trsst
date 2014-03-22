@@ -1313,7 +1313,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
 
         // note: "default" to getPageSize was actually max page size
-        int length = ProviderHelper.getPageSize(context, "count", 25);
+        int length = ProviderHelper.getPageSize(context, "count", 99);
         String _count = context.getParameter("count");
         if (_count == null) {
             if (context.getUri().toString().indexOf("count=") != -1) {
@@ -1326,8 +1326,14 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         String _page = context.getParameter("page");
         int page = (_page != null) ? Integer.parseInt(_page) : 0;
         int begin = page * length;
-        int total = addEntriesFromStorage(feed, begin, length, beginDate,
-                endDate, searchTerms, mentions, tags, verb);
+        int total = 0;
+        if (length > 0) {
+            total = addEntriesFromStorage(feed, begin, length, beginDate,
+                    endDate, searchTerms, mentions, tags, verb);
+        } else {
+            total = countEntriesFromStorage(beginDate,
+                    endDate, searchTerms, mentions, tags, verb);
+        }
         addPagingLinks(context, feed, page, length, total, searchTerms, before,
                 after, mentions, tags, verb);
     }
@@ -1355,6 +1361,17 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
         }
         return entryIds.length;
+    }
+
+    /**
+     * Counts entries specified search parameters.
+     * 
+     * @return the total number of entries matching the query.
+     */
+    protected int countEntriesFromStorage(Date after, Date before,
+            String query, String[] mentions, String[] tags, String verb) {
+        return persistence.getEntryCountForFeedId(feedId, after, before, query,
+                mentions, tags, verb);
     }
 
     private void addPagingLinks(RequestContext request, Feed feed,
