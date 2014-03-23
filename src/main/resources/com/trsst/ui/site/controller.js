@@ -1150,10 +1150,11 @@
 		// if we're not on the home page
 		if (path.trim().length > 1) {
 
-			// if we're on a entry page
 			var uid = model.getAuthenticatedAccountId();
 			var entry = /([^#?]*)\/([0-9a-fA-F]{11})/.exec(pathname);
 			if (entry !== null) {
+				
+				// we're on a entry page
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-feed");
 				$("body").removeClass("page-external");
@@ -1182,14 +1183,18 @@
 						}
 					});
 				}
+				
 			} else {
 
-				// otherwise we're on a feed page
+				// we're on a feed page
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-entry");
 				$("body").addClass("page-feed");
 				if (uid && uid.indexOf(path) !== -1) {
 					$("body").addClass("page-self");
+				}
+				if (path.indexOf("?") === 0) {
+					$("body").addClass("page-query");
 				}
 
 				// if external feed

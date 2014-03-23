@@ -35,6 +35,7 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.flexible.core.QueryNodeException;
 import org.apache.lucene.queryparser.flexible.standard.StandardQueryParser;
 import org.apache.lucene.queryparser.flexible.standard.config.StandardQueryConfigHandler;
+import org.apache.lucene.queryparser.flexible.standard.parser.ParseException;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.IndexSearcher;
@@ -331,12 +332,17 @@ public class LuceneStorage implements Storage {
         if (feedId != null) {
             search = "feed:\"" + feedId + "\"" + search;
         }
-        if ( search.trim().length() == 0 ) {
-            log.error("Unexpected search length: " + search );
+        if (search.trim().length() == 0) {
+            log.error("Unexpected search length: " + search);
         }
         StandardQueryParser parser = new StandardQueryParser();
         parser.setDefaultOperator(StandardQueryConfigHandler.Operator.AND);
-        return parser.parse(search, "text");
+        try {
+            return parser.parse(search, "text");
+        } catch (ParseException se) {
+            log.error("Could not parse query: " + search);
+            throw se;
+        }
     }
 
     /**

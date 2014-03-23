@@ -65,12 +65,12 @@ public class HomeAdapter extends TrsstAdapter {
             return feed;
         }
 
-        Date now = new Date();
-
         feed = Abdera.getInstance().newFeed();
         feed.setId(canonicalFeedIdForQuery(request));
         feed.setTitle("Search Results");
-        feed.setUpdated(now);
+        
+        // default to one month ago in case of zero results 
+        feed.setUpdated(new Date(System.currentTimeMillis()-1000*60*60*24*30));
 
         // store in request context
         wrapper.setAttribute(Scope.REQUEST, "com.trsst.Feed", feed);
@@ -79,48 +79,42 @@ public class HomeAdapter extends TrsstAdapter {
 
     /**
      * Eliminates paging parameters and sorts remaining query parameters to
-     * construct a feed id string.
+     * construct a feed id string of the form "?key=value&key=value"
      * 
      * @param request
      * @return
      */
     private String canonicalFeedIdForQuery(RequestContext request) {
-        String urn = "urn:feed:" + request.getBaseUri()
-                + request.getUri().toString().substring(1);
-        // if there's a query string
-        int i = urn.lastIndexOf('?');
-        if (i != -1) {
-            urn = urn.substring(0, i + 1);
-
-            // collate and sort query parameters
-            TreeMap<String, List<String>> map = new TreeMap<String, List<String>>();
-            String[] params = request.getParameterNames();
-            for (String param : params) {
-                map.put(param, request.getParameters(param));
-            }
-
-            // remove params used for paging
-            map.remove("page");
-            map.remove("count");
-            map.remove("before");
-            map.remove("after");
-
-            // reassemble ordered query string
-            String param;
-            List<String> values;
-            Iterator<String> iterator = map.keySet().iterator();
-            while (iterator.hasNext()) {
-                param = iterator.next();
-                values = map.get(param);
-                for (String value : values) {
-                    urn = urn + Common.encodeURL(param) + '='
-                            + Common.encodeURL(value) + '&';
-                }
-            }
-            // remove trailing ampersand
-            urn = urn.substring(0, urn.length() - 1);
+        // collate and sort query parameters
+        TreeMap<String, List<String>> map = new TreeMap<String, List<String>>();
+        String[] params = request.getParameterNames();
+        for (String param : params) {
+            map.put(param, request.getParameters(param));
         }
-        return urn;
+
+        // remove params used for paging
+        map.remove("page");
+        map.remove("count");
+        map.remove("before");
+        map.remove("after");
+
+        // reassemble ordered query string
+        StringBuffer buf = new StringBuffer("urn:feed:?");
+        String param;
+        List<String> values;
+        Iterator<String> iterator = map.keySet().iterator();
+        while (iterator.hasNext()) {
+            param = iterator.next();
+            values = map.get(param);
+            for (String value : values) {
+                buf.append(Common.encodeURL(param));
+                buf.append('=');
+                buf.append(Common.encodeURL(value));
+                buf.append('&');
+            }
+        }
+        // remove trailing ampersand
+        return buf.substring(0, buf.length() - 1);
     }
 
     /**

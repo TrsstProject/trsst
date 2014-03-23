@@ -73,6 +73,8 @@ import org.apache.abdera.util.EntityTag;
 import org.apache.abdera.util.MimeTypeHelper;
 import org.apache.abdera.writer.StreamWriter;
 import org.apache.commons.codec.binary.Base64;
+import org.eclipse.jetty.util.MultiMap;
+import org.eclipse.jetty.util.UrlEncoded;
 
 import com.trsst.Common;
 
@@ -1251,25 +1253,35 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
     protected void fetchEntriesFromStorage(RequestContext context, Feed feed)
             throws FileNotFoundException, IOException {
-        String searchTerms = (String) context.getAttribute(Scope.REQUEST,
-                "OpenSearch__searchTerms");
+        // NOTE: occasionally (<1%) jetty and/or abdera give us a servlet
+        // request that has a valid query string but returns no parameters;
+        // we now just parse the query manually every time just to be safe
+        MultiMap<String> params = new MultiMap<String>();
+        String uri = context.getUri().toString();
+        int i = uri.indexOf('?');
+        if (i != -1) {
+            UrlEncoded.decodeTo(uri.substring(i + 1), params, "UTF-8", 255);
+        }
+        //System.out.println("fetchEntriesFromStorage: " + params + " : " + uri);
+
+        String searchTerms = params.getString("q");
         Date beginDate = null;
 
-        String verb = context.getParameter("verb");
+        String verb = params.getString("verb");
 
         String[] mentions = null;
-        List<String> mentionList = context.getParameters("mention");
+        List<String> mentionList = params.getValues("mention");
         if (mentionList != null) {
             mentions = mentionList.toArray(new String[0]);
         }
 
         String[] tags = null;
-        List<String> tagList = context.getParameters("tag");
+        List<String> tagList = params.getValues("tag");
         if (tagList != null) {
             tags = tagList.toArray(new String[0]);
         }
 
-        String after = context.getParameter("after");
+        String after = params.getString("after");
         if (after != null) {
             try {
                 // try to parse an entry id timestamp
@@ -1291,7 +1303,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         }
         Date endDate = null;
-        String before = context.getParameter("before");
+        String before = params.getString("before");
         if (before != null) {
             try {
                 // try to parse an entry id timestamp
@@ -1314,7 +1326,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // note: "default" to getPageSize was actually max page size
         int length = ProviderHelper.getPageSize(context, "count", 99);
-        String _count = context.getParameter("count");
+        String _count = params.getString("count");
         if (_count == null) {
             if (context.getUri().toString().indexOf("count=") != -1) {
                 // BUG in abdera?
@@ -1323,7 +1335,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
         }
         // int offset = ProviderHelper.getOffset(context, "page", length);
-        String _page = context.getParameter("page");
+        String _page = params.getString("page");
         int page = (_page != null) ? Integer.parseInt(_page) : 0;
         int begin = page * length;
         int total = 0;
@@ -1331,8 +1343,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             total = addEntriesFromStorage(feed, begin, length, beginDate,
                     endDate, searchTerms, mentions, tags, verb);
         } else {
-            total = countEntriesFromStorage(beginDate,
-                    endDate, searchTerms, mentions, tags, verb);
+            total = countEntriesFromStorage(beginDate, endDate, searchTerms,
+                    mentions, tags, verb);
         }
         addPagingLinks(context, feed, page, length, total, searchTerms, before,
                 after, mentions, tags, verb);
