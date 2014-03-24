@@ -174,7 +174,7 @@ public class Client {
                                             for (PrivateKey decryptionKey : decryptionKeys) {
                                                 try {
                                                     decryptedKey = Crypto
-                                                            .decryptKeyWithECDH(
+                                                            .decryptKeyWithIES(
                                                                     decodedBytes,
                                                                     entry.getUpdated()
                                                                             .getTime(),
@@ -691,7 +691,7 @@ public class Client {
 
                     // encrypt content key separately for each recipient
                     for (PublicKey recipient : keys) {
-                        byte[] bytes = Crypto.encryptKeyWithECDH(contentKey,
+                        byte[] bytes = Crypto.encryptKeyWithIES(contentKey,
                                 feed.getUpdated().getTime(), recipient,
                                 encryptionKeys.getPrivate());
                         String encoded = new Base64(0, null, true)
