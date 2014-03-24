@@ -95,7 +95,7 @@ div.private.messaging .composer {
 	/* don't display messager at all for now */
 	display: none;	
 }
-div.private.messaging .message-renderer:after:empty {
+div.private.messaging .message-renderer:before {
 	content: 'No mentions yet.';
 	position: absolute;
 	left: 0px;
@@ -104,6 +104,16 @@ div.private.messaging .message-renderer:after:empty {
 	font-size: 140%;
 	color: #ccc;
 	text-align: center;
+}
+
+.page-query .feeds-renderer {
+	display: none;
+}
+.page-query div.private.messaging {
+	display: none;
+}
+.page-query .profile-renderer div.feed-id:before {
+	content: '@';
 }
 
 
@@ -452,7 +462,7 @@ article .renderer:empty:before {
 
 .feed .follow {
 	position: absolute;
-	bottom: 16px;
+	bottom: 10px;
 	left: 16px;
 	right: 16px;
 	display: none;
@@ -487,6 +497,7 @@ article .renderer:empty:before {
 	padding-top: 16px;
 	border-bottom: 1px solid #ddd;
 	min-height: 56px;
+	background-color: #fff;
 }
 
 .entry:first-child {
@@ -781,6 +792,26 @@ div.own .feed-title:before {
 	display: inherit;
 }
 
+.entry .mentions>a {
+	left: 0px;
+	display: inline-block;
+	padding: 8px 12px;
+	font-size: 12px;
+	line-height: 12px;
+	margin:1px;
+	height: 12px;
+	background-color: #ddd;
+	border-radius: 12px;
+	color: #333;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 80%
+}
+.entry.verb-follow .mentions {
+	display:none;
+}
+
 .entry .content>a {
 	right: 0px;
 	left: 0px;
@@ -793,9 +824,10 @@ div.own .feed-title:before {
 	border-radius: 12px;
 	color: #333;
 	padding-left: 42px;
-	
 }
-.entry .content>a span {
+.entry .content>a span,
+.entry .mentions>a span
+{
 	position: relative;
 	overflow: hidden;
 	text-overflow: ellipsis;

@@ -70,10 +70,10 @@
 			// determine public or private
 			var encrypted = this.form.find("select[name='encrypt'] option:selected").hasClass("private");
 			var entry = this.form.closest(".entry");
-			
+
 			if (entry.length === 1) {
 				// if replying to an encrypted entry
-				if ( !encrypted && entry.hasClass("content-decrypted") ) {
+				if (!encrypted && entry.hasClass("content-decrypted")) {
 					var privateOption = this.form.find("select[name='encrypt'] option.private");
 					// force this entry to be encrypted for all mentions
 					formData.append("encrypt", "-");
@@ -82,10 +82,15 @@
 
 			// copy mentions from enclosed reply
 			if (entry.length === 1) {
-				// var mentions =
-				// TODO: copy mentions when we display them
-				formData.append("mention", entry.attr("entry"));
 				formData.append("verb", "reply");
+				formData.append("mention", entry.attr("entry"));
+				entry.find(".mentions .mention").each(function() {
+					var text = $(this).find("span").text();
+					if (text.indexOf('@') === 0) {
+						text = text.substring(1);
+					}
+					formData.append("mention", "urn:feed:" + text);
+				});
 			}
 
 			// find tags and mentions

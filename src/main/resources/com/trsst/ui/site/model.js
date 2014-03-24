@@ -58,15 +58,8 @@
 			success : function(data) {
 				authenticatedUid = $(data).children("id").text();
 				authenticatedPwd = password;
-				authenticatedFollows = {};
-				model.getFollowsForFeedId(authenticatedUid, function(ids) {
-					for ( var id in ids) {
-						// used for hash lookups
-						authenticatedFollows[ids[id]] = null;
-					}
-					callback($(data));
-					model.notify(feedId);
-				});
+				callback($(data));
+				model.notify(feedId);
 			},
 			error : function(e) {
 				console.log("Error: error while posting:");
@@ -135,7 +128,16 @@
 	 * with feedData on success, or null on failure.
 	 */
 	model.signIn = function(feedId, password, callback) {
-		pushFeed(feedId, password, new FormData(), callback);
+		pushFeed(feedId, password, new FormData(), function(feedData) {
+			model.getFollowsForFeedId(authenticatedUid, function(ids) {
+				authenticatedFollows = {};
+				for ( var id in ids) {
+					// used for hash lookups
+					authenticatedFollows[ids[id]] = null;
+				}
+				callback(feedData);
+			});
+		});
 	};
 
 	/**

@@ -150,12 +150,6 @@
 		if (self.entryContainer && self.entryFactory) {
 			var entries = feedData.find("entry");
 			var total = entries.length;
-			if (total > 5) {
-				// FIXME: forcing manual cap on result size
-				console.log("Server fail: returned more than 5 entries: " + total + " : " + feedData.children("id"));
-				total = 5;
-			}
-			// FIXME: forcing manual cap on result size
 			var counter = 0;
 			entries.each(function(index) {
 				var element = self.addDataToEntryContainer(feedData, this);

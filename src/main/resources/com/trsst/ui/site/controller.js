@@ -168,11 +168,11 @@
 			} else {
 				// treat this as an "encrypted" verb
 				contentEncryption = "content-encrypted";
-				//return null; //NOTE: entry skipped
-				//FIXME: returning null is preventing incremental loading
+				// return null; //NOTE: entry skipped
+				// FIXME: returning null is preventing incremental loading
 			}
 		}
-		
+
 		// clone entry template
 		var entryElement = $(entryTemplate).clone();
 		var entryId = entryData.find("id").text();
@@ -198,9 +198,9 @@
 		var verb = entryData.find("verb").text();
 		if (verb) {
 			entryElement.addClass("verb-" + verb);
-			if ( verb === "deleted" ) {
-				//return null; //NOTE: entry skipped
-				//FIXME: returning null is preventing incremental loading
+			if (verb === "deleted") {
+				// return null; //NOTE: entry skipped
+				// FIXME: returning null is preventing incremental loading
 			}
 		}
 
@@ -305,6 +305,22 @@
 				addContentPreviewToElement(entryData, $(this), viewElement, duplicateDetector);
 			});
 
+		});
+
+		// add any (internal) feed mentons last
+		var mention, e;
+		entryData.find("category[scheme='urn:com.trsst.mention']").each(function() {
+			mention = $(this).attr("term");
+			if (mention && mention.indexOf("urn:feed:") === 0) {
+				mention = mention.substring("urn:feed:".length);
+				if (mention.indexOf("http") === -1) {
+					e = $("<a class='mention'><span></span></a>");
+					e.attr("href", '/' + mention);
+					e.attr("title", mention);
+					e.children("span").text('@' + mention);
+					$(entryElement).find(".mentions").append(e);
+				}
+			}
 		});
 
 		// create composer
@@ -446,7 +462,7 @@
 						console.log("Unsupported atom link: " + src);
 					}
 				} else if (src !== undefined) {
-					e = $("<a target='_blank'><span></span></a>");
+					e = $("<a class='link' target='_blank'><span></span></a>");
 					e.attr("href", src);
 					e.attr("title", src);
 					e.children("span").text(src);
@@ -669,9 +685,10 @@
 
 	var getCurrentAccountId = function() {
 		var id = localStorage.getItem("currentAccountId");
-		if (!id) {
-			id = model.getAuthenticatedAccountId();
-		}
+		// if (!id) {
+		//NOTE: for now avoid local stored id
+		id = model.getAuthenticatedAccountId();
+		// }
 		return id;
 	};
 
@@ -1153,7 +1170,7 @@
 			var uid = model.getAuthenticatedAccountId();
 			var entry = /([^#?]*)\/([0-9a-fA-F]{11})/.exec(pathname);
 			if (entry !== null) {
-				
+
 				// we're on a entry page
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-feed");
@@ -1183,7 +1200,7 @@
 						}
 					});
 				}
-				
+
 			} else {
 
 				// we're on a feed page
@@ -1232,12 +1249,15 @@
 					// page owner conversation
 					messageRenderer.reset();
 					if (uid) {
-						// add their entries that mention us
-						messageRenderer.addEntries({
-							feedId : path,
-							mention : uid
-						});
+						if (uid !== path) {
+							// add their entries that mention us
+							messageRenderer.addEntries({
+								feedId : path,
+								mention : uid
+							});
+						}
 						// add our entries that mention them
+						// (and our own replies that mention us if same)
 						messageRenderer.addEntries({
 							feedId : uid,
 							mention : path
