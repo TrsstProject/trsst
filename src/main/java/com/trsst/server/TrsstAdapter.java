@@ -374,6 +374,11 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         queryString = queryString + "relay=" + hashName;
 
         // calculate target path
+        String base = request.getTargetBasePath();
+        if (base == null || "null".equals(base)) {
+            // workaround: base was sometimes "null" (length=4)
+            base = "";
+        }
         String path = request.getTargetPath().substring(
                 request.getTargetBasePath().length() + 1);
         int index = path.indexOf('?');
@@ -1262,7 +1267,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         if (i != -1) {
             UrlEncoded.decodeTo(uri.substring(i + 1), params, "UTF-8", 255);
         }
-        //System.out.println("fetchEntriesFromStorage: " + params + " : " + uri);
+        // System.out.println("fetchEntriesFromStorage: " + params + " : " +
+        // uri);
 
         String searchTerms = params.getString("q");
         Date beginDate = null;

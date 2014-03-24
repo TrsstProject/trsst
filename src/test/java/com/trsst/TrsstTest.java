@@ -184,9 +184,9 @@ public class TrsstTest extends TestCase {
             long timestamp = System.currentTimeMillis();
             KeyPair a = Common.generateEncryptionKeyPair();
             KeyPair b = Common.generateEncryptionKeyPair();
-            byte[] bytes = Crypto.encryptKeyWithECDH(key, timestamp,
+            byte[] bytes = Crypto.encryptKeyWithIES(key, timestamp,
                     a.getPublic(), b.getPrivate());
-            byte[] decrypted = Crypto.decryptKeyWithECDH(bytes, timestamp,
+            byte[] decrypted = Crypto.decryptKeyWithIES(bytes, timestamp,
                     b.getPublic(), a.getPrivate());
             assertTrue("ECDH Encryption round trip test",
                     Arrays.areEqual(key, decrypted));
