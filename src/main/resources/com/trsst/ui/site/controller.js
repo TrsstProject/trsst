@@ -1337,10 +1337,12 @@
 	};
 
 	controller.start = function() {
-		// onPopulate();
-		window.onpopstate = function(event) {
-			onPopulate();
-		};
+		window.setTimeout(function() {
+			window.onpopstate = function(event) {
+				onPopulate();
+			};
+		}, 100);
+		onPopulate();
 	};
 
 	onInit();
