@@ -31,12 +31,14 @@ import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyFactory;
+import java.security.KeyManagementException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.Security;
+import java.security.cert.X509Certificate;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
@@ -45,6 +47,12 @@ import java.util.Date;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Transformer;
@@ -56,10 +64,14 @@ import org.apache.abdera.Abdera;
 import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Element;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.httpclient.protocol.Protocol;
+import org.apache.commons.httpclient.protocol.ProtocolSocketFactory;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 import org.bouncycastle.util.encoders.Hex;
 import org.w3c.tidy.Tidy;
+
+import com.trsst.client.AnonymSSLSocketFactory;
 
 /**
  * Shared utilities and constants used by both clients and servers. Portions
@@ -701,4 +713,57 @@ public class Common {
         }
         return result;
     }
+
+    /**
+     * Most trsst nodes run with self-signed certificates, so by default we
+     * accept them. While posts are still signed and/or encrypted, a MITM can
+     * still refuse our out-going posts and suppress incoming new ones, but this
+     * the reason to relay with many trsst servers. Use the -strict option to
+     * require CA-signed certificates. Note that nowadays CA-signed certs are no
+     * guarantee either.
+     */
+    public static void enableAnonymousSSL() {
+
+        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
+            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                return null;
+            }
+
+            public void checkClientTrusted(X509Certificate[] certs,
+                    String authType) {
+            }
+
+            public void checkServerTrusted(X509Certificate[] certs,
+                    String authType) {
+            }
+
+        } };
+
+        SSLContext sc;
+        try {
+            sc = SSLContext.getInstance("SSL");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection
+                    .setDefaultSSLSocketFactory(sc.getSocketFactory());
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Can't get SSL context", e);
+        } catch (KeyManagementException e) {
+            log.error("Can't set SSL socket factory", e);
+        }
+
+        // Create all-trusting host name verifier
+        HostnameVerifier allHostsValid = new HostnameVerifier() {
+            public boolean verify(String hostname, SSLSession session) {
+                return true;
+            }
+        };
+        // Install the all-trusting host verifier
+        HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+
+        // install the protocol handler
+        Protocol anonhttps = new Protocol("https",
+                (ProtocolSocketFactory) new AnonymSSLSocketFactory(), 443);
+        Protocol.registerProtocol("https", anonhttps);
+    }
+
 }

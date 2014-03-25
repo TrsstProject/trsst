@@ -133,7 +133,7 @@ public class Command {
         // if unspecified, default relay to home.trsst.com
         if (System.getProperty("com.trsst.server.relays") == null) {
             System.setProperty("com.trsst.server.relays",
-                    "http://home.trsst.com/feed");
+                    "https://home.trsst.com/feed");
         }
 
         // default to user-friendlier file names
@@ -346,6 +346,12 @@ public class Command {
         o.setLongOpt("vanity");
         postOptions.addOption(o);
 
+        o = new Option(null, "Require SSL certs");
+        o.setRequired(false);
+        o.setArgs(0);
+        o.setLongOpt("strict");
+        postOptions.addOption(o);
+
         // merge options parameters
         mergedOptions = new Options();
         for (Object obj : pullOptions.getOptions()) {
@@ -391,6 +397,13 @@ public class Command {
             if (arguments.size() < 1) {
                 printAllUsage();
                 return 127; // "command not found"
+            }
+            if (!commands.hasOption("strict")) {
+                // most trsst nodes run with self-signed certificates,
+                // so by default we accept them
+                Common.enableAnonymousSSL();
+            } else {
+                System.err.println("Requiring signed SSL");
             }
 
             String mode = arguments.removeFirst().toString();

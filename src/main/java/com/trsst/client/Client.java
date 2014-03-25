@@ -51,8 +51,6 @@ import org.apache.abdera.security.Signature;
 import org.apache.abdera.security.SignatureOptions;
 import org.apache.abdera.writer.StreamWriter;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.httpclient.protocol.Protocol;
-import org.apache.commons.httpclient.protocol.ProtocolSocketFactory;
 
 import com.trsst.Common;
 import com.trsst.Crypto;
@@ -72,16 +70,6 @@ public class Client {
      */
     public Client(URL url) {
         this.serving = url;
-
-        // FLAG: allow anonymous SSL:
-        // trsst clients aren't vulnerable to MITM
-        // because we don't trust the man anyway;
-        // the worst he can do is drop our messages,
-        // but we keep our copy and others will see
-        // the gap in the blog chain.
-        Protocol anonhttps = new Protocol("https",
-                (ProtocolSocketFactory) new AnonymSSLSocketFactory(), 443);
-        Protocol.registerProtocol("https", anonhttps);
     }
 
     /**

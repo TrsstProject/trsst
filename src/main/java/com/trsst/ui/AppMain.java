@@ -36,6 +36,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import com.trsst.Command;
+import com.trsst.Common;
 
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -93,6 +94,11 @@ public class AppMain extends javafx.application.Application {
         } catch (IOException e) {
             log.warn("Can't write to log file", e);
         }
+        
+        // we connect with our local server with a self-signed certificate:
+        // we create our server with a random port that would fail to bind
+        // if there were a mitm that happened to be serving on that port.
+        Common.enableAnonymousSSL();
 
         // launch the app
         launch(argv);
@@ -108,11 +114,6 @@ public class AppMain extends javafx.application.Application {
     public void start(Stage stage) {
 
         instance = this;
-
-        // we connect with our local server with a self-signed certificate:
-        // we create our server with a random port that would fail to bind
-        // if there were a mitm that happened to be serving on that port.
-        enableAnonymousSSL();
 
         stage.setTitle("trsst");
         webView = new WebView();
@@ -204,51 +205,6 @@ public class AppMain extends javafx.application.Application {
     @Override
     public void stop() {
         System.exit(0);
-    }
-
-    public static void enableAnonymousSSL() {
-        /*
-         * fix for Exception in thread "main"
-         * javax.net.ssl.SSLHandshakeException:
-         * sun.security.validator.ValidatorException: PKIX path building failed:
-         * sun.security.provider.certpath.SunCertPathBuilderException: unable to
-         * find valid certification path to requested target
-         */
-        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
-            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                return null;
-            }
-
-            public void checkClientTrusted(X509Certificate[] certs,
-                    String authType) {
-            }
-
-            public void checkServerTrusted(X509Certificate[] certs,
-                    String authType) {
-            }
-
-        } };
-
-        SSLContext sc;
-        try {
-            sc = SSLContext.getInstance("SSL");
-            sc.init(null, trustAllCerts, new java.security.SecureRandom());
-            HttpsURLConnection
-                    .setDefaultSSLSocketFactory(sc.getSocketFactory());
-        } catch (NoSuchAlgorithmException e) {
-            log.error("Can't get SSL context", e);
-        } catch (KeyManagementException e) {
-            log.error("Can't set SSL socket factory", e);
-        }
-
-        // Create all-trusting host name verifier
-        HostnameVerifier allHostsValid = new HostnameVerifier() {
-            public boolean verify(String hostname, SSLSession session) {
-                return true;
-            }
-        };
-        // Install the all-trusting host verifier
-        HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
     }
 
     private final static org.slf4j.Logger log = org.slf4j.LoggerFactory
