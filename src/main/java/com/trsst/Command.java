@@ -758,6 +758,12 @@ public class Command {
             }
 
             // create new account
+            if ( base == null ) {
+                // default to trsst hub
+                base = "https://home.trsst.com/feed";
+            }            
+
+            // generate vanity id if required
             if (vanity != null) {
                 System.err.println("Searching for vanity feed id prefix: "
                         + vanity);

@@ -20,23 +20,10 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
-
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-
-import com.trsst.Command;
-import com.trsst.Common;
 
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -46,6 +33,9 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+
+import com.trsst.Command;
+import com.trsst.Common;
 
 /**
  * Creates a javafx frame just to embed a real live webkit browser. This exists
@@ -78,7 +68,7 @@ public class AppMain extends javafx.application.Application {
         if (System.getProperty("com.trsst.server.relays") == null) {
             // if unspecified, default relay to home.trsst.com
             System.setProperty("com.trsst.server.relays",
-                    "http://home.trsst.com/feed");
+                    "https://home.trsst.com/feed");
         }
 
         try {
