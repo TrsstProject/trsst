@@ -7,7 +7,7 @@
 	<groupId>com.trsst.client</groupId>
 	<artifactId>trsst-client</artifactId>
 	<packaging>jar</packaging>
-	<version>0.2-SNAPSHOT</version>
+	<version>0.2</version>
 	<name>trsst</name>
 	<url>https://github.com/TrsstProject/trsst</url>
 	<issueManagement>
