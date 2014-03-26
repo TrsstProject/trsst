@@ -117,6 +117,7 @@ public class Crypto {
         return _cryptBytesAES(input, key, false);
     }
 
+    // h/t Steve Weis, Michael Rogers, and liberationtech
     private static byte[] _cryptBytesAES(byte[] input, byte[] key,
             boolean forEncryption) throws InvalidCipherTextException {
         assert key.length == 32; // 32 bytes == 256 bits
