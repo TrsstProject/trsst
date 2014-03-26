@@ -139,7 +139,7 @@ public class Command {
         // default to user-friendlier file names
         String home = System.getProperty("user.home", ".");
         if (System.getProperty("com.trsst.client.storage") == null) {
-            File client = new File(home, "Trsst Keyfiles");
+            File client = new File(home, "Trsst Accounts");
             System.setProperty("com.trsst.client.storage",
                     client.getAbsolutePath());
         }
