@@ -686,7 +686,7 @@
 	var getCurrentAccountId = function() {
 		var id = localStorage.getItem("currentAccountId");
 		// if (!id) {
-		//NOTE: for now avoid local stored id
+		// NOTE: for now avoid local stored id
 		id = model.getAuthenticatedAccountId();
 		// }
 		return id;
@@ -835,10 +835,7 @@
 				if (index > 1) {
 					base = base.substring(0, index - 1);
 				}
-			} else {
-				// default to trsst hub
-				base = "http://home.trsst.com/feed";
-			}
+			} 
 			form.find(".title input").val(feedData.children("title").text());
 			form.find(".subtitle textarea").val(feedData.children("subtitle").text());
 			form.find(".base input").val(base);
@@ -1071,40 +1068,68 @@
 			}
 		});
 
-		/* Enable feed id/url paste */
-		$(".util-feed-navigator form").submit(function(e) {
-			e.preventDefault();
-			var url = $(".util-feed-navigator form input").val();
-			if (url) {
-				// escape parameterized urns
-				if (url.indexOf("?") !== -1) {
-					url = encodeURIComponent(url);
-				}
-				controller.pushState("/" + url);
-			}
-		});
-
-		/* Enable feed id/url paste */
-		$(".util-feed-navigator form").submit(function(e) {
-			e.preventDefault();
-			var url = $(".util-feed-navigator form input").val();
-			if (url) {
-				controller.pushState("/" + url.trim());
-			}
-		});
-
 		/* Enable global search bar */
 		$(".util-search form").submit(function(e) {
 			e.preventDefault();
+			var i;
+			var tags = [];
+			var mentions = [];
 			var query = $(".util-search form input").val();
 			if (query) {
 				query = query.trim();
+				var terms = query.split(" ");
+				query = "";
+
+				// extract tags and mentions
+				for (i in terms) {
+					if (terms[i].indexOf("@") === 0) {
+						mentions.push(terms[i].substring(1));
+					} else if (terms[i].indexOf("#") === 0) {
+						tags.push(terms[i].substring(1));
+					} else {
+						query = query + terms[i] + " ";
+					}
+				}
+				query = query.trim();
+
+				if (terms.length == 1) {
+					// if external feed
+					if (query.indexOf("http") === 0) {
+						// escape parameterized urns
+						if (query.indexOf("?") !== -1) {
+							query = encodeURIComponent(query);
+						}
+						controller.pushState("/" + query);
+						return;
+					}
+					// if feed id
+					// FIXME: until we get our js address checker
+					if (query.length > 25) {
+						// navigate to feed id
+						controller.pushState("/" + query);
+						return;
+					}
+				}
+
+				// otherwise: treat as query against current page
+
 				var params = searchToObject();
-				params.q = encodeURIComponent(query);
+				delete params.tag;
+				delete params.mention;
+				delete params.q;
+				if ( query.length > 0 ) {
+					params.q = query;
+				}
 				query = "?";
 				// reassemble query params
-				for ( var i in params) {
+				for (i in params) {
 					query = query + i + "=" + params[i] + "&";
+				}
+				for (i in tags) {
+					query = query + "tag=" + tags[i] + "&";
+				}
+				for (i in mentions) {
+					query = query + "mention=" + mentions[i] + "&";
 				}
 				// strip last & or ?
 				query = query.substring(0, query.length - 1);
@@ -1173,6 +1198,7 @@
 
 				// we're on a entry page
 				$("body").removeClass("page-home");
+				$("body").removeClass("page-query");
 				$("body").removeClass("page-feed");
 				$("body").removeClass("page-external");
 				$("body").addClass("page-entry");
@@ -1205,6 +1231,7 @@
 
 				// we're on a feed page
 				$("body").removeClass("page-home");
+				$("body").removeClass("page-query");
 				$("body").removeClass("page-entry");
 				$("body").addClass("page-feed");
 				if (uid && uid.indexOf(path) !== -1) {
@@ -1276,6 +1303,7 @@
 			// otherwise: we're on the "home" page
 
 			$("body").addClass("page-home");
+			$("body").removeClass("page-query");
 			$("body").removeClass("page-entry");
 			$("body").removeClass("page-external");
 			$("body").removeClass("page-feed");

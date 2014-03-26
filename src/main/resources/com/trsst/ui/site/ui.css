@@ -1624,25 +1624,11 @@ body .footer-container .wrapper {
 	position: relative;
 }
 
-.util-feed-navigator {
-	display: block;
-	float: left;
-	top: 0px;
-	width: 30%;
-}
-
-.util-feed-navigator {
-	display: block;
-	float: left;
-	top: 0px;
-	width: 30%;
-}
-
 .util-search {
 	display: block;
-	float: right;
+	float: left;
 	top: 0px;
-	width: 30%;
+	width: 33%;
 }
 
 .footer-container input {
@@ -1653,7 +1639,7 @@ body .footer-container .wrapper {
 	border-radius: 2px;
 	width: 100%;
 }
-.footer-container .util-feed-navigator input:before {
+.footer-container .util-search input:before {
 	position: absolute;
 	content: ' ';
 	width: 20px;
@@ -1663,31 +1649,42 @@ body .footer-container .wrapper {
 	top: 6px;
 	background-image: url('/icon-rss.png');
 }
-
-.footer-container .util-search form {
-	position: relative;
-	display: block;
-	height: 32px;
-	vertical-align: middle;
-}
-.footer-container .util-search form input {
-	position: absolute;
-	bottom: 2px;
-	height: 20px;
-}
 .footer-container .util-search input:after {
+	content: 'Search';
+	color: #888;
+	position: absolute;
+	font-height: 20px;
+	top: 8px;
+}
+.page-self .footer-container .util-search input:after {
+	content: 'Search your feed';
+}
+.page-feed .footer-container .util-search input:after {
+	content: 'Search this feed';
+}
+.page-home .footer-container .util-search input:after {
+	content: 'Find feeds and entries';
+}
+.page-query .footer-container .util-search input:after {
+	content: 'Search again';
+}
+.footer-container .util-search input:valid:after {
+	content: ' ';
+}
+
+.footer-container:after {
 	position: absolute;
 	content: ' ';
 	width: 28px;
 	height: 28px;
-	right: -32px;
-	top: -6px;
+	right: 50%;
+	top: 4px;
 	background-image: url('/loading-on-gray.gif');
 	background-size: 28px 28px;
-	-webkit-transition: opacity .5s ease-in-out 0s;
+	-webkit-transition: opacity .5s ease-in-out .5s;
 	opacity: 0;
 }
-.pending .footer-container .util-search input:after {
+.pending .footer-container:after {
 	opacity: 1;
 }
 
@@ -1695,8 +1692,7 @@ body .footer-container .wrapper {
 	display: block;
 	position: absolute;
 	margin: 5px;
-	left: 33%;
-	right: 33%;
+	right: 0%;
 	text-align: center;
 	font-size: 85%;
 }
