@@ -1355,6 +1355,14 @@
 		// we can show the account menu now
 		$(document.body).removeClass("accounts-loading");
 	};
+	
+	/*
+	 * Force-populate all applicable renderers with the specified feed. 
+	 */
+	controller.forceRender = function(feedData) {
+		// used to ensure quick appearance of submitted posts
+		homeRenderer.addEntriesFromFeed(feedData, null);
+	};
 
 	// + Jonas Raoni Soares Silva
 	// @ http://jsfromhell.com/array/shuffle [v1.0]

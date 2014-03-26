@@ -141,6 +141,7 @@
 					self.form[0].reset();
 					self.form.find(".attach").removeAttr("file");
 					self.form.removeClass("error");
+					controller.forceRender(feedData); // quicker ux
 				} else {
 					// error
 					self.form.addClass("error");
