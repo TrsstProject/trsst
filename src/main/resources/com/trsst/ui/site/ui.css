@@ -100,11 +100,22 @@ div.private.messaging .message-renderer:before {
 	position: absolute;
 	left: 0px;
 	right: 0px;
-	top: 60%;
+	top: 100px;
 	font-size: 140%;
 	color: #ccc;
 	text-align: center;
 }
+aside .follows-renderer>div:empty:before {
+	content: 'Not following anyone.';
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	top: 120px;
+	font-size: 140%;
+	color: #ccc;
+	text-align: center;
+}
+
 
 .page-query .feeds-renderer {
 	display: none;
