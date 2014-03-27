@@ -81,20 +81,29 @@
 			}
 
 			// copy mentions from enclosed reply
+			var i;
 			if (entry.length === 1) {
+				var nodupes = [];
 				formData.append("verb", "reply");
-				formData.append("mention", entry.attr("entry"));
+				var entryUrn = entry.attr("entry");
+				formData.append("mention", entryUrn);
+				nodupes.push(model.feedUrnFromFeedId(model.feedIdFromEntryUrn(entryUrn)));
 				entry.find(".mentions .mention").each(function() {
 					var text = $(this).find("span").text();
 					if (text.indexOf('@') === 0) {
 						text = text.substring(1);
 					}
-					formData.append("mention", "urn:feed:" + text);
+					text = model.feedUrnFromFeedId(text);
+					if (nodupes.indexOf(text) === -1) {
+						nodupes.push(text);
+					}
 				});
+				for (i in nodupes) {
+					formData.append("mention", nodupes[i]);
+				}
 			}
 
 			// find tags and mentions
-			var i;
 			var match;
 			var matches = value.match(/([\@\#]\w*)/g);
 			if (matches) {
@@ -113,6 +122,10 @@
 								console.log("Could not match mention: " + match);
 								console.log(feeds[0]);
 							}
+							// FIXME: until we get our js address checker
+						} else if (match.length > 25 && match.length < 35) {
+							// assume a mention of that size is an account id
+							formData.append("mention", "urn:feed:" + match);
 						}
 					} else {
 						// otherwise hash->tag
