@@ -16,6 +16,7 @@
 package com.trsst.server;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -56,6 +57,10 @@ import org.apache.abdera.model.Link;
 import org.apache.abdera.model.Person;
 import org.apache.abdera.model.Text;
 import org.apache.abdera.parser.ParseException;
+import org.apache.abdera.protocol.Response.ResponseType;
+import org.apache.abdera.protocol.client.AbderaClient;
+import org.apache.abdera.protocol.client.ClientResponse;
+import org.apache.abdera.protocol.client.RequestOptions;
 import org.apache.abdera.protocol.server.ProviderHelper;
 import org.apache.abdera.protocol.server.RequestContext;
 import org.apache.abdera.protocol.server.RequestContext.Scope;
@@ -73,6 +78,14 @@ import org.apache.abdera.util.EntityTag;
 import org.apache.abdera.util.MimeTypeHelper;
 import org.apache.abdera.writer.StreamWriter;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.conn.ClientConnectionManager;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.SingleClientConnManager;
 import org.eclipse.jetty.util.MultiMap;
 import org.eclipse.jetty.util.UrlEncoded;
 
@@ -149,6 +162,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             if (feed != null) {
                 // trigger async fetch in case we're stale
                 pullLaterFromRelay(feedId, request);
+                // pullFromRelay(request);
             }
         }
 
@@ -394,23 +408,27 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * trsst feed, (optionally validate it), (optionally persist it), and return
      * the feed.
      */
-    private Feed fetchFromExternalSource(String feedId) {
+    protected Feed fetchFromExternalSource(String feedId) {
         Feed result = null;
         try {
-            feedId = Common.decodeURL(feedId);
-            URL url = new URL(feedId);
-            InputStream input = url.openStream();
-            // byte[] content = Common.readFully(input);
-            // System.out.println(new String(content, "UTF-8"));
-            // input = new ByteArrayInputStream(content);
-            result = (Feed) Abdera.getInstance().getParser().parse(input)
-                    .getRoot();
-        } catch (FileNotFoundException fnfe) {
-            log.warn("Could not fetch from external source: " + feedId);
+            AbderaClient client = new AbderaClient(Abdera.getInstance(),
+                    Common.getBuildString());
+            new URL(feedId); // validates as a url
+            ClientResponse response = client.get(feedId);
+            if (response.getType() == ResponseType.SUCCESS) {
+                Document<Feed> document = response.getDocument();
+                if (document != null) {
+                    return document.getRoot();
+                } else {
+                    log.warn("fetchFromExternalSource: no document for: "
+                            + feedId);
+                }
+            } else {
+                log.debug("fetchFromExternalSource: no document found for: "
+                        + feedId + " : " + response.getType());
+            }
         } catch (MalformedURLException urle) {
             log.error("Not a valid external feed id: " + feedId);
-        } catch (IOException ioe) {
-            log.error("Could not connect: " + feedId, ioe);
         } catch (ClassCastException cce) {
             log.error("Not a valid feed: " + feedId, cce);
         } catch (Exception e) {
@@ -1517,7 +1535,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @param context
      * @param hostUrl
      */
-    private void pushRawPostIfNeeded(Feed feed, RequestContext request,
+    protected void pushRawPostIfNeeded(Feed feed, RequestContext request,
             byte[] requestData) {
         IRI ourUri = request.getBaseUri();
         IRI theirUri = feed.getBaseUri();
@@ -1544,27 +1562,35 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @param context
      * @param hostUrl
      */
-    private void pushRawPost(Feed feed, RequestContext request,
+    protected void pushRawPost(Feed feed, RequestContext request,
             byte[] requestData, String hostUrl) {
         try {
             // FIXME: eventually want to move off feed ids in POST
             hostUrl = hostUrl + "/" + Common.toFeedIdString(feed.getId());
-            URL url = new URL(hostUrl);
-            HttpURLConnection connection = (HttpURLConnection) url
-                    .openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", request
-                    .getContentType().toString());
-            connection.setDoInput(true);
-            connection.setDoOutput(true);
-            connection.connect();
-            OutputStream output = connection.getOutputStream();
-            output.write(requestData);
-            output.flush();
-            output.close();
-            connection.disconnect();
-            System.out.println("Response: " + connection.getResponseCode()
-                    + " : " + connection.getResponseMessage());
+            new URL(hostUrl); // validates url
+            AbderaClient client = new AbderaClient(Abdera.getInstance(),
+                    Common.getBuildString());
+            ClientResponse response = client.post(hostUrl,
+                    new ByteArrayInputStream(requestData), new RequestOptions()
+                            .setContentType(request.getContentType()));
+            System.out.println("Response: " + response.getStatus()
+                    + " : " + response.getStatusText());
+
+            // HttpURLConnection connection = (HttpURLConnection) url
+            // .openConnection();
+            // connection.setRequestMethod("POST");
+            // connection.setRequestProperty("Content-Type", request
+            // .getContentType().toString());
+            // connection.setDoInput(true);
+            // connection.setDoOutput(true);
+            // connection.connect();
+            // OutputStream output = connection.getOutputStream();
+            // output.write(requestData);
+            // output.flush();
+            // output.close();
+            // connection.disconnect();
+//            System.out.println("Response: " + connection.getResponseCode()
+//                    + " : " + connection.getResponseMessage());
             log.debug("Forwarded to: " + hostUrl);
         } catch (IOException ioe) {
             log.warn("Connection error while connecting to: " + hostUrl, ioe);
@@ -1573,7 +1599,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
     }
 
-    private static boolean syncToService(String id, Storage storage,
+    protected boolean syncToService(String id, Storage storage,
             String serviceUrl) {
         Feed localFeed = fetchFeedFromStorage(id, storage);
         Feed remoteFeed = pullFromService(serviceUrl, id, "count=1");
@@ -1668,25 +1694,35 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         return false;
     }
 
-    private static boolean pushToService(Feed feed, String serviceUrl) {
+    protected boolean pushToService(Feed feed, String serviceUrl) {
         try {
             URL url = new URL(serviceUrl + "/"
                     + Common.toFeedIdString(feed.getId()));
-            HttpURLConnection connection = (HttpURLConnection) url
-                    .openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type",
-                    "application/atom+xml; type=feed; charset=utf-8");
-            connection.setDoInput(true);
-            connection.setDoOutput(true);
-            connection.connect();
-            OutputStream output = connection.getOutputStream();
+            
+            AbderaClient client = new AbderaClient(Abdera.getInstance(),
+                    Common.getBuildString());
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
             feed.writeTo(output);
-            output.flush();
-            output.close();
-            connection.disconnect();
-            System.out.println("Response: " + connection.getResponseCode()
-                    + " : " + connection.getResponseMessage());
+            ClientResponse response = client.post(url.toString(),
+                    new ByteArrayInputStream(output.toByteArray()), new RequestOptions()
+                            .setContentType("application/atom+xml; type=feed; charset=utf-8"));
+            System.out.println("Response: " + response.getStatus()
+                    + " : " + response.getStatusText());
+//            HttpURLConnection connection = (HttpURLConnection) url
+//                    .openConnection();
+//            connection.setRequestMethod("POST");
+//            connection.setRequestProperty("Content-Type",
+//                    "application/atom+xml; type=feed; charset=utf-8");
+//            connection.setDoInput(true);
+//            connection.setDoOutput(true);
+//            connection.connect();
+//            OutputStream output = connection.getOutputStream();
+//            feed.writeTo(output);
+//            output.flush();
+//            output.close();
+//            connection.disconnect();
+//            System.out.println("Response: " + connection.getResponseCode()
+//                    + " : " + connection.getResponseMessage());
             log.debug("Pushed: " + feed.getId() + " : " + serviceUrl);
             return true;
         } catch (MalformedURLException e) {
@@ -1699,7 +1735,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         return false;
     }
 
-    private static Feed pullFromService(String serviceUrl, String entityId,
+    protected Feed pullFromService(String serviceUrl, String entityId,
             String queryString) {
         Feed result = null;
         if (!entityId.startsWith("/")) {
@@ -1711,17 +1747,22 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             queryString = "";
         }
         String combined = serviceUrl + entityId + queryString;
+        log.info("pullFromService: " + combined);
         try {
-            URL url = new URL(combined);
-            log.info("pullFromService: " + url);
-            result = (Feed) Abdera.getInstance().getParser()
-                    .parse(url.openStream()).getRoot();
-        } catch (FileNotFoundException fnfe) {
-            log.warn("Could not fetch from relay: " + combined);
-        } catch (MalformedURLException urle) {
-            log.error("Could not construct relay fetch url: " + combined);
-        } catch (IOException ioe) {
-            log.error("Could not connect: " + combined, ioe);
+            AbderaClient client = new AbderaClient(Abdera.getInstance(),
+                    Common.getBuildString());
+            ClientResponse response = client.get(combined);
+            if (response.getType() == ResponseType.SUCCESS) {
+                Document<Feed> document = response.getDocument();
+                if (document != null) {
+                    return document.getRoot();
+                } else {
+                    log.warn("pull: no document for: " + combined);
+                }
+            } else {
+                log.debug("pull: no document found for: " + combined + " : "
+                        + response.getType());
+            }
         } catch (ClassCastException cce) {
             log.error("Not a valid feed: " + combined, cce);
         } catch (Exception e) {

@@ -646,13 +646,14 @@ public class Common {
         Attributes result = null;
         Class<Common> clazz = Common.class;
         String className = clazz.getSimpleName() + ".class";
-        String classPath = clazz.getResource(className).toString();
-        if (!classPath.startsWith("jar")) {
+        URL classPath = clazz.getResource(className);
+        if (classPath == null || !classPath.toString().startsWith("jar")) {
             // Class not from JAR
             return null;
         }
-        String manifestPath = classPath.substring(0,
-                classPath.lastIndexOf("!") + 1) + "/META-INF/MANIFEST.MF";
+        String classPathString = classPath.toString();
+        String manifestPath = classPathString.substring(0,
+                classPathString.lastIndexOf("!") + 1) + "/META-INF/MANIFEST.MF";
         try {
             Manifest manifest = new Manifest(new URL(manifestPath).openStream());
             result = manifest.getMainAttributes();
@@ -723,7 +724,6 @@ public class Common {
      * guarantee either.
      */
     public static void enableAnonymousSSL() {
-
         TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
             public java.security.cert.X509Certificate[] getAcceptedIssuers() {
                 return null;
@@ -757,13 +757,13 @@ public class Common {
                 return true;
             }
         };
+
         // Install the all-trusting host verifier
         HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
 
-        // install the protocol handler
+        // For apache http client
         Protocol anonhttps = new Protocol("https",
-                (ProtocolSocketFactory) new AnonymSSLSocketFactory(), 443);
-        Protocol.registerProtocol("https", anonhttps);
+                (ProtocolSocketFactory) new AnonymSSLSocketFactory(), 443); //
+        Protocol.registerProtocol("https", anonhttps);        
     }
-
 }
