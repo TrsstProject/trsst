@@ -536,7 +536,7 @@ article .renderer:empty:before {
 }
 
 .entry .title a {
-	color: #f16312;
+	color: #FF8A49;
 }
 .feed .title a {
     /* don't highlight followed feed titles */
@@ -804,6 +804,9 @@ div.own .feed-title:before {
 	display: inherit;
 }
 
+.entry .mentions {
+	margin-top: 4px;
+}
 .entry .mentions>a {
 	left: 0px;
 	display: inline-block;
@@ -818,7 +821,7 @@ div.own .feed-title:before {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	max-width: 80%
+	max-width: 25%
 }
 .entry.verb-follow .mentions {
 	display:none;
@@ -1643,8 +1646,7 @@ body .footer-container .wrapper {
 	top: 5px;
 	left: 24px;
 	bottom: 5px;
-	right: 4px;
-	right:67%;
+	right: 55%;
 	background-color: #fff;
 	border-radius: 20px;
 }
@@ -1672,7 +1674,7 @@ body .footer-container .wrapper {
 	height: 20px;
 	background-size: 20px;
 	left: -24px;
-	top: 3px;
+	top: 2px;
 	background-image: url('/icon-rss.png');
 }
 
@@ -1702,7 +1704,8 @@ body .footer-container .wrapper {
 	content: ' ';
 	width: 28px;
 	height: 28px;
-	right: 50%;
+	left: 50%;
+	margin-left: -14px;
 	top: 4px;
 	background-image: url('/loading-on-gray.gif');
 	background-size: 28px 28px;
@@ -1916,6 +1919,7 @@ body.page-entry .entry {
 	padding-bottom: 48px;
 	padding-left: 108px;
 	padding-right: 48px;
+	border-radius: 8px;
 }
 
 body.page-entry .entry .icon {
@@ -1928,6 +1932,7 @@ body.page-entry .entry .feed-title {
 	font-size: 24px;
 	line-height: 28px;
 	margin-left: 80px;
+	min-height: 28px;
 }
 body.page-entry .entry .feed-id {
 	display: block;
@@ -2005,17 +2010,6 @@ body.page-entry article {
 	margin-left: -250px;
 }
 
-.util-search {
-	/* take full footer */
-	right: 0px;
-}
-.util-browser-launcher {
-	display: none;
-}
-.pending .footer-container:after {
-	display: none;
-}
-
 }
 
 /* @group iPhone/Android/Mobile */
@@ -2051,14 +2045,38 @@ aside #profileRenderer div.feed {
 aside .private.messaging {
 	display: none !important;
 }
-
+.menu {
+	height: 64px;
+	overflow: hidden;
+	border-radius: 4px;
+	padding-right: 16px;
+	padding-left: 16px;
+	margin-right:-16px;
+	-webkit-user-select: none;	
+}
 .menu-item {
 	padding-left: 0px;
-	padding-right: 0px;
+	padding: 0xp 16px;
+	margin-left:-16px;
+	margin-right:-32px;
+	padding-left:16px;
 }
 body.page-entry .entry {
 	margin-top: -12px;
 }
+
+.util-search {
+	/* take full footer */
+	right: 0px;
+}
+.util-browser-launcher {
+	display: none;
+}
+.pending .footer-container:after {
+	display: none;
+}
+
+
 }
 
 /* @end */
