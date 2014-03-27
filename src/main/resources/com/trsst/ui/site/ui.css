@@ -291,7 +291,8 @@ body aside {
 .footer-container,
 .main aside .feed {
     background: #444;
-	opacity: 0.95;
+	
+    opacity: 0.95;
 }
 
 .header-container a {
@@ -1633,54 +1634,67 @@ body .footer-container footer {
 
 body .footer-container .wrapper {
 	position: relative;
+	height: 100%;
 }
 
 .util-search {
+	position:absolute;
 	display: block;
-	float: left;
-	top: 0px;
-	width: 33%;
+	top: 5px;
+	left: 24px;
+	bottom: 5px;
+	right: 4px;
+	right:67%;
+	background-color: #fff;
+	border-radius: 20px;
 }
 
-.footer-container input {
+.util-search input {
+	position: absolute;
 	font-size: 100%;
 	padding: 4px;
-	margin: 4px;
 	border: none;
 	border-radius: 2px;
-	width: 100%;
+	left: 8px;
+	width: 90%;
+	top:0px;
+	bottom:0px;
+	background-color: rgba(255,255,255,0);
 }
-.footer-container .util-search input:before {
+.util-search input:valid {
+	background-color: #fff;
+}
+
+.util-search:before {
 	position: absolute;
 	content: ' ';
 	width: 20px;
 	height: 20px;
 	background-size: 20px;
-	left: -19px;
-	top: 6px;
+	left: -24px;
+	top: 3px;
 	background-image: url('/icon-rss.png');
 }
-.footer-container .util-search input:after {
+
+.util-search form:before {
 	content: 'Search';
 	color: #888;
 	position: absolute;
-	font-height: 20px;
-	top: 8px;
+	line-height: 20px;
+	left: 12px;
+	bottom: 2px;
 }
-.page-self .footer-container .util-search input:after {
+.page-self .util-search form:before {
 	content: 'Search your feed';
 }
-.page-feed .footer-container .util-search input:after {
+.page-feed .util-search form:before {
 	content: 'Search this feed';
 }
-.page-home .footer-container .util-search input:after {
+.page-home .util-search form:before {
 	content: 'Find feeds and entries';
 }
-.page-query .footer-container .util-search input:after {
+.page-query .util-search form:before {
 	content: 'Search again';
-}
-.footer-container .util-search input:valid:after {
-	content: ' ';
 }
 
 .footer-container:after {
@@ -1989,6 +2003,17 @@ body.page-entry article {
 	width: 490px;
 	left: 50%;
 	margin-left: -250px;
+}
+
+.util-search {
+	/* take full footer */
+	right: 0px;
+}
+.util-browser-launcher {
+	display: none;
+}
+.pending .footer-container:after {
+	display: none;
 }
 
 }

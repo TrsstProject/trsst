@@ -1171,7 +1171,7 @@
 		var host = window.location.host;
 		var path = window.location.toString();
 		var pathname = window.location.pathname;
-
+		
 		/* Enable "Open in Browser" */
 		$(".util-browser-launcher a").attr("target", "_blank").attr("href", path);
 
@@ -1228,6 +1228,8 @@
 				}
 
 			} else {
+				/* Start progress indicator */
+				$("body").addClass("pending");
 
 				// we're on a feed page
 				$("body").removeClass("page-home");
