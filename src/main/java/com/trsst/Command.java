@@ -327,14 +327,14 @@ public class Command {
 
         o = new Option("i", "Set as this feed's icon or specify url");
         o.setRequired(false);
-        o.setOptionalArg(true);
+        o.setArgs(1);
         o.setArgName("url");
         o.setLongOpt("icon");
         postOptions.addOption(o);
 
         o = new Option("l", "Set as this feed's logo or specify url");
         o.setRequired(false);
-        o.setOptionalArg(true);
+        o.setArgs(1);
         o.setArgName("url");
         o.setLongOpt("logo");
         postOptions.addOption(o);
