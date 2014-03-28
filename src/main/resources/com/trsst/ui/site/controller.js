@@ -1201,6 +1201,7 @@
 				$("body").removeClass("page-query");
 				$("body").removeClass("page-feed");
 				$("body").removeClass("page-external");
+				$("body").removeClass("page-self");
 				$("body").addClass("page-entry");
 				if (uid && uid.indexOf(path) !== -1) {
 					$("body").addClass("page-self");
@@ -1235,6 +1236,7 @@
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-query");
 				$("body").removeClass("page-entry");
+				$("body").removeClass("page-self");
 				$("body").addClass("page-feed");
 				if (uid && uid.indexOf(path) !== -1) {
 					$("body").addClass("page-self");
