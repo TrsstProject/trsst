@@ -1709,8 +1709,11 @@ body .footer-container .wrapper {
 	top: 4px;
 	background-image: url('/loading-on-gray.gif');
 	background-size: 28px 28px;
-	-webkit-transition: opacity .5s ease-in-out .5s;
 	opacity: 0;
+	
+	/* causes problems on jfx webkit: looks great otherwise */
+	x-webkit-transition: opacity .5s ease-in-out .5s;
+	
 }
 .pending .footer-container:after {
 	opacity: 1;
