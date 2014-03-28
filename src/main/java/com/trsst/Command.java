@@ -789,7 +789,6 @@ public class Command {
                 }
                 System.err.println("Started: " + new Date());
                 System.err.println("^C to exit");
-                vanity = "1" + vanity;
             }
             do {
                 signingKeys = Common.generateSigningKeyPair();
