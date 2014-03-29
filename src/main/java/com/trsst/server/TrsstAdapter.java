@@ -493,8 +493,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         try {
             Feed result = currentFeed(request);
             fetchEntriesFromStorage(request, result);
-            return ProviderHelper.returnBase(result, 200, result.getUpdated())
-                    .setEntityTag(ProviderHelper.calculateEntityTag(result));
+            return ProviderHelper.returnBase(result, 200, result.getUpdated());
+            //FIXME: Abdera's etag creator doesn't create valid etags
+                    //.setEntityTag(ProviderHelper.calculateEntityTag(result));
         } catch (IllegalArgumentException e) {
             log.debug("Bad request: " + feedId, e);
             return ProviderHelper.badrequest(request, e.getMessage());
@@ -529,8 +530,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             } else {
                 return ProviderHelper.notfound(request);
             }
-            return ProviderHelper.returnBase(result, 200, result.getUpdated())
-                    .setEntityTag(ProviderHelper.calculateEntityTag(result));
+            return ProviderHelper.returnBase(result, 200, result.getUpdated());
+                    //FIXME: Abdera's etag creator doesn't create valid etags
+                    //.setEntityTag(ProviderHelper.calculateEntityTag(result));
         } catch (FileNotFoundException e) {
             log.debug("Could not find feed: " + feedId, e);
             return ProviderHelper.notfound(request);
@@ -980,6 +982,20 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 // convert existing entry id to a trsst timestamp-based id
                 Entry converted = Abdera.getInstance().newEntry();
                 Date updated = entry.getUpdated();
+                if (updated == null) {
+                    updated = entry.getPublished();
+                    if (updated == null) {
+                        // fall back on dc:date
+                        Element dcDate = entry.getExtension(new QName(
+                                "http://purl.org/dc/elements/1.1/", "date"));
+                        try {
+                            updated = new AtomDate(dcDate.getText()).getDate();
+                        } catch (Throwable t) {
+                            log.warn("Could not parse date for feed: " + dcDate
+                                    + " : " + feed.getId());
+                        }
+                    }
+                }
                 long timestamp = updated.getTime();
                 if (mostRecent == null || mostRecent.before(updated)) {
                     mostRecent = updated;
@@ -1563,8 +1579,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             ClientResponse response = client.post(hostUrl,
                     new ByteArrayInputStream(requestData), new RequestOptions()
                             .setContentType(request.getContentType()));
-            System.out.println("Response: " + response.getStatus()
-                    + " : " + response.getStatusText());
+            System.out.println("Response: " + response.getStatus() + " : "
+                    + response.getStatusText());
 
             // HttpURLConnection connection = (HttpURLConnection) url
             // .openConnection();
@@ -1579,8 +1595,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             // output.flush();
             // output.close();
             // connection.disconnect();
-//            System.out.println("Response: " + connection.getResponseCode()
-//                    + " : " + connection.getResponseMessage());
+            // System.out.println("Response: " + connection.getResponseCode()
+            // + " : " + connection.getResponseMessage());
             log.debug("Forwarded to: " + hostUrl);
         } catch (IOException ioe) {
             log.warn("Connection error while connecting to: " + hostUrl, ioe);
@@ -1688,31 +1704,33 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         try {
             URL url = new URL(serviceUrl + "/"
                     + Common.toFeedIdString(feed.getId()));
-            
+
             AbderaClient client = new AbderaClient(Abdera.getInstance(),
                     Common.getBuildString());
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             feed.writeTo(output);
-            ClientResponse response = client.post(url.toString(),
-                    new ByteArrayInputStream(output.toByteArray()), new RequestOptions()
-                            .setContentType("application/atom+xml; type=feed; charset=utf-8"));
-            System.out.println("Response: " + response.getStatus()
-                    + " : " + response.getStatusText());
-//            HttpURLConnection connection = (HttpURLConnection) url
-//                    .openConnection();
-//            connection.setRequestMethod("POST");
-//            connection.setRequestProperty("Content-Type",
-//                    "application/atom+xml; type=feed; charset=utf-8");
-//            connection.setDoInput(true);
-//            connection.setDoOutput(true);
-//            connection.connect();
-//            OutputStream output = connection.getOutputStream();
-//            feed.writeTo(output);
-//            output.flush();
-//            output.close();
-//            connection.disconnect();
-//            System.out.println("Response: " + connection.getResponseCode()
-//                    + " : " + connection.getResponseMessage());
+            ClientResponse response = client
+                    .post(url.toString(),
+                            new ByteArrayInputStream(output.toByteArray()),
+                            new RequestOptions()
+                                    .setContentType("application/atom+xml; type=feed; charset=utf-8"));
+            System.out.println("Response: " + response.getStatus() + " : "
+                    + response.getStatusText());
+            // HttpURLConnection connection = (HttpURLConnection) url
+            // .openConnection();
+            // connection.setRequestMethod("POST");
+            // connection.setRequestProperty("Content-Type",
+            // "application/atom+xml; type=feed; charset=utf-8");
+            // connection.setDoInput(true);
+            // connection.setDoOutput(true);
+            // connection.connect();
+            // OutputStream output = connection.getOutputStream();
+            // feed.writeTo(output);
+            // output.flush();
+            // output.close();
+            // connection.disconnect();
+            // System.out.println("Response: " + connection.getResponseCode()
+            // + " : " + connection.getResponseMessage());
             log.debug("Pushed: " + feed.getId() + " : " + serviceUrl);
             return true;
         } catch (MalformedURLException e) {
