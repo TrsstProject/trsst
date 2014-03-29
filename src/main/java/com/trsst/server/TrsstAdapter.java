@@ -494,8 +494,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             Feed result = currentFeed(request);
             fetchEntriesFromStorage(request, result);
             return ProviderHelper.returnBase(result, 200, result.getUpdated());
-            //FIXME: Abdera's etag creator doesn't create valid etags
-                    //.setEntityTag(ProviderHelper.calculateEntityTag(result));
+            // FIXME: Abdera's etag creator doesn't create valid etags
+            // .setEntityTag(ProviderHelper.calculateEntityTag(result));
         } catch (IllegalArgumentException e) {
             log.debug("Bad request: " + feedId, e);
             return ProviderHelper.badrequest(request, e.getMessage());
@@ -531,8 +531,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 return ProviderHelper.notfound(request);
             }
             return ProviderHelper.returnBase(result, 200, result.getUpdated());
-                    //FIXME: Abdera's etag creator doesn't create valid etags
-                    //.setEntityTag(ProviderHelper.calculateEntityTag(result));
+            // FIXME: Abdera's etag creator doesn't create valid etags
+            // .setEntityTag(ProviderHelper.calculateEntityTag(result));
         } catch (FileNotFoundException e) {
             log.debug("Could not find feed: " + feedId, e);
             return ProviderHelper.notfound(request);
@@ -1579,24 +1579,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             ClientResponse response = client.post(hostUrl,
                     new ByteArrayInputStream(requestData), new RequestOptions()
                             .setContentType(request.getContentType()));
-            System.out.println("Response: " + response.getStatus() + " : "
+            log.debug("Response: " + response.getStatus() + " : "
                     + response.getStatusText());
 
-            // HttpURLConnection connection = (HttpURLConnection) url
-            // .openConnection();
-            // connection.setRequestMethod("POST");
-            // connection.setRequestProperty("Content-Type", request
-            // .getContentType().toString());
-            // connection.setDoInput(true);
-            // connection.setDoOutput(true);
-            // connection.connect();
-            // OutputStream output = connection.getOutputStream();
-            // output.write(requestData);
-            // output.flush();
-            // output.close();
-            // connection.disconnect();
-            // System.out.println("Response: " + connection.getResponseCode()
-            // + " : " + connection.getResponseMessage());
             log.debug("Forwarded to: " + hostUrl);
         } catch (IOException ioe) {
             log.warn("Connection error while connecting to: " + hostUrl, ioe);
@@ -1714,23 +1699,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                             new ByteArrayInputStream(output.toByteArray()),
                             new RequestOptions()
                                     .setContentType("application/atom+xml; type=feed; charset=utf-8"));
-            System.out.println("Response: " + response.getStatus() + " : "
+            log.debug("Response: " + response.getStatus() + " : "
                     + response.getStatusText());
-            // HttpURLConnection connection = (HttpURLConnection) url
-            // .openConnection();
-            // connection.setRequestMethod("POST");
-            // connection.setRequestProperty("Content-Type",
-            // "application/atom+xml; type=feed; charset=utf-8");
-            // connection.setDoInput(true);
-            // connection.setDoOutput(true);
-            // connection.connect();
-            // OutputStream output = connection.getOutputStream();
-            // feed.writeTo(output);
-            // output.flush();
-            // output.close();
-            // connection.disconnect();
-            // System.out.println("Response: " + connection.getResponseCode()
-            // + " : " + connection.getResponseMessage());
             log.debug("Pushed: " + feed.getId() + " : " + serviceUrl);
             return true;
         } catch (MalformedURLException e) {
