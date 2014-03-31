@@ -477,11 +477,16 @@
 					// console.log(this);
 				}
 			} else if (verb === "reply") {
-				// get last mention:
+				// get last entry mention:
 				// this is the nearest parent in a tree of comments
-				var ref = entryXml.find("category[scheme='urn:com.trsst.mention']").last().attr("term");
-				// FIXME: need to modify to find last mentioned entry instead of
-				// last mention
+				var ref;
+				var term;
+				entryXml.find("category[scheme='urn:com.trsst.mention']").each(function() {
+					term = $(this).attr("term");
+					if ( term && term.indexOf("urn:entry") === 0 ) {
+						ref = term;
+					}
+				});
 				if (ref) {
 					model.pull({
 						feedId : model.feedIdFromEntryUrn(ref) + '/' + model.entryIdFromEntryUrn(ref),
