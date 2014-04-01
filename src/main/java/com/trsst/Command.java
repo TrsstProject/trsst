@@ -30,6 +30,7 @@ import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Security;
 import java.security.SignatureException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
@@ -46,7 +47,12 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.tika.Tika;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.silvertunnel_ng.netlib.adapter.java.JvmGlobalUtil;
+import org.silvertunnel_ng.netlib.api.NetFactory;
+import org.silvertunnel_ng.netlib.api.NetLayer;
+import org.silvertunnel_ng.netlib.api.NetLayerIDs;
 
 import com.trsst.client.Client;
 import com.trsst.client.EntryOptions;
@@ -130,6 +136,30 @@ public class Command {
             }
         }
 
+        // experimental tor support
+        boolean wantsTor = false;
+        for ( String s : argv ) {
+            if ( "--tor".equals(s) ) {
+                wantsTor = true;
+            }
+        }
+        if (wantsTor && !HAS_TOR) {
+            try {
+                log.info("Attempting to connect to tor network...");
+                Security.addProvider(new BouncyCastleProvider());
+                JvmGlobalUtil.init();
+                NetLayer netLayer = NetFactory.getInstance().getNetLayerById(
+                        NetLayerIDs.TOR);
+                JvmGlobalUtil.setNetLayerAndNetAddressNameService(netLayer,
+                        true);
+                log.info("Connected to tor network");
+                HAS_TOR = true;
+            } catch (Throwable t) {
+                log.error("Could not connect to tor: exiting", t);
+                System.exit(1);
+            }
+        }
+
         // if unspecified, default relay to home.trsst.com
         if (System.getProperty("com.trsst.server.relays") == null) {
             System.setProperty("com.trsst.server.relays",
@@ -155,7 +185,7 @@ public class Command {
         int result;
         try {
             if (console == null && argv.length == 0) {
-                argv = new String[] { "port", "--gui" };
+                argv = new String[] { "serve", "--gui" };
             }
             result = new Command().doBegin(argv, System.out, System.in);
 
@@ -181,6 +211,7 @@ public class Command {
     private Options postOptions;
     private Option helpOption;
     private boolean format = false;
+    private static boolean HAS_TOR = false;
 
     @SuppressWarnings("static-access")
     private void buildOptions(String[] argv, PrintStream out, InputStream in) {
@@ -191,7 +222,13 @@ public class Command {
 
         portOptions = new Options();
 
-        o = new Option(null, "Expose REST API");
+        o = new Option(null, "Specify port");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setLongOpt("port");
+        portOptions.addOption(o);
+
+        o = new Option(null, "Expose client API");
         o.setRequired(false);
         o.setArgs(0);
         o.setLongOpt("api");
@@ -207,6 +244,12 @@ public class Command {
         o.setRequired(false);
         o.setArgs(0);
         o.setLongOpt("clear");
+        portOptions.addOption(o);
+
+        o = new Option(null, "Use TOR (experimental)");
+        o.setRequired(false);
+        o.setArgs(0);
+        o.setLongOpt("tor");
         portOptions.addOption(o);
 
         pullOptions = new Options();
@@ -409,9 +452,9 @@ public class Command {
             String mode = arguments.removeFirst().toString();
 
             // for port requests
-            if ("port".equals(mode)) {
+            if ("serve".equals(mode)) {
                 // start a server and exit
-                result = doPort(commands, arguments);
+                result = doServe(commands, arguments);
                 return 0;
             }
 
@@ -607,15 +650,15 @@ public class Command {
         return 0; // "OK"
     }
 
-    public int doPort(CommandLine commands, LinkedList<String> arguments) {
+    public int doServe(CommandLine commands, LinkedList<String> arguments) {
 
         boolean apiOption = commands.hasOption("api");
         boolean guiOption = commands.hasOption("gui");
         boolean clearOption = commands.hasOption("clear");
         int portOption = 0; // default to random port
 
-        if (arguments.size() > 0) {
-            String portString = arguments.removeFirst().toString();
+        if (commands.hasOption("port")) {
+            String portString = commands.getOptionValue("port");
             try {
                 portOption = Integer.parseInt(portString);
             } catch (NumberFormatException t) {
@@ -758,10 +801,10 @@ public class Command {
             }
 
             // create new account
-            if ( base == null ) {
+            if (base == null) {
                 // default to trsst hub
                 base = "https://home.trsst.com/feed";
-            }            
+            }
 
             // generate vanity id if required
             if (vanity != null) {
@@ -992,7 +1035,7 @@ public class Command {
     private void printPortUsage() {
         HelpFormatter formatter = new HelpFormatter();
         formatter.setSyntaxPrefix("");
-        formatter.printHelp("port [<portnumber>]", portOptions);
+        formatter.printHelp("serve ", portOptions);
     }
 
     private void printPostUsage() {
