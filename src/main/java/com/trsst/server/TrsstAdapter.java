@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.servlet.http.HttpUtils;
 import javax.xml.crypto.dsig.XMLSignatureException;
 import javax.xml.namespace.QName;
 
@@ -76,8 +77,6 @@ import org.apache.abdera.util.EntityTag;
 import org.apache.abdera.util.MimeTypeHelper;
 import org.apache.abdera.writer.StreamWriter;
 import org.apache.commons.codec.binary.Base64;
-import org.eclipse.jetty.util.MultiMap;
-import org.eclipse.jetty.util.UrlEncoded;
 
 import com.trsst.Common;
 
@@ -97,14 +96,15 @@ import com.trsst.Common;
  * @author mpowers
  */
 
+@SuppressWarnings("deprecation")
 public class TrsstAdapter extends AbstractMultipartAdapter {
 
     private final static Template paging_template = new Template(
             "{collection}?{-join|&|q,verb,mention,tag,before,after,count,page}");
 
-    String feedId;
-    Storage persistence;
-    Map<String, String> accepts;
+    protected String feedId;
+    protected Storage persistence;
+    protected Map<String, String> accepts;
 
     /**
      * Callers may serve multiple request for the same feed id to the same
@@ -737,6 +737,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         entries.addAll(feed.getEntries()); // make a copy
         for (Entry entry : feed.getEntries()) {
             if (!signature.verify(entry, options)) {
+                //FIXME: this triggers for delete entries
                 log.warn("Could not verify signature for entry with id: "
                         + feed.getId());
                 throw new XMLSignatureException(
@@ -1280,38 +1281,29 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }.setStatus(200).setContentType(Constants.CAT_MEDIA_TYPE);
     }
 
+    @SuppressWarnings({ "rawtypes" })
     protected void fetchEntriesFromStorage(RequestContext context, Feed feed)
             throws FileNotFoundException, IOException {
         // NOTE: occasionally (<1%) jetty and/or abdera give us a servlet
         // request that has a valid query string but returns no parameters;
         // we now just parse the query manually every time just to be safe
-        MultiMap<String> params = new MultiMap<String>();
+        Hashtable params = new Hashtable();
         String uri = context.getUri().toString();
         int i = uri.indexOf('?');
         if (i != -1) {
-            UrlEncoded.decodeTo(uri.substring(i + 1), params, "UTF-8", 255);
+            params = HttpUtils.parseQueryString(uri.substring(i + 1));
         }
         // System.out.println("fetchEntriesFromStorage: " + params + " : " +
         // uri);
 
-        String searchTerms = params.getString("q");
+        String searchTerms = params.get("q") == null ? null : ((String[]) params.get("q"))[0];
         Date beginDate = null;
 
-        String verb = params.getString("verb");
+        String verb = params.get("verb") == null ? null : ((String[]) params.get("verb"))[0];
 
-        String[] mentions = null;
-        List<String> mentionList = params.getValues("mention");
-        if (mentionList != null) {
-            mentions = mentionList.toArray(new String[0]);
-        }
-
-        String[] tags = null;
-        List<String> tagList = params.getValues("tag");
-        if (tagList != null) {
-            tags = tagList.toArray(new String[0]);
-        }
-
-        String after = params.getString("after");
+        String[] mentions = (String[]) params.get("mention");
+        String[] tags = (String[]) params.get("tag");
+        String after = params.get("after") == null ? null : ((String[]) params.get("after"))[0];
         if (after != null) {
             try {
                 // try to parse an entry id timestamp
@@ -1333,7 +1325,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         }
         Date endDate = null;
-        String before = params.getString("before");
+        String before = params.get("before") == null ? null : ((String[]) params.get("before"))[0];
         if (before != null) {
             try {
                 // try to parse an entry id timestamp
@@ -1356,7 +1348,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // note: "default" to getPageSize was actually max page size
         int length = ProviderHelper.getPageSize(context, "count", 99);
-        String _count = params.getString("count");
+        String _count = params.get("count") == null ? null : ((String[]) params.get("count"))[0];
         if (_count == null) {
             if (context.getUri().toString().indexOf("count=") != -1) {
                 // BUG in abdera?
@@ -1365,7 +1357,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
         }
         // int offset = ProviderHelper.getOffset(context, "page", length);
-        String _page = params.getString("page");
+        String _page = params.get("page") == null ? null : ((String[]) params.get("page"))[0];
         int page = (_page != null) ? Integer.parseInt(_page) : 0;
         int begin = page * length;
         int total = 0;
