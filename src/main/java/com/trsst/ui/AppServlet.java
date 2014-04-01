@@ -153,8 +153,8 @@ public class AppServlet extends HttpServlet {
                                 // process regular form field
                                 String name = item.getFieldName();
                                 String value = item.getString().trim();
-//                                 System.out.println("AppServlet: " + name
-//                                 + " : " + value);
+                                // System.out.println("AppServlet: " + name
+                                // + " : " + value);
                                 if (value.length() > 0) {
                                     // FLAG: don't allow "home" (server-abuse)
                                     // FLAG: don't allow "attach" (file-system
@@ -206,6 +206,11 @@ public class AppServlet extends HttpServlet {
                     args.add("--attach");
                 }
                 // System.out.println(args);
+
+                // make sure we don't create another local server
+                args.add("--host");
+                args.add(request.getScheme() + "://" + request.getServerName()
+                        + ":" + request.getServerPort() + "/feed");
 
                 PrintStream outStream = new PrintStream(
                         response.getOutputStream());

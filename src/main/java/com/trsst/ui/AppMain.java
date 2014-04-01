@@ -161,13 +161,13 @@ public class AppMain extends javafx.application.Application {
             log.warn("Could not start osx events: " + t.getMessage());
         }
     }
-
+    
     public void openURI(URI uri) {
-        log.info("openURI: got this far 1: " + uri);
+//        log.info("openURI: got this far 1: " + uri);
         // mac feed urls use a feed:// protocol; convert to http
         String url = uri.toString().replace("feed://", "http://");
         final String script = "controller.pushState('/" + url + "');";
-        log.info("openURI: got this far 2: " + uri);
+//        log.info("openURI: got this far 2: " + uri);
         Platform.runLater(new Runnable() {
             public void run() {
                 try {
@@ -175,7 +175,7 @@ public class AppMain extends javafx.application.Application {
                 } catch (Throwable t) {
                     log.error("Unexpected error: ", t);
                 }
-                log.info("openURI: got this far 3: " + script);
+//                log.info("openURI: got this far 3: " + script);
             }
         });
     }

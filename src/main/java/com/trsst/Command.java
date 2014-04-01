@@ -141,6 +141,7 @@ public class Command {
         for ( String s : argv ) {
             if ( "--tor".equals(s) ) {
                 wantsTor = true;
+                break;
             }
         }
         if (wantsTor && !HAS_TOR) {
@@ -448,7 +449,7 @@ public class Command {
             } else {
                 System.err.println("Requiring signed SSL");
             }
-
+            //System.out.println("Commands: " + arguments );
             String mode = arguments.removeFirst().toString();
 
             // for port requests
