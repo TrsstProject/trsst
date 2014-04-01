@@ -214,7 +214,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
      *            a hint for implementors
      * @return a Storage for the specified feed id
      */
-    Storage getStorage() {
+    protected Storage getStorage() {
         if (sharedStorage == null) {
             try {
                 Storage clientStorage = new FileStorage(Common.getClientRoot());
@@ -259,8 +259,15 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
                     if (i != -1) {
                         host = host.substring(0, i);
                         i = host.lastIndexOf('.');
-                        if (i == -1) {
+                        if (i != -1) {
                             feedId = host.substring(0, i);
+                            try {
+                                Integer.parseInt(feedId);
+                                // it's a numeric address, not a name.
+                                feedId = null;
+                            } catch (NumberFormatException nfe) {
+                                // it's a hostname; continue.
+                            }
                         }
                     }
                 }
