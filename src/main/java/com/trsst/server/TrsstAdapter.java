@@ -21,8 +21,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.security.PublicKey;
 import java.util.Collections;
 import java.util.Date;
@@ -246,8 +248,9 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // if relay peer count is less than search limit
         List<String> relays = wrapper.getParameters("relay");
+        URL relayPeer = null;
         if (relays == null || relays.size() <= limit) {
-            URL relayPeer = getRelayPeer(relays);
+            relayPeer = getRelayPeer(relays);
             if (relayPeer != null) {
                 log.debug("Using relay peer: " + relayPeer);
                 result = pullFromServiceUrl(request, relayPeer);
@@ -267,27 +270,36 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // if we got a result
         if (result != null) {
-            try {
-                if (Common.isExternalId(feedId)) {
-                    // convert from rss if needed
-                    if (result.getClass().getName().indexOf("RssFeed") != -1) {
-                        result = convertFromRSS(feedId, result);
-                    }
-                    if (result != null) {
-                        // process and persist external feed
-                        ingestExternalFeed(feedId, result, 25);
-                        // no more than default page size
-                    }
-                } else {
-                    // ingest the native feed
-                    ingestFeed(persistence, result);
-                }
-            } catch (Throwable t) {
-                log.error("Could not ingest feed: " + feedId, t);
-            }
+            ingestFromRelay(persistence, result, relayPeer, relays);
         }
 
         return result;
+    }
+
+    protected void ingestFromRelay(Storage storage, Feed feed, URL relayPeer,
+            List<String> relays) {
+        String feedIdentifier = feed.getId().toString();
+        try {
+            if (Common.isExternalId(feedIdentifier)) {
+                // convert from rss if needed
+                if (feed.getClass().getName().indexOf("RssFeed") != -1) {
+                    feed = convertFromRSS(feedIdentifier, feed);
+                }
+                if (feed != null) {
+                    // process and persist external feed
+                    ingestExternalFeed(feedIdentifier, feed, 25);
+                }
+            } else if (Common.isAggregateId(feedIdentifier)
+                    && relayPeer != null) {
+                // if it's an aggregate feed fetched from a relay
+                ingestAggregateFeed(storage, feed, relayPeer, relays);
+            } else {
+                // ingest the native feed
+                ingestFeed(storage, feed);
+            }
+        } catch (Throwable t) {
+            log.error("Could not ingest feed: " + feedIdentifier, t);
+        }
     }
 
     /**
@@ -335,7 +347,18 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     /**
      * Return a one-way hash token for the specified relay url.
      */
-    protected String getHashForRelay(String relay) {
+    protected String getLocalRelayId() {
+        if (RELAY_ID == null) {
+            // shared across all instances
+            try {
+                RELAY_ID = Integer.toHexString(InetAddress.getLocalHost()
+                        .hashCode());
+            } catch (UnknownHostException e) {
+                log.error("Could not obtain local IP address: falling back to loopback address");
+                RELAY_ID = Integer.toHexString(InetAddress.getLoopbackAddress()
+                        .hashCode());
+            }
+        }
         // FLAG: hash name for a bit of extra obscurity
         // would this be overkill? #paranoid
         // byte[] hostBytes;
@@ -347,9 +370,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // log.error("Should never happen", e1);
         // hashName = hostName;
         // }
-        return Integer.toHexString(relay.hashCode());
+        return RELAY_ID;
     }
 
+    private static String RELAY_ID;
     private static String[] RELAYS;
 
     /**
@@ -357,38 +381,61 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * return the returned feed.
      */
     private Feed pullFromServiceUrl(RequestContext request, URL serviceUrl) {
-        Feed result = null;
-        log.trace("fetchFromServiceUrl: uri: " + request.getResolvedUri());
-        IRI uri = request.getResolvedUri();
-        String hostName = uri.getHost();
-        String hashName = getHashForRelay(hostName);
-        String queryString = uri.getQuery();
+        String feedIdentifier = request.getTarget().getParameter("collection");
+        String uri = request.getResolvedUri().toString();
+        String path = null;
+        String query = null;
+        if (feedIdentifier == null) {
+            // global query
+            int index = uri.indexOf('?');
+            if (index != -1) {
+                query = uri.substring(index + 1);
+                path = "";
+            } else {
+                log.error("Could not find query in service request: "
+                        + request.getResolvedUri());
+                return null;
+            }
+        } else {
+            // feed query
+            int index = uri.indexOf(feedIdentifier);
+            if (index != -1) {
+                path = uri.substring(index);
+                index = path.indexOf('?');
+                if (index != -1) {
+                    query = path.substring(index + 1);
+                    path = path.substring(0, index);
+                }
+            } else {
+                log.error("Could not find feed id in service request: "
+                        + request.getResolvedUri());
+                return null;
+            }
+        }
+        return pullFromServiceUrl(serviceUrl, path, query);
+    }
+
+    /**
+     * Fetch from the specified trsst service url, validate it, ingest it, and
+     * return the returned feed.
+     */
+    private Feed pullFromServiceUrl(URL serviceUrl, String path,
+            String queryString) {
+        log.trace("pullFromServiceUrl: uri: " + serviceUrl.toString() + " : "
+                + path + " : " + queryString);
         if (queryString == null) {
             queryString = "";
         }
-        if (queryString.indexOf("relay=" + hashName) != -1) {
+        if (queryString.indexOf("relay=" + getLocalRelayId()) != -1) {
             // if we're alerady in the list of relay peers
             log.error("Unexpected relay loopback: ignoring request");
-            return result;
+            return null;
         }
         if (queryString.length() > 0) {
             queryString = queryString + '&';
         }
         // add self as relay
-        queryString = queryString + "relay=" + hashName;
-
-        // calculate target path
-        String base = request.getTargetBasePath();
-        if (base == null || "null".equals(base)) {
-            // workaround: base was sometimes "null" (length=4)
-            base = "";
-        }
-        String path = request.getTargetPath().substring(
-                request.getTargetBasePath().length() + 1);
-        int index = path.indexOf('?');
-        if (index != -1) {
-            path = path.substring(0, index);
-        }
+        queryString = queryString + "relay=" + getLocalRelayId();
 
         return pullFromService(serviceUrl.toString(), path, queryString);
     }
@@ -737,7 +784,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         entries.addAll(feed.getEntries()); // make a copy
         for (Entry entry : feed.getEntries()) {
             if (!signature.verify(entry, options)) {
-                //FIXME: this triggers for delete entries
+                // FIXME: this triggers for delete entries
                 log.warn("Could not verify signature for entry with id: "
                         + feed.getId());
                 throw new XMLSignatureException(
@@ -934,6 +981,51 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
             persistence.updateEntry(feedId, Common.toEntryId(entry.getId()),
                     date, entry.toString());
+        }
+    }
+
+    /**
+     * Aggregate feeds contain signed entries from a number of feeds. To ingest,
+     * we refetch each entry directly with its feed.
+     */
+    protected void ingestAggregateFeed(Storage storage, Feed feed,
+            URL relayUrl, List<String> relays) {
+        Object id;
+        String feedIdentifier;
+        String entryIdentifier;
+        // for each entry
+        for (Entry entry : feed.getEntries()) {
+            id = entry.getId();
+            feedIdentifier = Common.toFeedIdString(id);
+            entryIdentifier = Common.toEntryIdString(id);
+            try {
+                // see if this file already exists locally
+                persistence.readEntry(feedIdentifier,
+                        Common.toEntryId(entryIdentifier));
+                log.info("Entry found: skipping: " + id);
+            } catch (FileNotFoundException e) {
+                log.info("Entry not found: fetching: " + id);
+                // we don't already have it:
+                String queryString = null;
+                if (relays != null) {
+                    // reconstruct the relays parameter
+                    queryString = "";
+                    for (String relay : relays) {
+                        queryString = queryString + "relay=" + relay + '&';
+                    }
+                    queryString = queryString.substring(0,
+                            queryString.length() - 1);
+                }
+                // fetch enclosing feed
+                Feed result = pullFromServiceUrl(relayUrl, feedIdentifier + '/'
+                        + entryIdentifier, queryString);
+                // and ingest
+                if (result != null) {
+                    ingestFromRelay(storage, result, relayUrl, relays);
+                }
+            } catch (IOException ioe) {
+                log.error("Unexpected exception from readEntry", ioe);
+            }
         }
     }
 
@@ -1296,14 +1388,17 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // System.out.println("fetchEntriesFromStorage: " + params + " : " +
         // uri);
 
-        String searchTerms = params.get("q") == null ? null : ((String[]) params.get("q"))[0];
+        String searchTerms = params.get("q") == null ? null
+                : ((String[]) params.get("q"))[0];
         Date beginDate = null;
 
-        String verb = params.get("verb") == null ? null : ((String[]) params.get("verb"))[0];
+        String verb = params.get("verb") == null ? null : ((String[]) params
+                .get("verb"))[0];
 
         String[] mentions = (String[]) params.get("mention");
         String[] tags = (String[]) params.get("tag");
-        String after = params.get("after") == null ? null : ((String[]) params.get("after"))[0];
+        String after = params.get("after") == null ? null : ((String[]) params
+                .get("after"))[0];
         if (after != null) {
             try {
                 // try to parse an entry id timestamp
@@ -1325,7 +1420,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         }
         Date endDate = null;
-        String before = params.get("before") == null ? null : ((String[]) params.get("before"))[0];
+        String before = params.get("before") == null ? null
+                : ((String[]) params.get("before"))[0];
         if (before != null) {
             try {
                 // try to parse an entry id timestamp
@@ -1348,7 +1444,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
         // note: "default" to getPageSize was actually max page size
         int length = ProviderHelper.getPageSize(context, "count", 99);
-        String _count = params.get("count") == null ? null : ((String[]) params.get("count"))[0];
+        String _count = params.get("count") == null ? null : ((String[]) params
+                .get("count"))[0];
         if (_count == null) {
             if (context.getUri().toString().indexOf("count=") != -1) {
                 // BUG in abdera?
@@ -1357,7 +1454,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             }
         }
         // int offset = ProviderHelper.getOffset(context, "page", length);
-        String _page = params.get("page") == null ? null : ((String[]) params.get("page"))[0];
+        String _page = params.get("page") == null ? null : ((String[]) params
+                .get("page"))[0];
         int page = (_page != null) ? Integer.parseInt(_page) : 0;
         int begin = page * length;
         int total = 0;

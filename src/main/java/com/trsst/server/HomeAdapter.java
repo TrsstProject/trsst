@@ -72,6 +72,14 @@ public class HomeAdapter extends TrsstAdapter {
         // default to one month ago in case of zero results 
         feed.setUpdated(new Date(System.currentTimeMillis()-1000*60*60*24*30));
 
+        // if async fetch is allowed
+        if (wrapper.getParameter("sync") == null) {
+            if (feed != null) {
+                // ingest results from relay peers asynchronously
+                pullLaterFromRelay(feedId, request);
+            }
+        }
+        
         // store in request context
         wrapper.setAttribute(Scope.REQUEST, "com.trsst.Feed", feed);
         return feed;
@@ -81,10 +89,10 @@ public class HomeAdapter extends TrsstAdapter {
      * Eliminates paging parameters and sorts remaining query parameters to
      * construct a feed id string of the form "?key=value&key=value"
      * 
-     * @param request
+     * @param requestment
      * @return
      */
-    private String canonicalFeedIdForQuery(RequestContext request) {
+    public static String canonicalFeedIdForQuery(RequestContext request) {
         // collate and sort query parameters
         TreeMap<String, List<String>> map = new TreeMap<String, List<String>>();
         String[] params = request.getParameterNames();
@@ -171,6 +179,6 @@ public class HomeAdapter extends TrsstAdapter {
     }
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory
-            .getLogger(TrsstAdapter.class);
+            .getLogger(HomeAdapter.class);
 
 }

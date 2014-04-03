@@ -279,11 +279,19 @@ public class Common {
         // "external id" a.k.a. URL
         try {
             // test for valid url
+            id = fromFeedUrn(id);
             new URL(decodeURL(id));
             return true;
         } catch (MalformedURLException e) {
             return false;
         }
+    }
+
+    public static boolean isAggregateId(String id) {
+        // "aggregate id" a.k.a. query result:
+        // currently, these start with a '?'.
+        id = fromFeedUrn(id);
+        return (id != null && id.length() > 0 && id.charAt(0) == '?');
     }
 
     /**
@@ -653,7 +661,8 @@ public class Common {
         }
         String classPathString = classPath.toString();
         String manifestPath = classPathString.substring(0,
-                classPathString.lastIndexOf("!") + 1) + "/META-INF/MANIFEST.MF";
+                classPathString.lastIndexOf("!") + 1)
+                + "/META-INF/MANIFEST.MF";
         try {
             Manifest manifest = new Manifest(new URL(manifestPath).openStream());
             result = manifest.getMainAttributes();
@@ -764,6 +773,6 @@ public class Common {
         // For apache http client
         Protocol anonhttps = new Protocol("https",
                 (ProtocolSocketFactory) new AnonymSSLSocketFactory(), 443); //
-        Protocol.registerProtocol("https", anonhttps);        
+        Protocol.registerProtocol("https", anonhttps);
     }
 }
