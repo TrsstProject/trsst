@@ -278,8 +278,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
 
     protected void ingestFromRelay(Storage storage, Feed feed, URL relayPeer,
             List<String> relays) {
-        String feedIdentifier = feed.getId().toString();
         try {
+            String feedIdentifier = Common.fromFeedUrn(feed.getId());
             if (Common.isExternalId(feedIdentifier)) {
                 // convert from rss if needed
                 if (feed.getClass().getName().indexOf("RssFeed") != -1) {
@@ -298,7 +298,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 ingestFeed(storage, feed);
             }
         } catch (Throwable t) {
-            log.error("Could not ingest feed: " + feedIdentifier, t);
+            log.error("Could not ingest feed: " + feed.getId(), t);
         }
     }
 
