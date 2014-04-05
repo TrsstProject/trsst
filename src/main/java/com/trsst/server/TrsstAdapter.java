@@ -784,12 +784,25 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         entries.addAll(feed.getEntries()); // make a copy
         for (Entry entry : feed.getEntries()) {
             if (!signature.verify(entry, options)) {
-                // FIXME: this triggers for delete entries
-                log.warn("Could not verify signature for entry with id: "
-                        + feed.getId());
-                throw new XMLSignatureException(
-                        "Could not verify signature for entry with id: "
-                                + entry.getId() + " : " + feed.getId());
+                // failed validation
+                Element activity = entry
+                        .getExtension(new QName(
+                                "http://activitystrea.ms/spec/1.0/", "verb",
+                                "activity"));
+                // if not a 'deleted' entry
+                if (activity == null || !"deleted".equals(activity.getText())) {
+                    // TODO: should validate that the 'delete' entry that
+                    // this entry mentions is mentioning this entry
+                    log.warn("Could not verify signature for entry with id: "
+                            + feed.getId());
+                    // fail ingest
+                    throw new XMLSignatureException(
+                            "Could not verify signature for entry with id: "
+                                    + entry.getId() + " : " + feed.getId());
+                } else {
+                    log.warn("Skipping signature verification for deleted entry: "
+                            + feed.getId());
+                }
             }
             // remove from feed parent
             entry.discard();
