@@ -256,7 +256,9 @@
 				formData.append("mention", feedId);
 				pushFeed(authenticatedUid, authenticatedPwd, formData, function(feedData) {
 					console.log("Following: " + feedId);
+					authenticatedFollows[feedId] = null; // adds to list
 					model.notify(feedId);
+					model.notify(authenticatedUid);
 				});
 			}
 		}
@@ -280,6 +282,7 @@
 							console.log(results);
 						}
 						model.notify(feedId);
+						model.notify(authenticatedUid);
 					} else {
 						console.log("Could not find follow to delete: " + feedId);
 					}
