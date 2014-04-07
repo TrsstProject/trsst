@@ -540,11 +540,20 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         try {
             Feed result = currentFeed(request);
             fetchEntriesFromStorage(request, result);
-            return ProviderHelper.returnBase(result, 200, result.getUpdated());
-            // FIXME: Abdera's etag creator doesn't create valid etags
-            // .setEntityTag(ProviderHelper.calculateEntityTag(result));
+
+            // validity check:
+            // sometimes abdera is failing to parse its own etags
+            EntityTag etag = ProviderHelper.calculateEntityTag(result);
+            try {
+                EntityTag.parse(etag.toString());
+            } catch (IllegalArgumentException e) {
+                // FIXME: Abdera's etag creator doesn't create valid etags
+                log.error("Bad etag: " + feedId + " : " + etag, e);
+            }
+            return ProviderHelper.returnBase(result, 200, result.getUpdated())
+                    .setEntityTag(etag);
         } catch (IllegalArgumentException e) {
-            log.debug("Bad request: " + feedId, e);
+            log.error("Bad request: " + feedId, e);
             return ProviderHelper.badrequest(request, e.getMessage());
         } catch (FileNotFoundException e) {
             log.debug("Could not find feed: " + feedId, e);
