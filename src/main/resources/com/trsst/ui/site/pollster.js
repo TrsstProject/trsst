@@ -211,15 +211,14 @@
 
 				if (currentTask.lastFetched === 0) {
 					// first time fetch:
-					// fetch again asap
-					currentTask.noFetchBefore = 0;
+					// fetch again after 15 seconds to allow for relays to respond
+					currentTask.noFetchBefore = now + 15 * 1000;
 					console.log("rescheduled: " + currentTask.query.feedId + " : asap");
 				} else {
 					// fetch on a sliding delay
 					diff = Math.max(6, Math.min(diff, Math.floor(Math.pow(diff / 60000, 1 / 3) * 20000)));
 					currentTask.noFetchBefore = now + diff;
-					// schedule fetch for cube root of the number of elapsed
-					// minutes
+					// schedule fetch for cube root of the number of elapsed minutes
 					console.log("rescheduled: " + currentTask.query.feedId + " : " + Math.floor((now - updated) / 1000) + "s : " + Math.floor(diff / 1000 / 60) + "m " + Math.floor((diff / 1000) % 60) + "s");
 				}
 				currentTask.lastUpdate = updated;
