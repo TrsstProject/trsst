@@ -37,6 +37,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpUtils;
 import javax.xml.crypto.dsig.XMLSignatureException;
@@ -280,10 +282,11 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             List<String> relays) {
         try {
             String feedIdentifier = Common.fromFeedUrn(feed.getId());
-            if (Common.isExternalId(feedIdentifier)) {
+            if (feedIdentifier == null || Common.isExternalId(feedIdentifier)) {
                 // convert from rss if needed
                 if (feed.getClass().getName().indexOf("RssFeed") != -1) {
-                    feed = convertFromRSS(feedIdentifier, feed);
+                    // our adapter feed id is the url
+                    feed = convertFromRSS(feed);
                 }
                 if (feed != null) {
                     // process and persist external feed
@@ -1054,7 +1057,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     /**
      * Converts from RSS parser's read-only Feed to a mutable Feed.
      */
-    protected Feed convertFromRSS(String feedId, Feed feed) {
+    protected Feed convertFromRSS(Feed feed) {
         Feed result = Abdera.getInstance().newFeed();
 
         // for our purposes: replace the existing feed id with the URL
@@ -1091,6 +1094,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             result.addLink(link);
         }
 
+        Pattern hashtagsExp = Pattern.compile("([\\#]\\w+)");
         for (Entry entry : feed.getEntries()) {
             try {
 
@@ -1137,6 +1141,14 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 converted.setUpdated(new Date(timestamp));
                 converted.setPublished(entry.getPublished());
                 converted.setTitle(entry.getTitle());
+
+                // let RSS feeds participate in our hashtag conversations
+                Matcher matcher = hashtagsExp.matcher(entry.getTitle());
+                while (matcher.find()) {
+                    // add tag; remove the hash.
+                    converted.addCategory(Common.TAG_URN, matcher.group()
+                            .substring(1), "Tag");
+                }
 
                 // find "link"
                 String linkSrc = null;

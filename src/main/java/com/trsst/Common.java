@@ -226,18 +226,22 @@ public class Common {
     }
 
     public static final String fromFeedUrn(Object feedUrn) {
-        String feedId = feedUrn.toString();
-        if (feedId.startsWith(FEED_URN_PREFIX)) {
-            feedId = feedId.substring(9);
+        if (feedUrn != null) {
+            String feedId = feedUrn.toString();
+            if (feedId.startsWith(FEED_URN_PREFIX)) {
+                feedId = feedId.substring(9);
+            }
+            return feedId;
         }
-        return feedId;
+        return null;
     }
 
     public static final String toFeedUrn(String feedId) {
-        if (!feedId.startsWith(FEED_URN_PREFIX)) {
-            feedId = FEED_URN_PREFIX + feedId;
+        if (feedId != null) {
+            if (!feedId.startsWith(FEED_URN_PREFIX)) {
+                feedId = FEED_URN_PREFIX + feedId;
+            }
         }
-        // return as string to avoid uri try/catch
         return feedId;
     }
 
