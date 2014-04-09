@@ -550,12 +550,21 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             // validity check:
             // sometimes abdera is failing to parse its own etags
             EntityTag etag = ProviderHelper.calculateEntityTag(result);
+            EntityTag[] matches = request.getIfMatch();
+            for (EntityTag match : matches) {
+                if (etag.equals(match)) {
+                    // no change: return 304 Not Modified
+                    return ProviderHelper.notmodified(request);
+                }
+            }
+
             try {
                 EntityTag.parse(etag.toString());
             } catch (IllegalArgumentException e) {
-                // FIXME: Abdera's etag creator doesn't create valid etags
+                // FIXME: Abdera's etag creator sometimes creates invalid etags
                 log.error("Bad etag: " + feedId + " : " + etag, e);
             }
+
             return ProviderHelper.returnBase(result, 200, result.getUpdated())
                     .setEntityTag(etag);
         } catch (IllegalArgumentException e) {
