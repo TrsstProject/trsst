@@ -307,18 +307,28 @@
 
 		});
 
-		// add any (internal) feed mentons last
-		var mention, e;
+		// add any (internal) feed tags/mentions last
+		var address, e;
+		entryData.find("category[scheme='urn:com.trsst.tag']").each(function() {
+			address = $(this).attr("term");
+				if (address.indexOf("http") === -1) {
+					e = $("<a class='address tag'><span></span></a>");
+					e.attr("href", '/?tag=' + address);
+					e.attr("title", address);
+					e.children("span").text('#' + address);
+					$(entryElement).find(".addresses").append(e);
+				}
+		});
 		entryData.find("category[scheme='urn:com.trsst.mention']").each(function() {
-			mention = $(this).attr("term");
-			if (mention && mention.indexOf("urn:feed:") === 0) {
-				mention = mention.substring("urn:feed:".length);
-				if (mention.indexOf("http") === -1) {
-					e = $("<a class='mention'><span></span></a>");
-					e.attr("href", '/' + mention);
-					e.attr("title", mention);
-					e.children("span").text('@' + mention);
-					$(entryElement).find(".mentions").append(e);
+			address = $(this).attr("term");
+			if (address && address.indexOf("urn:feed:") === 0) {
+				address = address.substring("urn:feed:".length);
+				if (address.indexOf("http") === -1) {
+					e = $("<a class='address mention'><span></span></a>");
+					e.attr("href", '/' + address);
+					e.attr("title", address);
+					e.children("span").text('@' + address);
+					$(entryElement).find(".addresses").append(e);
 				}
 			}
 		});
@@ -468,7 +478,7 @@
 					e.children("span").text(src);
 					$(viewElement).append(e);
 				} else if (contentElement.text().trim().length > 0) {
-					e = $("<div class='overlay'><iframe scrolling='no' seamless='seamless' sandbox=''></iframe></div>");
+					e = $("<div class='overlay'><iframe scrolling='no' seamless='seamless' sandbox='' frameBorder='0'></iframe></div>");
 					e.find("iframe").attr("tmpdoc", inlineStyle + contentElement.text());
 					// tmpdoc becomes srcdoc when expanded
 					$(viewElement).append(e);
@@ -476,33 +486,34 @@
 					console.log("Unrecognized content type:" + type);
 					// console.log(this);
 				}
-			} else if (verb === "reply") {
-				// get last entry mention:
-				// this is the nearest parent in a tree of comments
-				var ref;
-				var term;
-				entryXml.find("category[scheme='urn:com.trsst.mention']").each(function() {
-					term = $(this).attr("term");
-					if ( term && term.indexOf("urn:entry") === 0 ) {
-						ref = term;
-					}
-				});
-				if (ref) {
-					model.pull({
-						feedId : model.feedIdFromEntryUrn(ref) + '/' + model.entryIdFromEntryUrn(ref),
-						count : 1
-					}, function(feedData) {
-						if (feedData && feedData.length > 0) {
-							// replying entry appears under mention entry
-							var entryData = $(feedData).children("entry").first();
-							createElementForEntryData(feedData, entryData).prependTo($(viewElement).closest(".entry"));
-						} else {
-							console.log("Could not fetch referenced entry: " + ref);
-						}
-					});
-				} else {
-					console.log("Unexpected mention type for reply: " + ref);
-				}
+//TODO: rethink conversation threading 				
+//			} else if (verb === "reply") {
+//				// get last entry mention:
+//				// this is the nearest parent in a tree of comments
+//				var ref;
+//				var term;
+//				entryXml.find("category[scheme='urn:com.trsst.mention']").each(function() {
+//					term = $(this).attr("term");
+//					if ( term && term.indexOf("urn:entry") === 0 ) {
+//						ref = term;
+//					}
+//				});
+//				if (ref) {
+//					model.pull({
+//						feedId : model.feedIdFromEntryUrn(ref) + '/' + model.entryIdFromEntryUrn(ref),
+//						count : 1
+//					}, function(feedData) {
+//						if (feedData && feedData.length > 0) {
+//							// replying entry appears under mention entry
+//							var entryData = $(feedData).children("entry").first();
+//							createElementForEntryData(feedData, entryData).prependTo($(viewElement).closest(".entry"));
+//						} else {
+//							console.log("Could not fetch referenced entry: " + ref);
+//						}
+//					});
+//				} else {
+//					console.log("Unexpected mention type for reply: " + ref);
+//				}
 			} else if (type) {
 				console.log("Unrecognized content type:" + type);
 				// console.log(this);

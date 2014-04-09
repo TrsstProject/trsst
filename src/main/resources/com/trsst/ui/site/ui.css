@@ -150,6 +150,12 @@ article>.composer:before
 	padding: 16px 16px;
 	padding-top: 18px;
 }
+.page-feed .public.composer:before 
+{
+	content: 'Send a Message';
+}
+
+
 
 article>.composer
 {
@@ -162,15 +168,6 @@ article>.composer
 article>.composer textarea {
 	height: 48px;
 	margin-bottom: 8px;
-}
-
-.public.composer {
-	display: none;	
-}
-.page-home .public.composer,
-.page-self .public.composer 
-{
-	display: inherit;
 }
 
 .private.messaging {
@@ -804,10 +801,10 @@ div.own .feed-title:before {
 	display: inherit;
 }
 
-.entry .mentions {
+.entry .addresses {
 	margin-top: 4px;
 }
-.entry .mentions>a {
+.entry .addresses>a {
 	left: 0px;
 	display: inline-block;
 	padding: 8px 12px;
@@ -823,7 +820,7 @@ div.own .feed-title:before {
 	white-space: nowrap;
 	max-width: 25%
 }
-.entry.verb-follow .mentions {
+.entry.verb-follow .addresses {
 	display:none;
 }
 
@@ -841,7 +838,7 @@ div.own .feed-title:before {
 	padding-left: 42px;
 }
 .entry .content>a span,
-.entry .mentions>a span
+.entry .addresses>a span
 {
 	position: relative;
 	overflow: hidden;
@@ -996,7 +993,7 @@ div.own .feed-title:before {
 .entry.verb-repost>section .feed-title, 
 .entry.verb-follow>section .feed-title 
 {
-	font-size: 90%
+	font-size: 90%;
 }
 .entry.verb-repost>section .title,
 .entry.verb-repost>section .icon,
@@ -1069,11 +1066,11 @@ div.entry.verb-follow>div.feed .subtitle {
 
 /* @group Inline Reply */
 
-.entry.verb-reply  {
+x.entry.verb-reply  {
 margin-top: 0px;
 padding-top: 0px;
 }
-.entry.verb-reply>div.entry {
+x.entry.verb-reply>div.entry {
 	position: relative;
 	left: -80px;
 	width: 100%;
@@ -1081,22 +1078,25 @@ padding-top: 0px;
 	x-border-bottom: none;
 	x-padding-bottom: 0px;
 }
-.entry.verb-reply>section  {
+x.entry.verb-reply>section  {
 	padding-top: 12px;
 	padding-left: 64px;
 	font-size: 85%;
 	position: relative;
 }
-.entry.verb-reply>section .icon {
+x.entry.verb-reply>section .title {
+	line-height: 14px;
+}
+x.entry.verb-reply>section .icon {
 	left: 0px;
 }
-.entry.verb-reply>section .updated {
+x.entry.verb-reply>section .updated {
 	right: -12px;
 }
-.entry.verb-reply>section .feed-title:after {
+x.entry.verb-reply>section .feed-title:after {
 	content: ' commented';
 }
-.entry.verb-reply>section .feed-id {
+x.entry.verb-reply>section .feed-id {
 	display: none;
 }
 
