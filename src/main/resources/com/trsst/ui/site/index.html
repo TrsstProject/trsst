@@ -82,7 +82,8 @@
 		<div class="main wrapper clearfix">
 
 			<aside>
-				<div id="profileRenderer" class="renderer feed-renderer profile-renderer"></div>
+				<div id="profileRenderer"
+					class="renderer feed-renderer profile-renderer"></div>
 				<div class="private messaging">
 					<form class="private composer">
 						<img />
@@ -101,14 +102,23 @@
 					</form>
 					<div id="messageRenderer" class="renderer message-renderer"></div>
 				</div>
-				<div id="followsRenderer" class="renderer feeds-renderer follows-renderer"><div></div></div>
-				<div id="followingRenderer" class="renderer feeds-renderer following-renderer"><div></div></div>
+				<div id="followsRenderer"
+					class="renderer feeds-renderer follows-renderer">
+					<div></div>
+				</div>
+				<div id="followingRenderer"
+					class="renderer feeds-renderer following-renderer">
+					<div></div>
+				</div>
 			</aside>
 
 			<article>
 				<form class="public composer">
 					<img />
 					<textarea name="status" placeholder="Your comments" rows="2"></textarea>
+					<div class="addresses">
+						<span></span>
+					</div>
 					<button class="submit">
 						<span></span>
 					</button>
@@ -135,7 +145,7 @@
 		<footer class="wrapper">
 			<div class="util-search">
 				<form>
-					<input required type="text"/>
+					<input required type="text" />
 				</form>
 			</div>
 			<div class="util-browser-launcher">
@@ -199,7 +209,8 @@
 				</div>
 				<div class="summary">
 					<div class="overlay">
-						<iframe scrolling="no" seamless="seamless" sandbox=""  frameBorder="0"></iframe>
+						<iframe scrolling="no" seamless="seamless" sandbox=""
+							frameBorder="0"></iframe>
 					</div>
 				</div>
 				<div class="updated">

@@ -162,5 +162,37 @@
 			});
 		}
 	};
+	
+	/**
+	 * Clears all tags and mentions from this composer.
+	 */
+	Composer.prototype.clearAddresses = function() {
+		this.form.find(".addresses>span").empty();
+	};
+	
+	/**
+	 * Adds a tag to this composer.
+	 */
+	Composer.prototype.addTag = function(address) {
+		address = address.toString().toLowerCase();
+		var e = $("<a class='address tag'><span></span><input type='hidden' name='tag' value='" + address + "'></a>");
+		e.attr("href", '/?tag=' + address);
+		e.attr("title", address);
+		e.children("span").text('#' + address);
+		this.form.find(".addresses>span").append(e);
+	};
+	
+	/**
+	 * Adds a mention to this composer.
+	 */
+	Composer.prototype.addMention = function(address) {
+		var urn = model.feedUrnFromFeedId(address);
+		var e = $("<a class='address mention'><span></span><input type='hidden' name='mention' value='" + urn + "'></a>");
+		e.attr("href", '/?mention=' + address);
+		e.attr("title", address);
+		e.children("span").text('@' + address);
+		this.form.find(".addresses>span").append(e);
+	};
+	
 
 })(window);

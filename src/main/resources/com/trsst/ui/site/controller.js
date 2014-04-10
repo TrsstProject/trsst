@@ -311,13 +311,13 @@
 		var address, e;
 		entryData.find("category[scheme='urn:com.trsst.tag']").each(function() {
 			address = $(this).attr("term");
-				if (address.indexOf("http") === -1) {
-					e = $("<a class='address tag'><span></span></a>");
-					e.attr("href", '/?tag=' + address);
-					e.attr("title", address);
-					e.children("span").text('#' + address);
-					$(entryElement).find(".addresses").append(e);
-				}
+			if (address.indexOf("http") === -1) {
+				e = $("<a class='address tag'><span></span></a>");
+				e.attr("href", '/?tag=' + address);
+				e.attr("title", address);
+				e.children("span").text('#' + address);
+				$(entryElement).find(".addresses").append(e);
+			}
 		});
 		entryData.find("category[scheme='urn:com.trsst.mention']").each(function() {
 			address = $(this).attr("term");
@@ -486,34 +486,37 @@
 					console.log("Unrecognized content type:" + type);
 					// console.log(this);
 				}
-//TODO: rethink conversation threading 				
-//			} else if (verb === "reply") {
-//				// get last entry mention:
-//				// this is the nearest parent in a tree of comments
-//				var ref;
-//				var term;
-//				entryXml.find("category[scheme='urn:com.trsst.mention']").each(function() {
-//					term = $(this).attr("term");
-//					if ( term && term.indexOf("urn:entry") === 0 ) {
-//						ref = term;
-//					}
-//				});
-//				if (ref) {
-//					model.pull({
-//						feedId : model.feedIdFromEntryUrn(ref) + '/' + model.entryIdFromEntryUrn(ref),
-//						count : 1
-//					}, function(feedData) {
-//						if (feedData && feedData.length > 0) {
-//							// replying entry appears under mention entry
-//							var entryData = $(feedData).children("entry").first();
-//							createElementForEntryData(feedData, entryData).prependTo($(viewElement).closest(".entry"));
-//						} else {
-//							console.log("Could not fetch referenced entry: " + ref);
-//						}
-//					});
-//				} else {
-//					console.log("Unexpected mention type for reply: " + ref);
-//				}
+				// TODO: rethink conversation threading
+				// } else if (verb === "reply") {
+				// // get last entry mention:
+				// // this is the nearest parent in a tree of comments
+				// var ref;
+				// var term;
+				// entryXml.find("category[scheme='urn:com.trsst.mention']").each(function()
+				// {
+				// term = $(this).attr("term");
+				// if ( term && term.indexOf("urn:entry") === 0 ) {
+				// ref = term;
+				// }
+				// });
+				// if (ref) {
+				// model.pull({
+				// feedId : model.feedIdFromEntryUrn(ref) + '/' +
+				// model.entryIdFromEntryUrn(ref),
+				// count : 1
+				// }, function(feedData) {
+				// if (feedData && feedData.length > 0) {
+				// // replying entry appears under mention entry
+				// var entryData = $(feedData).children("entry").first();
+				// createElementForEntryData(feedData,
+				// entryData).prependTo($(viewElement).closest(".entry"));
+				// } else {
+				// console.log("Could not fetch referenced entry: " + ref);
+				// }
+				// });
+				// } else {
+				// console.log("Unexpected mention type for reply: " + ref);
+				// }
 			} else if (type) {
 				console.log("Unrecognized content type:" + type);
 				// console.log(this);
@@ -851,7 +854,7 @@
 				if (index > 1) {
 					base = base.substring(0, index - 1);
 				}
-			} 
+			}
 			form.find(".title input").val(feedData.children("title").text());
 			form.find(".subtitle textarea").val(feedData.children("subtitle").text());
 			form.find(".base input").val(base);
@@ -1047,6 +1050,7 @@
 	};
 
 	var TRSST_WELCOME = "8crfxaHcBWTHuhA8cXfwPc3vfJ3SbsRpJ";
+	var publicComposer = new Composer($("article>.composer").get());
 
 	var onInit = function() {
 
@@ -1133,7 +1137,7 @@
 				delete params.tag;
 				delete params.mention;
 				delete params.q;
-				if ( query.length > 0 ) {
+				if (query.length > 0) {
 					params.q = query;
 				}
 				query = "?";
@@ -1156,7 +1160,6 @@
 		});
 
 		new Composer($(document).find(".private.messaging form"));
-		new Composer($("article>.composer").get());
 	};
 
 	controller.pushState = function(path) {
@@ -1187,7 +1190,7 @@
 		var host = window.location.host;
 		var path = window.location.toString();
 		var pathname = window.location.pathname;
-		
+
 		/* Enable "Open in Browser" */
 		$(".util-browser-launcher a").attr("target", "_blank").attr("href", path);
 
@@ -1213,6 +1216,7 @@
 			if (entry !== null) {
 
 				// we're on a entry page
+				publicComposer.clearAddresses();
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-query");
 				$("body").removeClass("page-feed");
@@ -1249,23 +1253,39 @@
 				$("body").addClass("pending");
 
 				// we're on a feed page
+				publicComposer.clearAddresses();
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-query");
 				$("body").removeClass("page-entry");
 				$("body").removeClass("page-self");
+				$("body").removeClass("page-external");
 				$("body").addClass("page-feed");
 				if (uid && uid.indexOf(path) !== -1) {
+					// if user's feed
 					$("body").addClass("page-self");
-				}
-				if (path.indexOf("?") === 0) {
-					$("body").addClass("page-query");
-				}
-
-				// if external feed
-				if (path.indexOf("http") === 0) {
+				} else if (path.indexOf("http") === 0) {
+					// if external feed
 					$("body").addClass("page-external");
+				} else if (path.indexOf("?") === 0) {
+					// if aggregate feed
+					$("body").addClass("page-query");
+					if (window.location.search) {
+						// parse query params to prepopulate composer
+						var params = window.location.search.slice(1).split("&");
+						for (var i = 0; i < params.length; i++) {
+							var tmp = params[i].split("=");
+							if (tmp[0].toLowerCase() === "tag") {
+								publicComposer.addTag(unescape(tmp[1]));
+							} else if (tmp[0].toLowerCase() === "mention") {
+								publicComposer.addMention(unescape(tmp[1]));
+							}
+						}
+					}
+
 				} else {
-					$("body").removeClass("page-external");
+					// else we're a trsst feed:
+					// add feed to mentioned
+					publicComposer.addMention(path);
 				}
 
 				// if this is not the current path
@@ -1321,7 +1341,7 @@
 
 		} else {
 			// otherwise: we're on the "home" page
-
+			publicComposer.clearAddresses();
 			$("body").addClass("page-home");
 			$("body").removeClass("page-query");
 			$("body").removeClass("page-entry");
@@ -1375,9 +1395,9 @@
 		// we can show the account menu now
 		$(document.body).removeClass("accounts-loading");
 	};
-	
+
 	/*
-	 * Force-populate all applicable renderers with the specified feed. 
+	 * Force-populate all applicable renderers with the specified feed.
 	 */
 	controller.forceRender = function(feedData) {
 		// used to ensure quick appearance of submitted posts

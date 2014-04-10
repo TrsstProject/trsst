@@ -801,10 +801,10 @@ div.own .feed-title:before {
 	display: inherit;
 }
 
-.entry .addresses {
+.addresses {
 	margin-top: 4px;
 }
-.entry .addresses>a {
+.addresses a {
 	left: 0px;
 	display: inline-block;
 	padding: 8px 12px;
@@ -822,6 +822,10 @@ div.own .feed-title:before {
 }
 .entry.verb-follow .addresses {
 	display:none;
+}
+.composer .addresses {
+	margin-top: 0px;
+	margin-bottom: 6px;
 }
 
 .entry .content>a {

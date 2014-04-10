@@ -67,7 +67,7 @@ public class HomeAdapter extends TrsstAdapter {
 
         feed = Abdera.getInstance().newFeed();
         feed.setId(canonicalFeedIdForQuery(request));
-        feed.setTitle("Search Results");
+        feed.setTitle("Conversations");
         
         // default to one month ago in case of zero results 
         feed.setUpdated(new Date(System.currentTimeMillis()-1000*60*60*24*30));
