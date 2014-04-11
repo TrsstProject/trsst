@@ -404,7 +404,7 @@ article .renderer:empty:before {
 	padding-top: 4px;
 	min-height: 48px;
 	text-align: center;
-	border-radius: 6px;
+	border-radius: 8px;
 	margin-bottom: 12px;
 }
 
@@ -827,6 +827,12 @@ div.own .feed-title:before {
 .addresses {
 	margin-top: 8px;
 }
+
+.entry.verb-repost .addresses {
+	/* don't show for 'reposted' header */
+	display: none;
+}
+
 .addresses a {
 	left: 0px;
 	display: inline-block;

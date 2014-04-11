@@ -890,7 +890,8 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
                 for (Category mention : mentions) {
                     IRI scheme = mention.getScheme();
                     if (scheme != null
-                            && Common.MENTION_URN.equals(scheme.toString())) {
+                            && (Common.MENTION_URN.equals(scheme.toString()) || Common.MENTION_URN_LEGACY
+                                    .equals(scheme.toString()))) {
                         Entry deleted = null;
                         try {
                             deleted = deleteEntry(storage,

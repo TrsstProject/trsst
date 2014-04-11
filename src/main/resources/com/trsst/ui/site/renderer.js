@@ -72,7 +72,7 @@
 				var parentElement;
 				if ("reply" === verb) {
 					var term;
-					entryData.find("category[scheme='urn:com.trsst.mention']").each(function() {
+					entryData.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
 						term = $(this).attr("term");
 						if (term.indexOf("urn:feed:") === 0) {
 							// first parent is top-most parent of thread

@@ -578,6 +578,8 @@ public class Client {
                 if (options.url.startsWith("urn:feed:")
                         || options.url.startsWith("urn:entry:")) {
                     content.setMimeType("application/atom+xml");
+                } else {
+                    content.setMimeType("text/html");
                 }
                 content.setSrc(options.url);
                 entry.setContentElement(content);

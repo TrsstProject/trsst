@@ -89,8 +89,10 @@ public class Common {
     public static final String NS_ABBR = "trsst";
     public static final String SIGN = "sign";
     public static final String ENCRYPT = "encrypt";
-    public static final String MENTION_URN = "urn:com.trsst.mention";
-    public static final String TAG_URN = "urn:com.trsst.tag";
+    public static final String MENTION_URN = "urn:mention";
+    public static final String MENTION_URN_LEGACY = "urn:com.trsst.mention";
+    public static final String TAG_URN = "urn:tag";
+    public static final String TAG_URN_LEGACY = "urn:com.trsst.tag";
     public static final String PREDECESSOR = "predecessor";
     public static final String ATTACHMENT_DIGEST = "digest";
     public static final String PREDECESSOR_ID = "id";

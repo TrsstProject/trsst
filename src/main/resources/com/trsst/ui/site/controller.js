@@ -311,7 +311,7 @@
 		var address;
 		var parent;
 		var e;
-		entryData.find("category[scheme='urn:com.trsst.tag']").each(function() {
+		entryData.find("category[scheme='urn:tag'],category[scheme='urn:com.trsst.tag']").each(function() {
 			// create link to hashtag
 			address = $(this).attr("term");
 			e = $("<a class='address tag'><span></span></a>");
@@ -320,7 +320,7 @@
 			e.children("span").text('#' + address);
 			$(entryElement).find(".addresses").append(e);
 		});
-		entryData.find("category[scheme='urn:com.trsst.mention']").each(function() {
+		entryData.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
 			address = $(this).attr("term");
 			if (address) {
 				if (address.indexOf("urn:feed:") === 0) {
@@ -339,9 +339,9 @@
 					parent = address; // only add first
 					var lastIndexSwap = address.lastIndexOf(":");
 					if (lastIndexSwap !== -1) {
-						address = address.substring(0, lastIndexSwap) + '/' + address.substring(lastIndexSwap + 1);
+						var path = address.substring(0, lastIndexSwap) + '/' + address.substring(lastIndexSwap + 1);
 						e = $("<a class='address parent'><span></span></a>");
-						e.attr("href", '/' + address);
+						e.attr("href", '/' + path);
 						e.attr("title", address);
 						$(entryElement).find(".addresses").prepend(e);
 					}
@@ -410,7 +410,7 @@
 		if (matches) {
 			for (i in matches) {
 				match = matches[i].substring(1); // remove @
-				entryData.find("category[scheme='urn:com.trsst.mention']").each(function() {
+				entryData.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
 					id = $(this).attr("term");
 					if (id && id.indexOf("urn:feed:" + match) === 0) {
 						id = id.substring("urn:feed:".length);
@@ -508,7 +508,7 @@
 				// // this is the nearest parent in a tree of comments
 				// var ref;
 				// var term;
-				// entryXml.find("category[scheme='urn:com.trsst.mention']").each(function()
+				// entryXml.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function()
 				// {
 				// term = $(this).attr("term");
 				// if ( term && term.indexOf("urn:entry") === 0 ) {

@@ -494,12 +494,14 @@ public class LuceneStorage implements Storage {
                 for (Category e : categories) {
                     IRI scheme = e.getScheme();
                     if (scheme != null
-                            && Common.TAG_URN.equals(scheme.toString())) {
+                            && (Common.TAG_URN.equals(scheme.toString()) || Common.TAG_URN_LEGACY
+                                    .equals(scheme.toString()))) {
                         if (e.getTerm() != null) {
                             tags.add('#' + e.getTerm().trim().toLowerCase());
                         }
                     } else if (scheme != null
-                            && Common.MENTION_URN.equals(scheme.toString())) {
+                            && (Common.MENTION_URN.equals(scheme.toString()) || Common.MENTION_URN_LEGACY
+                                    .equals(scheme.toString()))) {
                         String mention = e.getTerm();
                         if (mention != null) {
                             mention = mention.trim();
