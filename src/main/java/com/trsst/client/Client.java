@@ -423,19 +423,6 @@ public class Client {
         feed.setMustPreserveWhitespace(false);
 
         // update feed properties
-        if (feedOptions.name != null || feedOptions.email != null) {
-            Person author = feed.getAuthor();
-            if (author == null) {
-                author = Abdera.getInstance().getFactory().newAuthor();
-                feed.addAuthor(author);
-            }
-            if (feedOptions.name != null) {
-                author.setName(feedOptions.name);
-            }
-            if (feedOptions.email != null) {
-                author.setEmail(feedOptions.email);
-            }
-        }
         if (feedOptions.title != null) {
             feed.setTitle(feedOptions.title);
         }
@@ -447,6 +434,28 @@ public class Client {
         }
         if (feedOptions.logo != null) {
             feed.setLogo(feedOptions.logo);
+        }
+
+        Person author = feed.getAuthor();
+        if (author == null) {
+            // author is a required element
+            author = Abdera.getInstance().getFactory().newAuthor();
+            String defaultName = feed.getTitle();
+            if (defaultName == null) {
+                defaultName = Common.toFeedIdString(feed.getId());
+            }
+            author.setName(defaultName);
+            feed.addAuthor(author);
+        }
+
+        // update author
+        if (feedOptions.name != null || feedOptions.email != null) {
+            if (feedOptions.name != null) {
+                author.setName(feedOptions.name);
+            }
+            if (feedOptions.email != null) {
+                author.setEmail(feedOptions.email);
+            }
         }
 
         // holds any attachments (can be used for logo and icons)
@@ -466,18 +475,36 @@ public class Client {
             } else {
                 entry.setPublished(entry.getUpdated());
             }
-            entry.setTitle(options.status);
+
+            if (options.status != null) {
+                entry.setTitle(options.status);
+            } else {
+                // title is a required element:
+                // default to verb
+                if (options.verb != null) {
+                    entry.setTitle(options.verb);
+                } else {
+                    // "post" is the default verb
+                    entry.setSummary("post");
+                }
+            }
+
             if (options.verb != null) {
                 feed.declareNS("http://activitystrea.ms/spec/1.0/", "activity");
                 entry.addSimpleExtension(
                         new QName("http://activitystrea.ms/spec/1.0/", "verb",
                                 "activity"), options.verb);
             }
+
             if (options.body != null) {
                 // was: entry.setSummary(options.body);
                 entry.setSummary(options.body,
                         org.apache.abdera.model.Text.Type.HTML);
                 // FIXME: some readers only show type=html
+            } else {
+                // summary is a required element in some cases
+                entry.setSummary("", org.apache.abdera.model.Text.Type.TEXT);
+                // FIXME: use tika to generate a summary
             }
 
             // generate proof-of-work stamp for this feed id and entry id

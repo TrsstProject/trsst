@@ -1515,11 +1515,24 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
         addPagingLinks(context, feed, page, length, total, searchTerms, before,
                 after, mentions, tags, verb);
+
+        // ARGH:
+        // because having links appear after entries is invalid
+        // we have to remove and then reinsert each entry.
+        // would have expected Feed.addLink to insert before entries.
+        List<Entry> entries = feed.getEntries();
+        for (Entry entry : entries) {
+            entry.discard();
+        }
+        for (Entry entry : entries) {
+            feed.addEntry(entry);
+        }
     }
 
     /**
      * Adds entries to the specified feed for the specified search and paging
-     * parameters.
+     * parameters. Importantly, this method MUST call addPagingLinks before
+     * adding entries in order to generate valid atom xml.
      * 
      * @return the total number of entries matching the query.
      */
