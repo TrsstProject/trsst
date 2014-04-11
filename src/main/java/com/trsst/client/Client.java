@@ -27,6 +27,7 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -486,23 +487,33 @@ public class Client {
                     .getUpdated().getTime(), feedId));
 
             if (options.mentions != null) {
+                HashSet<String> set = new HashSet<String>();
                 for (String s : options.mentions) {
-                    entry.addCategory(Common.MENTION_URN, s, "Mention");
-                    stampElement = entry.addExtension(new QName(Common.NS_URI,
-                            Common.STAMP));
-                    stampElement.setText(Crypto.computeStamp(Common.STAMP_BITS,
-                            entry.getUpdated().getTime(), s));
-                    // stamp is required for each mention
+                    if (!set.contains(s)) {
+                        set.add(s); // prevent duplicates
+                        entry.addCategory(Common.MENTION_URN, s, "Mention");
+                        stampElement = entry.addExtension(new QName(
+                                Common.NS_URI, Common.STAMP));
+                        stampElement.setText(Crypto.computeStamp(
+                                Common.STAMP_BITS,
+                                entry.getUpdated().getTime(), s));
+                        // stamp is required for each mention
+                    }
                 }
             }
             if (options.tags != null) {
+                HashSet<String> set = new HashSet<String>();
                 for (String s : options.tags) {
-                    entry.addCategory(Common.TAG_URN, s, "Tag");
-                    stampElement = entry.addExtension(new QName(Common.NS_URI,
-                            Common.STAMP));
-                    stampElement.setText(Crypto.computeStamp(Common.STAMP_BITS,
-                            entry.getUpdated().getTime(), s));
-                    // stamp is required for each tag
+                    if (!set.contains(s)) {
+                        set.add(s); // prevent duplicates
+                        entry.addCategory(Common.TAG_URN, s, "Tag");
+                        stampElement = entry.addExtension(new QName(
+                                Common.NS_URI, Common.STAMP));
+                        stampElement.setText(Crypto.computeStamp(
+                                Common.STAMP_BITS,
+                                entry.getUpdated().getTime(), s));
+                        // stamp is required for each tag
+                    }
                 }
             }
 
@@ -651,7 +662,7 @@ public class Client {
                     } else {
                         writer.writeTitle(""); // empty title
                     }
-                    
+
                     writer.startContent("application/xenc+xml");
 
                     List<PublicKey> keys = new LinkedList<PublicKey>();

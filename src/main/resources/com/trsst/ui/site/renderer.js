@@ -51,45 +51,72 @@
 	 * expecting any duplicates. Returns the inserted entry element.
 	 */
 	AbstractRenderer.prototype.addDataToEntryContainer = function(feedData, entryData) {
-		var element = this.entryFactory(feedData, entryData);
+		var self = this;
+		entryData = $(entryData);
+		var element = self.entryFactory(feedData, entryData);
 		// if entry should be visible (public or decrypted)
 		if (element) {
-			// insert it into our list
-			var current = element.attr("entry");
-			var currentFeedId = model.feedIdFromEntryUrn(current);
-			var currentEntryId = model.entryIdFromEntryUrn(current);
-			// extract hex timestamp
-			current = current.substring(current.lastIndexOf(":") + 1);
-			// console.log("addDataToEntryContainer: " + current);
-			var placedBefore;
-			var duplicate;
-			var children = this.allEntryElements;
+			var currentUrn = element.attr("entry");
+			// if entry is not already displayed
+			if (!self.urnToEntryElement[currentUrn]) {
+				// the list to iterate
+				var children = this.allEntryElements;
+				var currentFeedId = model.feedIdFromEntryUrn(currentUrn);
+				var currentEntryId = model.entryIdFromEntryUrn(currentUrn);
+				self.urnToEntryElement[currentUrn] = element;
+				// console.log("addDataToEntryContainer: " + current);
 
-			var i = 0;
-			$.each(children, function(index) {
-				var existing = $(this).attr("entry");
-				var existingFeedId = model.feedIdFromEntryUrn(existing);
-				var existingEntryId = model.entryIdFromEntryUrn(existing);
-				// hex timestamps compare lexicographically
-				if (currentEntryId === existingEntryId) {
-					if (currentFeedId === existingFeedId) {
-						// duplicate
-						duplicate = true;
-						return false; // break out
+				// if entry is a reply: find first parent
+				var verb = entryData.find("verb").text();
+				var parentUrn;
+				var parentElement;
+				if ("reply" === verb) {
+					var term;
+					entryData.find("category[scheme='urn:com.trsst.mention']").each(function() {
+						term = $(this).attr("term");
+						if (term.indexOf("urn:feed:") === 0) {
+							// first parent is top-most parent of thread
+							parentUrn = term;
+							return false; // break loop
+						}
+					});
+					if (parentUrn) {
+						parentElement = self.urnToEntryElement[parentUrn];
+						var index = children.indexOf(parentElement);
+						if (index !== -1) {
+							// subset to just elements after this one
+							children = children.slice(index + 1);
+							// now the logic below will automagically
+							// insert this entry in the correct spot
+							// beneath the parent entry in the list.
+						}
 					}
 				}
-				if (currentEntryId > existingEntryId) {
-					// insert before same or earlier time
-					placedBefore = this;
-					children.splice(index, 0, element);
-					console.log("Inserting element: " + element.attr("entry"));
-					return false; // break out
+
+				var didPlaceBefore;
+				$.each(children, function(index) {
+					var currentElement = $(this);
+					var existing = currentElement.attr("entry");
+					var existingFeedId = model.feedIdFromEntryUrn(existing);
+					var existingEntryId = model.entryIdFromEntryUrn(existing);
+
+					// ignore replies unless we are a reply
+					if (!parentElement || !currentElement.hasClass("verb-reply")) {
+						// hex timestamps compare lexicographically
+						if ((self.descendingOrder && (currentEntryId > existingEntryId)) || (!self.descendingOrder && (currentEntryId < existingEntryId))) {
+							// insert before same or earlier time
+							didPlaceBefore = this;
+							children.splice(index, 0, element);
+							console.log("Inserting element: " + element.attr("entry"));
+							return false; // break loop
+						}
+					}
+				});
+				if (!didPlaceBefore) {
+					// else: older than all existing entries: append
+					children.push(element);
+					console.log("Appending element: " + element.attr("entry"));
 				}
-			});
-			if (!placedBefore && !duplicate) {
-				// else: older than all existing entries: append
-				children.push(element);
-				console.log("Appending element: " + element.attr("entry"));
 			}
 		}
 		return element;
@@ -362,6 +389,9 @@
 		if (this.allEntryElements) {
 			this.allEntryElements = [];
 		}
+		if (this.urnToEntryElement) {
+			this.urnToEntryElement = {};
+		}
 		if (this.entryContainer) {
 			this.entryContainer.empty();
 		}
@@ -407,7 +437,9 @@
 	 * specified factory function.
 	 */
 	EntryRenderer = window.EntryRenderer = function(entryFactoryFunction, entryContainerElement) {
+		this.descendingOrder = true;
 		this.allEntryElements = [];
+		this.urnToEntryElement = {};
 		this.entryContainer = $(entryContainerElement);
 		this.entryContainer.empty();
 		this.entryFactory = entryFactoryFunction;
@@ -429,6 +461,7 @@
 	 * factory function and updated if the feed changes.
 	 */
 	FeedRenderer = window.FeedRenderer = function(feedFactoryFunction, feedContainerElement) {
+		this.descendingOrder = true;
 		this.feedContainer = $(feedContainerElement);
 		this.feedContainer.empty();
 		this.feedFactory = feedFactoryFunction;

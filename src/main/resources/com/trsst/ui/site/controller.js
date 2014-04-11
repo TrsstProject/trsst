@@ -308,27 +308,43 @@
 		});
 
 		// add any (internal) feed tags/mentions last
-		var address, e;
+		var address;
+		var parent;
+		var e;
 		entryData.find("category[scheme='urn:com.trsst.tag']").each(function() {
+			// create link to hashtag
 			address = $(this).attr("term");
-			if (address.indexOf("http") === -1) {
-				e = $("<a class='address tag'><span></span></a>");
-				e.attr("href", '/?tag=' + address);
-				e.attr("title", address);
-				e.children("span").text('#' + address);
-				$(entryElement).find(".addresses").append(e);
-			}
+			e = $("<a class='address tag'><span></span></a>");
+			e.attr("href", '/?tag=' + address);
+			e.attr("title", address);
+			e.children("span").text('#' + address);
+			$(entryElement).find(".addresses").append(e);
 		});
 		entryData.find("category[scheme='urn:com.trsst.mention']").each(function() {
 			address = $(this).attr("term");
-			if (address && address.indexOf("urn:feed:") === 0) {
-				address = address.substring("urn:feed:".length);
-				if (address.indexOf("http") === -1) {
-					e = $("<a class='address mention'><span></span></a>");
-					e.attr("href", '/' + address);
-					e.attr("title", address);
-					e.children("span").text('@' + address);
-					$(entryElement).find(".addresses").append(e);
+			if (address) {
+				if (address.indexOf("urn:feed:") === 0) {
+					// create link to mention
+					address = address.substring("urn:feed:".length);
+					if (address.indexOf("http") === -1) {
+						e = $("<a class='address mention'><span></span></a>");
+						e.attr("href", '/' + address);
+						e.attr("title", address);
+						e.children("span").text('@' + address);
+						$(entryElement).find(".addresses").append(e);
+					}
+				} else if (!parent && address.indexOf("urn:entry:") === 0) {
+					// create link to entry
+					address = address.substring("urn:entry:".length);
+					parent = address; // only add first
+					var lastIndexSwap = address.lastIndexOf(":");
+					if (lastIndexSwap !== -1) {
+						address = address.substring(0, lastIndexSwap) + '/' + address.substring(lastIndexSwap + 1);
+						e = $("<a class='address parent'><span></span></a>");
+						e.attr("href", '/' + address);
+						e.attr("title", address);
+						$(entryElement).find(".addresses").prepend(e);
+					}
 				}
 			}
 		});
@@ -1201,6 +1217,9 @@
 			path = path.substring(j + host.length + 1);
 		}
 
+		/* Enable "View as Feed" */
+		$(".util-feed-launcher a").attr("target", "_blank").attr("href", "/feed/" + path);
+
 		// determine if we're at origin page
 		if (window.history.state !== null) {
 			$("body").addClass("has-back");
@@ -1231,16 +1250,19 @@
 				if (entryRenderer[0].pathname !== pathname) {
 					entryRenderer[0].pathname = pathname;
 					entryRenderer.empty();
+					feedRenderer.reset();
 					model.pull({
 						feedId : pathname,
 						count : 1
 					}, function(feedData) {
 						$("body").removeClass("pending");
 						if (feedData && feedData.length > 0) {
-							// replying entry appears under mention entry
 							var entryData = $(feedData).children("entry").first();
-							createElementForEntryData(feedData, entryData).prependTo(entryRenderer).click();
 							// click to expand
+							createElementForEntryData(feedData, entryData).prependTo(entryRenderer).click();
+							feedRenderer.addEntries({
+								mention : $(entryData).children("id").text()
+							});
 						} else {
 							console.log("Could not fetch requested entry: " + pathname);
 							// TODO: display a not-found message

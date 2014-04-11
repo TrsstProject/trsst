@@ -93,9 +93,11 @@
 					if (text.indexOf('@') === 0) {
 						text = text.substring(1);
 					}
-					text = model.feedUrnFromFeedId(text);
-					if (nodupes.indexOf(text) === -1) {
-						nodupes.push(text);
+					if (text !== model.getAuthenticatedAccountId()) {
+						text = model.feedUrnFromFeedId(text);
+						if (nodupes.indexOf(text) === -1) {
+							nodupes.push(text);
+						}
 					}
 				});
 				for (i in nodupes) {
@@ -162,14 +164,14 @@
 			});
 		}
 	};
-	
+
 	/**
 	 * Clears all tags and mentions from this composer.
 	 */
 	Composer.prototype.clearAddresses = function() {
 		this.form.find(".addresses>span").empty();
 	};
-	
+
 	/**
 	 * Adds a tag to this composer.
 	 */
@@ -181,7 +183,7 @@
 		e.children("span").text('#' + address);
 		this.form.find(".addresses>span").append(e);
 	};
-	
+
 	/**
 	 * Adds a mention to this composer.
 	 */
@@ -193,6 +195,5 @@
 		e.children("span").text('@' + address);
 		this.form.find(".addresses>span").append(e);
 	};
-	
 
 })(window);

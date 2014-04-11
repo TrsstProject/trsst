@@ -67,10 +67,35 @@ public class HomeAdapter extends TrsstAdapter {
 
         feed = Abdera.getInstance().newFeed();
         feed.setId(canonicalFeedIdForQuery(request));
-        feed.setTitle("Conversations");
-        
-        // default to one month ago in case of zero results 
-        feed.setUpdated(new Date(System.currentTimeMillis()-1000*60*60*24*30));
+
+        // build a title string from query params
+        List<String> values;
+        String title = "";
+        values = request.getParameters("tag");
+        if (values != null) {
+            for (String value : values) {
+                title = title + '#' + value + ' ';
+            }
+        }
+        values = request.getParameters("mention");
+        if (values != null) {
+            for (String value : values) {
+                title = title + '@' + value + ' ';
+            }
+        }
+        String query = request.getParameter("q");
+        if (query != null) {
+            title = title + query;
+        }
+        title = title.trim();
+        if (title.length() == 0) {
+            title = "Search Results";
+        }
+        feed.setTitle(title);
+
+        // default to one month ago in case of zero results
+        feed.setUpdated(new Date(System.currentTimeMillis() - 1000 * 60 * 60
+                * 24 * 30));
 
         // if async fetch is allowed
         if (wrapper.getParameter("sync") == null) {
@@ -79,7 +104,7 @@ public class HomeAdapter extends TrsstAdapter {
                 pullLaterFromRelay(feedId, request);
             }
         }
-        
+
         // store in request context
         wrapper.setAttribute(Scope.REQUEST, "com.trsst.Feed", feed);
         return feed;
