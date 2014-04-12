@@ -83,29 +83,58 @@
 			// copy mentions from enclosed reply
 			var i;
 			if (entry.length === 1) {
-				var nodupes = [];
-				formData.append("verb", "reply");
+				
+				// copy any primary discussion parent posts first
 				var entryUrn = entry.attr("entry");
+				formData.append("verb", "reply");
+				entry.find(".addresses .parent").each(function() {
+					var text = $(this).attr("title");
+						text = model.entryUrnFromEntryId(text);
+						formData.append("mention", text);
+				});
+
+				// mention the current parent post last
 				formData.append("mention", entryUrn);
-				nodupes.push(model.feedUrnFromFeedId(model.feedIdFromEntryUrn(entryUrn)));
-				entry.find(".mentions .mention").each(function() {
+
+				// mention the author if it's not us
+				var nodupes = [];
+				var author = model.feedUrnFromFeedId(model.feedIdFromEntryUrn(entryUrn));
+				if ( author !== model.getAuthenticatedAccountId() ) {
+					nodupes.push(author);
+				}
+
+				// copy any mentions (excluding ourself)
+				entry.find(".addresses .mention").each(function() {
 					var text = $(this).find("span").text();
 					if (text.indexOf('@') === 0) {
 						text = text.substring(1);
 					}
+					text = model.feedUrnFromFeedId(text);
 					if (text !== model.getAuthenticatedAccountId()) {
-						text = model.feedUrnFromFeedId(text);
 						if (nodupes.indexOf(text) === -1) {
 							nodupes.push(text);
 						}
 					}
 				});
+				
+				// create the mentions
 				for (i in nodupes) {
 					formData.append("mention", nodupes[i]);
 				}
+				
+				// copy any tags (excluding ourself)
+				entry.find(".addresses .tag").each(function() {
+					var text = $(this).find("span").text();
+					if (text.indexOf('#') === 0) {
+						text = text.substring(1);
+					}
+					formData.append("mention", text);
+				});
+				
+				
 			}
 
-			// find tags and mentions
+			// find tags and mentions in the text
 			var match;
 			var matches = value.match(/([\@\#]\w*)/g);
 			if (matches) {

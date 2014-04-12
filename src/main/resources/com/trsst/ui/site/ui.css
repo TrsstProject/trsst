@@ -850,7 +850,7 @@ div.own .feed-title:before {
 	max-width: 25%
 }
 .addresses .address.parent span:after {
-	content: 'More comments';
+	content: 'Conversation';
 }
 .entry.verb-follow .addresses {
 	display:none;
@@ -2054,6 +2054,9 @@ body.page-entry .entry-renderer .entry .updated .absolute span.month span {
 }
 body.page-entry .entry-renderer .entry .updated .absolute span.year:before {
 	content: ' ';
+}
+body.page-entry .feed-renderer .entry .addresses {
+	display:none;
 }
 
 /* @end */

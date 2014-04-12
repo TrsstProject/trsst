@@ -130,6 +130,13 @@
 		return "urn:feed:" + feedId;
 	};
 
+	model.entryUrnFromEntryId = function(entryId) {
+		if ( entryId.indexOf("urn:entry:") === 0 ) {
+			return entryId; 
+		}
+		return "urn:entry:" + entryId;
+	};
+
 	/**
 	 * Attempts to authenticate the specified id and password, calling callback
 	 * with feedData on success, or null on failure.
