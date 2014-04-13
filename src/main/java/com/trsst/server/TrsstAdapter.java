@@ -1493,11 +1493,17 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         int length = ProviderHelper.getPageSize(context, "count", 99);
         String _count = params.get("count") == null ? null : ((String[]) params
                 .get("count"))[0];
-        if (_count == null) {
-            if (context.getUri().toString().indexOf("count=") != -1) {
-                // BUG in abdera?
-                log.error("Abdera returning no count from valid count parameter: "
-                        + context.getUri());
+        if (_count != null) {
+            try {
+                int newLength = Integer.parseInt(_count);
+                if (length != newLength) {
+                    // BUG in abdera?
+                    log.error("Abdera returning no count from valid count parameter: "
+                            + context.getUri());
+                }
+                length = newLength;
+            } catch (NumberFormatException exc) {
+                log.trace("Unrecognized count parameter: " + _count);
             }
         }
         // int offset = ProviderHelper.getOffset(context, "page", length);
@@ -1513,6 +1519,13 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             total = countEntriesFromStorage(beginDate, endDate, searchTerms,
                     mentions, tags, verb);
         }
+
+        if (feed.getEntries().size() > length) {
+            log.error("Returned count exceeded limit: "
+                    + feed.getEntries().size() + " : " + length + " : "
+                    + context.getUri());
+        }
+
         addPagingLinks(context, feed, page, length, total, searchTerms, before,
                 after, mentions, tags, verb);
 
