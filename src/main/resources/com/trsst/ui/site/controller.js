@@ -1066,6 +1066,12 @@
 	};
 
 	var TRSST_WELCOME = "8crfxaHcBWTHuhA8cXfwPc3vfJ3SbsRpJ";
+	// determine the "home" id for this app
+	var TRSST_HOME = $("meta[name='trsst-home-id']").attr("content");
+	if (!TRSST_HOME) {
+		// fall back on our welcome account
+		TRSST_HOME = TRSST_WELCOME;
+	}
 	var entryRenderer = new EntryRenderer(createElementForEntryData, $("#entryRenderer"));
 	var feedRenderer = new EntryRenderer(createElementForEntryData, $("#feedRenderer"));
 	var homeRenderer = new EntryRenderer(createElementForEntryData, $("#homeRenderer"));
@@ -1323,8 +1329,8 @@
 					// delay load for recommended feeds
 					followsRenderer.reset();
 					followsRenderer.addFeedFollows(path);
-					if (path !== TRSST_WELCOME) {
-						followingRenderer.addFeed(TRSST_WELCOME);
+					if (path !== TRSST_HOME) {
+						followingRenderer.addFeed(TRSST_HOME);
 					}
 
 					// update private messaging id
@@ -1356,13 +1362,18 @@
 					}
 				}
 
+				// show the home account's followed feeds
+				if (id === TRSST_HOME && id !== TRSST_WELCOME) {
+					homeRenderer.addFeedFollows(id);
+				}
+				
 				// first time only; not for entry page
 				if (!followingRenderer.homeId) {
 					window.setTimeout(function() {
 						// following renderer permanently shows home's
 						// recommendations
-						followingRenderer.homeId = TRSST_WELCOME;
-						followingRenderer.addFeedFollows(TRSST_WELCOME, 10);
+						followingRenderer.homeId = TRSST_HOME;
+						followingRenderer.addFeedFollows(TRSST_HOME, 10);
 					}, 2000);
 				}
 			}
@@ -1379,7 +1390,7 @@
 
 			var id = getCurrentAccountId();
 			if (!id) {
-				id = TRSST_WELCOME;
+				id = TRSST_HOME;
 			}
 
 			// this is the "home" feed
@@ -1391,15 +1402,19 @@
 
 				homeRenderer.reset();
 				homeRenderer.addFeed(id);
-				if (id !== TRSST_WELCOME) {
-					homeRenderer.addFeed(TRSST_WELCOME);
+				if (id !== TRSST_HOME) {
+					homeRenderer.addFeed(TRSST_HOME);
 				}
-				homeRenderer.addFeedFollows(id);
+				
+				// by default: show the welcome account's followed feeds
+				if (id === TRSST_WELCOME) {
+					homeRenderer.addFeedFollows(id);
+				}
 			}
 
 			// global conversation
 			messageRenderer.reset();
-			if (id !== TRSST_WELCOME) {
+			if (id !== TRSST_HOME) {
 				// add all our mentions
 				messageRenderer.addQuery({
 					mention : id
@@ -1411,8 +1426,8 @@
 				window.setTimeout(function() {
 					// following renderer permanently shows home's
 					// recommendations
-					followingRenderer.homeId = TRSST_WELCOME;
-					followingRenderer.addFeedFollows(TRSST_WELCOME, 10);
+					followingRenderer.homeId = TRSST_HOME;
+					followingRenderer.addFeedFollows(TRSST_HOME, 10);
 				}, 2000);
 			}
 
