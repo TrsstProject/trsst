@@ -19,20 +19,144 @@
 	 * Renderer manages a column of entries from one or more feeds with
 	 * automatic page-fetch handling and sorting by date.
 	 */
-
 	var AbstractRenderer = function() {
+	};
+
+	/**
+	 * Add the specified feed's entries to this renderer.
+	 */
+	AbstractRenderer.prototype.addFeed = function(id) {
+		this.addQuery({
+			feedId : id
+		});
+	};
+
+	/**
+	 * Add feeds followed by the specified feed, up to the optional limit.
+	 */
+	AbstractRenderer.prototype.addFeedFollows = function(id, limit) {
+		var self = this;
+		model.getFollowsForFeedId(id, function(follows) {
+			var count = 0;
+			for ( var follow in follows) {
+				self.addFeed(follows[follow]);
+				if (count++ == limit) {
+					break;
+				}
+			}
+		});
+	};
+
+	/**
+	 * Add entries matching the specified query parameters.
+	 */
+	AbstractRenderer.prototype.addQuery = function(query) {
+		var key = JSON.stringify(query);
+		if (!this.querySet[key]) {
+			console.log("addQuery: " + key);
+			pollster.subscribe(query, this);
+			this.querySet[key] = key; // avoid duplicates
+		}
+	};
+
+	/**
+	 * Immediately inserts the entries in the specified feed to the appropriate
+	 * location in the list.
+	 */
+	AbstractRenderer.prototype.addEntries = function(feedXml) {
+		this.addEntriesFromFeed(feedXml, null);
+		this.renderNow();
+	};
+
+	AbstractRenderer.prototype.addEntriesFromFeed = function(feedXml, query) {
+		// ignore delayed fetch responses
+		if (this.disposed) {
+			return;
+		}
+
+		var self = this;
+		var result = [];
+		if (self.feedContainer && self.feedFactory) {
+			self.addDataToFeedContainer(feedXml);
+		}
+		if (self.entryContainer && self.entryFactory) {
+			var entries = feedXml.find("entry");
+			var total = entries.length;
+			var counter = 0;
+			entries.each(function(index) {
+				var element = self.addDataToEntryContainer(feedXml, this);
+				if (element) {
+					result.push(element);
+					// remember how we got here
+					if (query != null) {
+						element[0].query = query;
+					}
+					// if this is the last one
+					if (index === total - 1) {
+						self.scrollTriggers.push(element);
+						window.setTimeout(function() {
+							self.onScroll();
+						}, 500); // delay until screen finishes populating
+						return false; // break;
+					}
+				}
+			});
+			self.renderLater();
+		}
+		return result;
+	};
+
+	AbstractRenderer.prototype.dispose = function() {
+		this.reset();
+		this.disposed = true;
+	};
+
+	AbstractRenderer.prototype.reset = function() {
+		console.log("reset");
+		pollster.unsubscribe(this);
+		this.scrollTriggers = [];
+		if (this.allEntryElements) {
+			this.allEntryElements = [];
+		}
+		if (this.urnToEntryElement) {
+			this.urnToEntryElement = {};
+		}
+		if (this.entryContainer) {
+			this.entryContainer.empty();
+		}
+		if (this.feedContainer) {
+			this.feedContainer.empty();
+		}
+		if (this.querySet) {
+			this.querySet = {};
+		}
+	};
+
+	/**
+	 * Empties and reloads this renderer.
+	 */
+	AbstractRenderer.prototype.reload = function() {
+		console.log("reload");
+		if (this.entryContainer) {
+			this.entryContainer.empty();
+		}
+		if (this.feedContainer) {
+			this.feedContainer.empty();
+		}
+		// FIXME: need to populate this.querySet
+		// FIXME: need to re-create list with this.ids
 	};
 
 	/**
 	 * Adds feed to container, replacing any existing element for this feed.
 	 * Returns the added feed element.
 	 */
-	AbstractRenderer.prototype.addDataToFeedContainer = function(feedData) {
-		var id = feedData.children("id").text();
-		var updated = feedData.children("updated").text();
+	AbstractRenderer.prototype.addDataToFeedContainer = function(feedXml) {
+		var id = feedXml.children("id").text();
+		var updated = feedXml.children("updated").text();
 		// console.log("addDataToFeedContainer: " + id);
 		this.feedContainer.find("[feed='" + id + "']").remove();
-		var element = this.feedFactory(feedData);
+		var element = this.feedFactory(feedXml);
 		element[0].updated = updated;
 		this.feedContainer.children().each(function() {
 			if (this.updated && this.updated < element[0].updated) {
@@ -50,10 +174,10 @@
 	 * Adds entry to container, maintaining the existing date sort, but not
 	 * expecting any duplicates. Returns the inserted entry element.
 	 */
-	AbstractRenderer.prototype.addDataToEntryContainer = function(feedData, entryData) {
+	AbstractRenderer.prototype.addDataToEntryContainer = function(feedXml, entryData) {
 		var self = this;
 		entryData = $(entryData);
-		var element = self.entryFactory(feedData, entryData);
+		var element = self.entryFactory(feedXml, entryData);
 		// if entry should be visible (public or decrypted)
 		if (element) {
 			var currentUrn = element.attr("entry");
@@ -123,80 +247,11 @@
 	};
 
 	/**
-	 * Monitor all feeds followed by the specified feed.
-	 */
-	AbstractRenderer.prototype.addFeedFollows = function(id) {
-		var self = this;
-		model.getFollowsForFeedId(id, function(follows) {
-			for ( var follow in follows) {
-				self.addFeed(follows[follow]);
-			}
-		});
-	};
-
-	/**
-	 * Monitor for specified feeds and entries.
-	 */
-	AbstractRenderer.prototype.addFeed = function(id) {
-		this.addEntries({
-			feedId : id
-		});
-	};
-
-	/**
-	 * Monitor for specified feeds and entries.
-	 */
-	AbstractRenderer.prototype.addEntries = function(query) {
-		var key = JSON.stringify(query);
-		if (!this.querySet[key]) {
-			console.log("addEntries: " + key);
-			pollster.subscribe(query, this);
-			this.querySet[key] = key; // avoid duplicates
-		}
-	};
-
-	/**
 	 * Called by pollster to update our contents with the specified feed.
 	 */
-	AbstractRenderer.prototype.notify = function(feedData, query) {
+	AbstractRenderer.prototype.notify = function(feedXml, query) {
 		console.log("notify: " + JSON.stringify(query));
-		this.addEntriesFromFeed(feedData, query);
-	};
-
-	AbstractRenderer.prototype.addEntriesFromFeed = function(feedData, query) {
-		// ignore delayed fetch responses
-		if (this.disposed) {
-			return;
-		}
-
-		var self = this;
-		var result = [];
-		if (self.feedContainer && self.feedFactory) {
-			self.addDataToFeedContainer(feedData);
-		}
-		if (self.entryContainer && self.entryFactory) {
-			var entries = feedData.find("entry");
-			var total = entries.length;
-			var counter = 0;
-			entries.each(function(index) {
-				var element = self.addDataToEntryContainer(feedData, this);
-				if (element) {
-					result.push(element);
-					// remember how we got here
-					element[0].query = query;
-					// if this is the last one
-					if (index === total - 1) {
-						self.scrollTriggers.push(element);
-						window.setTimeout(function() {
-							self.onScroll();
-						}, 500); // delay until screen finishes populating
-						return false; // break;
-					}
-				}
-			});
-			self.renderLater();
-		}
-		return result;
+		this.addEntriesFromFeed(feedXml, query);
 	};
 
 	/**
@@ -226,7 +281,7 @@
 		if (this.disposed) {
 			return;
 		}
-		if (!$(this.entryContainer).is(':visible')) {
+		if (!$(this.entryContainer).is(':visible') && this.entryContainer.height() > 0) {
 			console.log("renderNow: not rendering because off-screen");
 			return;
 		}
@@ -319,23 +374,23 @@
 		 * fetching until there is something to display.
 		 */
 		var displayableResults;
-		model.pull(query, function(feedData) {
+		model.pull(query, function(feedXml) {
 			/* fetch complete */
 			decrementPendingCount();
-			if (!feedData) {
+			if (!feedXml) {
 				console.log("fetchPrevious: complete: not found: " + JSON.stringify(query));
 			} else {
 				console.log("fetchPrevious: complete: found: " + JSON.stringify(query));
-				displayableResults = self.addEntriesFromFeed(feedData, query);
+				displayableResults = self.addEntriesFromFeed(feedXml, query);
 				// no more to fetch: exit
 			}
-		}, function(feedData) {
+		}, function(feedXml) {
 			/* fetch partial */
-			if (!feedData) {
+			if (!feedXml) {
 				console.log("fetchPrevious: partial: not found: " + JSON.stringify(query));
 			} else {
 				console.log("fetchPrevious: partial: found: " + JSON.stringify(query));
-				displayableResults = self.addEntriesFromFeed(feedData, query);
+				displayableResults = self.addEntriesFromFeed(feedXml, query);
 				if (displayableResults.length === 0) {
 					// not enough to display: keep fetching
 					return true;
@@ -375,47 +430,6 @@
 			}
 			self.renderNow();
 		}, 500);
-	};
-
-	AbstractRenderer.prototype.dispose = function() {
-		this.reset();
-		this.disposed = true;
-	};
-
-	AbstractRenderer.prototype.reset = function() {
-		console.log("reset");
-		pollster.unsubscribe(this);
-		this.scrollTriggers = [];
-		if (this.allEntryElements) {
-			this.allEntryElements = [];
-		}
-		if (this.urnToEntryElement) {
-			this.urnToEntryElement = {};
-		}
-		if (this.entryContainer) {
-			this.entryContainer.empty();
-		}
-		if (this.feedContainer) {
-			this.feedContainer.empty();
-		}
-		if (this.querySet) {
-			this.querySet = {};
-		}
-	};
-
-	/**
-	 * Empties and reloads this renderer.
-	 */
-	AbstractRenderer.prototype.reload = function() {
-		console.log("reload");
-		if (this.entryContainer) {
-			this.entryContainer.empty();
-		}
-		if (this.feedContainer) {
-			this.feedContainer.empty();
-		}
-		// FIXME: need to populate this.querySet
-		// FIXME: need to re-create list with this.ids
 	};
 
 	// h/t http://stackoverflow.com/questions/487073

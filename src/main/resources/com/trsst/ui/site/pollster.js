@@ -151,7 +151,7 @@
 		// if first time executing task
 		if (task.lastFetched === 0) {
 			// fetch only latest few and requeue
-			query.count = 3;
+			query.count = 4;
 		}
 
 		var self = this;

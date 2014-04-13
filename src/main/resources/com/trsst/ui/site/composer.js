@@ -18,9 +18,11 @@
 	/**
 	 * Composer manages an entry composer form, submitting its contents to the
 	 * model when needed. Variants can just replace or extend this object.
+	 * If a renderer is specified, new entries will be inserted into it.
 	 */
-	Composer = window.Composer = function(form) {
+	Composer = window.Composer = function(form, renderer) {
 		this.form = $(form);
+		this.renderer = renderer;
 		var self = this;
 		this.form.submit(function(e) {
 			e.preventDefault();

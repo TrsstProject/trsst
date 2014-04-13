@@ -140,7 +140,7 @@ aside .follows-renderer>div:empty:before {
 
 article {
 	position: relative;
-	padding-bottom: 24px;
+	padding-bottom: 64px;
 }
 
 article>.composer:before
@@ -544,7 +544,9 @@ article .renderer:empty:before {
 .entry.expanded section>.title {
 	max-height: 2000px;
 }
-
+.page-entry .entry section>.title {
+	max-height: inherit;
+}
 .entry .title a {
 	color: #FF8A49;
 }
@@ -850,7 +852,7 @@ div.own .feed-title:before {
 	max-width: 25%
 }
 .addresses .address.parent span:after {
-	content: 'Conversation';
+	content: 'Comments';
 }
 .entry.verb-follow .addresses {
 	display:none;
@@ -2055,9 +2057,6 @@ body.page-entry .entry-renderer .entry .updated .absolute span.month span {
 body.page-entry .entry-renderer .entry .updated .absolute span.year:before {
 	content: ' ';
 }
-body.page-entry .feed-renderer .entry .addresses {
-	display:none;
-}
 
 /* @end */
 
@@ -2125,10 +2124,6 @@ aside .private.messaging {
 }
 body.page-entry .entry-renderer .entry {
 	margin-top: -12px;
-}
-.addresses .address.parent span:after {
-	/* too long to display*/
-	content: 'Comments';
 }
 
 .util-search {

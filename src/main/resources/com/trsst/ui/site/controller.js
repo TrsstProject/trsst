@@ -1195,6 +1195,7 @@
 		controller.pushState("/" + href);
 	};
 
+	var entryRenderer = new EntryRenderer(createElementForEntryData, $("#entryRenderer"));
 	var feedRenderer = new EntryRenderer(createElementForEntryData, $("#feedRenderer"));
 	var homeRenderer = new EntryRenderer(createElementForEntryData, $("#homeRenderer"));
 	var followsRenderer = new FeedRenderer(createElementForFeedData, $("#followsRenderer>div"));
@@ -1236,6 +1237,9 @@
 
 				// we're on a entry page
 				publicComposer.clearAddresses();
+				$("body").addClass("pending");
+				entryRenderer.reset();
+				feedRenderer.reset();
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-query");
 				$("body").removeClass("page-feed");
@@ -1246,29 +1250,22 @@
 					$("body").addClass("page-self");
 				}
 				pathname = pathname.substring(1); // trim leading slash
-				var entryRenderer = $("#entryRenderer");
-				if (entryRenderer[0].pathname !== pathname) {
-					entryRenderer[0].pathname = pathname;
-					entryRenderer.empty();
-					feedRenderer.reset();
-					model.pull({
-						feedId : pathname,
-						count : 1
-					}, function(feedData) {
-						$("body").removeClass("pending");
-						if (feedData && feedData.length > 0) {
-							var entryData = $(feedData).children("entry").first();
-							// click to expand
-							createElementForEntryData(feedData, entryData).prependTo(entryRenderer).click();
-							feedRenderer.addEntries({
-								mention : $(entryData).children("id").text()
-							});
-						} else {
-							console.log("Could not fetch requested entry: " + pathname);
-							// TODO: display a not-found message
-						}
-					});
-				}
+				model.pull({
+					feedId : pathname,
+					count : 1
+				}, function(feedData) {
+					$("body").removeClass("pending");
+					if (feedData && feedData.length > 0) {
+						entryRenderer.addEntries(feedData);
+						feedRenderer.addQuery({
+							mention : $(feedData).find("entry id").first().text()
+						});
+						$("#entryRenderer div.entry").click(); // autoexpand
+					} else {
+						console.log("Could not fetch requested entry: " + pathname);
+						// TODO: display a not-found message
+					}
+				});
 
 			} else {
 				/* Start progress indicator */
@@ -1340,24 +1337,34 @@
 					if (uid) {
 						if (uid !== path) {
 							// add their entries that mention us
-							messageRenderer.addEntries({
+							messageRenderer.addQuery({
 								feedId : path,
 								mention : uid
 							});
 						}
 						// add our entries that mention them
 						// (and our own replies that mention us if same)
-						messageRenderer.addEntries({
+						messageRenderer.addQuery({
 							feedId : uid,
 							mention : path
 						});
 						// add all encrypted entries
-						messageRenderer.addEntries({
+						messageRenderer.addQuery({
 							feedId : path,
 							verb : "encrypt"
 						});
 						// only the ones we can decode will show up
 					}
+				}
+
+				// first time only; not for entry page
+				if (!followingRenderer.homeId) {
+					window.setTimeout(function() {
+						// following renderer permanently shows home's
+						// recommendations
+						followingRenderer.homeId = TRSST_WELCOME;
+						followingRenderer.addFeedFollows(TRSST_WELCOME, 10);
+					}, 2000);
 				}
 			}
 
@@ -1395,23 +1402,24 @@
 			messageRenderer.reset();
 			if (id !== TRSST_WELCOME) {
 				// add all our mentions
-				messageRenderer.addEntries({
+				messageRenderer.addQuery({
 					mention : id
 				});
+			}
+
+			// first time only; not for entry page
+			if (!followingRenderer.homeId) {
+				window.setTimeout(function() {
+					// following renderer permanently shows home's
+					// recommendations
+					followingRenderer.homeId = TRSST_WELCOME;
+					followingRenderer.addFeedFollows(TRSST_WELCOME, 10);
+				}, 2000);
 			}
 
 			// TESTING: high volume test
 			// "http://api.flickr.com/services/feeds/photos_public.gne" );
 			// //
-		}
-
-		// first time only
-		if (!followingRenderer.homeId) {
-			window.setTimeout(function() {
-				// following renderer permanently shows home's recommendations
-				followingRenderer.homeId = TRSST_WELCOME;
-				followingRenderer.addFeedFollows(TRSST_WELCOME);
-			}, 2000);
 		}
 
 		// we can show the account menu now
