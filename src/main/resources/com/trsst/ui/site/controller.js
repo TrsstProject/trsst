@@ -350,7 +350,7 @@
 		});
 
 		// create composer
-		new Composer(entryElement.find("form"));
+		new Composer(entryElement.find("form"), feedRenderer);
 
 		// catch all clicks on the entryElement
 		entryElement.click(onEntryClick);
@@ -1066,7 +1066,14 @@
 	};
 
 	var TRSST_WELCOME = "8crfxaHcBWTHuhA8cXfwPc3vfJ3SbsRpJ";
-	var publicComposer = new Composer($("article>.composer").get());
+	var entryRenderer = new EntryRenderer(createElementForEntryData, $("#entryRenderer"));
+	var feedRenderer = new EntryRenderer(createElementForEntryData, $("#feedRenderer"));
+	var homeRenderer = new EntryRenderer(createElementForEntryData, $("#homeRenderer"));
+	var followsRenderer = new FeedRenderer(createElementForFeedData, $("#followsRenderer>div"));
+	var followingRenderer = new FeedRenderer(createElementForFeedData, $("#followingRenderer>div"));
+	var profileRenderer = new FeedRenderer(createElementForFeedData, $("#profileRenderer"));
+	var messageRenderer = new EntryRenderer(createElementForEntryData, $("#messageRenderer"));
+	var publicComposer = new Composer($("article>.composer").get(), feedRenderer);
 
 	var onInit = function() {
 
@@ -1175,7 +1182,7 @@
 			}
 		});
 
-		new Composer($(document).find(".private.messaging form"));
+		new Composer($(document).find(".private.messaging form"), messageRenderer);
 	};
 
 	controller.pushState = function(path) {
@@ -1194,14 +1201,6 @@
 		var href = $(string).find("link[rel='self']").attr("href");
 		controller.pushState("/" + href);
 	};
-
-	var entryRenderer = new EntryRenderer(createElementForEntryData, $("#entryRenderer"));
-	var feedRenderer = new EntryRenderer(createElementForEntryData, $("#feedRenderer"));
-	var homeRenderer = new EntryRenderer(createElementForEntryData, $("#homeRenderer"));
-	var followsRenderer = new FeedRenderer(createElementForFeedData, $("#followsRenderer>div"));
-	var followingRenderer = new FeedRenderer(createElementForFeedData, $("#followingRenderer>div"));
-	var profileRenderer = new FeedRenderer(createElementForFeedData, $("#profileRenderer"));
-	var messageRenderer = new EntryRenderer(createElementForEntryData, $("#messageRenderer"));
 
 	var onPopulate = function() {
 		var host = window.location.host;

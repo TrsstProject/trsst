@@ -1918,9 +1918,6 @@ body.page-entry article {
 	left: 50%;
 	margin-left: -25%;
 }
-body.page-entry.pending article {
-	display: none;
-}
 
 body.page-entry .profile-renderer {
 	display: none;

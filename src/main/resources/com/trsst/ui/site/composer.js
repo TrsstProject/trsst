@@ -188,6 +188,9 @@
 					self.form.find(".attach").removeAttr("file");
 					self.form.removeClass("error");
 					controller.forceRender(feedData); // quicker ux
+					if ( self.renderer ) {
+						self.renderer.addEntries(feedData);
+					}
 				} else {
 					// error
 					self.form.addClass("error");
