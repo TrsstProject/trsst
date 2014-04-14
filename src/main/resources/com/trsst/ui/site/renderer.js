@@ -61,13 +61,9 @@
 
 	/**
 	 * Immediately inserts the entries in the specified feed to the appropriate
-	 * location in the list.
+	 * location in the list.  Optional query will be called to back fill the
+	 * list triggered by scrolling if needed.
 	 */
-	AbstractRenderer.prototype.addEntries = function(feedXml) {
-		this.addEntriesFromFeed(feedXml, null);
-		this.renderNow();
-	};
-
 	AbstractRenderer.prototype.addEntriesFromFeed = function(feedXml, query) {
 		// ignore delayed fetch responses
 		if (this.disposed) {

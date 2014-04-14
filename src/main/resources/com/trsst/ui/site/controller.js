@@ -1255,13 +1255,14 @@
 					$("body").addClass("page-self");
 				}
 				pathname = pathname.substring(1); // trim leading slash
-				model.pull({
+				query = {
 					feedId : pathname,
 					count : 1
-				}, function(feedData) {
+				};
+				model.pull(query, function(feedData) {
 					$("body").removeClass("pending");
 					if (feedData && feedData.length > 0) {
-						entryRenderer.addEntries(feedData);
+						entryRenderer.addEntriesFromFeed(feedData, query);
 						feedRenderer.addQuery({
 							mention : $(feedData).find("entry id").first().text()
 						});
