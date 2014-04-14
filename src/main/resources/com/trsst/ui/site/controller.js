@@ -1263,6 +1263,7 @@
 					$("body").removeClass("pending");
 					if (feedData && feedData.length > 0) {
 						entryRenderer.addEntriesFromFeed(feedData, query);
+						feedRenderer.path = null; // clear from feed page
 						feedRenderer.addQuery({
 							mention : $(feedData).find("entry id").first().text()
 						});
