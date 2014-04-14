@@ -59,7 +59,7 @@ public class AppMain extends javafx.application.Application {
             // NOTE: must happen first to collect launch events
             appleEvents = new AppleEvents();
             // major improvement in font rendering on OSX
-            System.setProperty("prism.lcdtext", "false");
+            //System.setProperty("prism.lcdtext", "false");
         } catch (Throwable t) {
             // probably wrong platform: ignore
             log.warn("Could not load osx events: " + t.getMessage());
