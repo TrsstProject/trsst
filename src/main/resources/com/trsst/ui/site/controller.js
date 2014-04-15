@@ -1410,6 +1410,11 @@
 				homeRenderer.reset();
 				homeRenderer.addFeed(id);
 				if (id !== TRSST_HOME) {
+					// add all encrypted entries
+					messageRenderer.addQuery({
+						feedId : id,
+						verb : "encrypt"
+					});
 					homeRenderer.addFeed(TRSST_HOME);
 				}
 				
@@ -1425,6 +1430,11 @@
 				// add all our mentions
 				messageRenderer.addQuery({
 					mention : id
+				});
+				// add all encrypted entries
+				messageRenderer.addQuery({
+					feedId : id,
+					verb : "encrypt"
 				});
 			}
 
