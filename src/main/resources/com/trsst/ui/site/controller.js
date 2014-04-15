@@ -1188,8 +1188,10 @@
 				// strip last & or ?
 				query = query.substring(0, query.length - 1);
 
-				// navigate with new query
-				controller.pushState(window.location.pathname + query);
+				// navigate with new query on current page
+				//controller.pushState(window.location.pathname + query);
+				//NOTE: now all queries are global to reduce confusion
+				controller.pushState("/" + query);
 			}
 		});
 
@@ -1410,11 +1412,11 @@
 				homeRenderer.reset();
 				homeRenderer.addFeed(id);
 				if (id !== TRSST_HOME) {
-					// add all encrypted entries
-					messageRenderer.addQuery({
-						feedId : id,
-						verb : "encrypt"
-					});
+//					// add all encrypted entries
+//					messageRenderer.addQuery({
+//						feedId : id,
+//						verb : "encrypt"
+//					});
 					homeRenderer.addFeed(TRSST_HOME);
 				}
 				
@@ -1426,7 +1428,7 @@
 
 			// global conversation
 			messageRenderer.reset();
-			if (id !== TRSST_HOME) {
+			if (id !== TRSST_WELCOME) {
 				// add all our mentions
 				messageRenderer.addQuery({
 					mention : id
