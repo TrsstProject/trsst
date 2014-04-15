@@ -85,7 +85,7 @@ textarea, input[type=text], input[type=password] {
 .page-external .follows-renderer {
 	display: none;
 }
-.page-self div.private.messaging .composer {
+.page-self div.private.messaging>.composer {
 	/* don't display messager on own feed */
 	display: none;	
 }
@@ -93,7 +93,7 @@ textarea, input[type=text], input[type=password] {
 	/* don't display messager on own feed */
 	display: inherit;	
 }
-.page-self div.private.messaging .composer {
+.page-self div.private.messaging>.composer {
 	/* don't display messager on own feed */
 	display: none;	
 }
@@ -287,7 +287,7 @@ body .header-container {
 	-webkit-box-shadow: 0 1px 10px #333;
     -moz-box-shadow: 0 1px 10px #333;
     box-shadow: 0 1px 10px #444;
-    x-opacity: 0.95;
+    opacity: 0.95;
 }
 
 body aside {
@@ -302,7 +302,7 @@ body aside {
 .main aside .feed {
     background: #444;
 	
-    x-opacity: 0.95;
+    opacity: 0.95;
 }
 
 .header-container a {
@@ -1749,9 +1749,7 @@ body .footer-container .wrapper {
 	background-image: url('/loading-on-gray.gif');
 	background-size: 28px 28px;
 	opacity: 0;
-	
-	/* causes problems on jfx webkit: looks great otherwise */
-	x-webkit-transition: opacity .5s ease-in-out .5s;
+	webkit-transition: opacity .5s ease-in-out .5s;
 	
 }
 .pending .footer-container:after {

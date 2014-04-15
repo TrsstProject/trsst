@@ -1089,6 +1089,11 @@
 				updateRelativeTimestamp($(this));
 			});
 		}, 60000); // each minute
+		
+		/* Super-annoying jfx-webkit repaint workaround */
+		window.setInterval(function() {
+			$('<style></style>').appendTo($(document.body)).remove();
+		}, 1000); // each second
 
 		/* Initial state is "signed-out" */
 		$(document.body).addClass("signed-out");
