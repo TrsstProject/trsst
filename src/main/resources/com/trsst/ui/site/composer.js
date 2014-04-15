@@ -20,9 +20,9 @@
 	 * model when needed. Variants can just replace or extend this object.
 	 * If a renderer is specified, new entries will be inserted into it.
 	 */
-	Composer = window.Composer = function(form, renderer) {
+	Composer = window.Composer = function(form, renderers) {
 		this.form = $(form);
-		this.renderer = renderer;
+		this.renderers = renderers;
 		var self = this;
 		this.form.submit(function(e) {
 			e.preventDefault();
@@ -187,9 +187,12 @@
 					self.form[0].reset();
 					self.form.find(".attach").removeAttr("file");
 					self.form.removeClass("error");
-					controller.forceRender(feedData); // quicker ux
-					if ( self.renderer ) {
-						self.renderer.addEntries(feedData);
+					controller.forceRender(feedData);
+					if ( self.renderers ) {
+						// update the ui immediately for better ux
+						for ( var renderer in self.renderers ) {
+							self.renderers[renderer].addEntriesFromFeed(feedData);
+						}
 					}
 				} else {
 					// error

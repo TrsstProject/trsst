@@ -350,7 +350,7 @@
 		});
 
 		// create composer
-		new Composer(entryElement.find("form"), feedRenderer);
+		new Composer(entryElement.find("form"), [ feedRenderer, homeRenderer ]);
 
 		// catch all clicks on the entryElement
 		entryElement.click(onEntryClick);
@@ -1079,7 +1079,7 @@
 	var followingRenderer = new FeedRenderer(createElementForFeedData, $("#followingRenderer>div"));
 	var profileRenderer = new FeedRenderer(createElementForFeedData, $("#profileRenderer"));
 	var messageRenderer = new EntryRenderer(createElementForEntryData, $("#messageRenderer"));
-	var publicComposer = new Composer($("article>.composer").get(), feedRenderer);
+	var publicComposer = new Composer($("article>.composer").get(), [ feedRenderer, homeRenderer ]);
 
 	var onInit = function() {
 
@@ -1188,7 +1188,7 @@
 			}
 		});
 
-		new Composer($(document).find(".private.messaging form"), messageRenderer);
+		new Composer($(document).find(".private.messaging form"), [ messageRenderer ] );
 	};
 
 	controller.pushState = function(path) {
