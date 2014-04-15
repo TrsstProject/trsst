@@ -97,7 +97,7 @@ textarea, input[type=text], input[type=password] {
 	/* don't display messager on own feed */
 	display: none;	
 }
-div.private.messaging .composer {
+div.private.messaging>.composer {
 	/* don't display messager at all for now */
 	display: none;	
 }
