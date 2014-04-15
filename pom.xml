@@ -69,6 +69,11 @@
 					<groupId>bcprov-jdk15</groupId>
 					<artifactId>bcprov-jdk15</artifactId>
 				</exclusion>
+				<exclusion>
+					<!-- conflicts with latest jetty -->
+					<groupId>javax.servlet</groupId>
+					<artifactId>servlet-api</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
 		<dependency>
