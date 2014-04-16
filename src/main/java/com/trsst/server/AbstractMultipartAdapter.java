@@ -64,10 +64,10 @@ public abstract class AbstractMultipartAdapter extends
     }
 
     protected List<MultipartRelatedPost> getMultipartRelatedData(
-            RequestContext request, InputStream requestData) throws IOException, ParseException,
-            MessagingException {
+            RequestContext request, InputStream requestData)
+            throws IOException, ParseException, MessagingException {
 
-        //NOTE: because request.getInputStream() has already been read 
+        // NOTE: because request.getInputStream() has already been read
         // we pass in a seperate input stream containing the request data
         MultipartInputStream stream = getMultipartStream(request, requestData);
         List<MultipartRelatedPost> result = new LinkedList<MultipartRelatedPost>();
@@ -115,7 +115,8 @@ public abstract class AbstractMultipartAdapter extends
                     dataHeaders.putAll(headers);
                 }
                 checkMultipartContent(source, dataHeaders, request);
-                result.add( new MultipartRelatedPost(source, data, entryHeaders, dataHeaders) );
+                result.add(new MultipartRelatedPost(source, data, entryHeaders,
+                        dataHeaders));
             }
         } catch (IOException ioe) {
             log.error("Unexpected error parsing multipart data", ioe);
@@ -123,8 +124,9 @@ public abstract class AbstractMultipartAdapter extends
         return result;
     }
 
-    private MultipartInputStream getMultipartStream(RequestContext request, InputStream inputStream)
-            throws IOException, ParseException, IllegalArgumentException {
+    private MultipartInputStream getMultipartStream(RequestContext request,
+            InputStream inputStream) throws IOException, ParseException,
+            IllegalArgumentException {
         String boundary = request.getContentType().getParameter(BOUNDARY_PARAM);
 
         if (boundary == null) {
@@ -224,8 +226,9 @@ public abstract class AbstractMultipartAdapter extends
         ByteArrayOutputStream bo = new ByteArrayOutputStream();
 
         byte[] buffer = new byte[1024];
-        while (stream.read(buffer) != -1) {
-            bo.write(buffer);
+        int i;
+        while ((i = stream.read(buffer)) != -1) {
+            bo.write(buffer, 0, i);
         }
         return new ByteArrayInputStream(base64.decode(bo.toByteArray()));
     }
