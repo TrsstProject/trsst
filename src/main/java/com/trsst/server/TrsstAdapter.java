@@ -181,7 +181,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         throw new FileNotFoundException("Not found: " + feedId);
     }
 
-    private static Feed fetchFeedFromStorage(String feedId, Storage storage) {
+    protected static Feed fetchFeedFromStorage(String feedId, Storage storage) {
         Feed feed = null;
         try {
             log.debug("fetchFeedFromStorage: " + feedId);

@@ -100,7 +100,7 @@
 					homeRenderer.addFeed(feedId);
 					homeRenderer.addEntriesFromFeed(feedId, {
 						feedId : feedId,
-						verb: "follow"
+						verb : "follow"
 					});
 				});
 			}
@@ -1431,11 +1431,7 @@
 					// });
 					homeRenderer.addFeed(TRSST_HOME);
 				}
-
-				// by default: show the welcome account's followed feeds
-				if (id === TRSST_WELCOME) {
-					homeRenderer.addFeedFollows(id);
-				}
+				homeRenderer.addFeedFollows(id);
 			}
 
 			// global conversation

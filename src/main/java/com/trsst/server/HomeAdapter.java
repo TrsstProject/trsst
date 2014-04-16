@@ -164,8 +164,9 @@ public class HomeAdapter extends TrsstAdapter {
             String[] tags, String verb) {
         String[] entryIds = persistence.getEntryIds(0, length, after, before,
                 query, mentions, tags, verb);
-        Document<Entry> document;
+        Document<Entry> entryDoc;
         String feedId;
+        Feed parentFeed;
         long entryId;
         String urn;
         Entry entry;
@@ -175,11 +176,18 @@ public class HomeAdapter extends TrsstAdapter {
             urn = entryIds[i];
             feedId = urn.substring(0, urn.lastIndexOf(':'));
             entryId = Common.toEntryId(urn);
-            document = getEntry(persistence, feedId, entryId);
-            if (document != null) {
-                entry = (Entry) document.getRoot().clone();
+            parentFeed = fetchFeedFromStorage(feedId, persistence);
+            entryDoc = getEntry(persistence, feedId, entryId);
+            if (entryDoc != null) {
+                entry = (Entry) entryDoc.getRoot().clone();
                 if (updated == null || updated.before(entry.getUpdated())) {
                     updated = entry.getUpdated();
+                }
+                if (parentFeed != null) {
+                    // specify xmlbase if known
+                    entry.setBaseUri(parentFeed.getBaseUri());
+                    // NOTE: clients should not persist
+                    // xmlbase on aggregate feeds
                 }
                 feed.addEntry(entry);
             } else {
