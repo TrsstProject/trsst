@@ -117,22 +117,22 @@
 	};
 
 	model.feedIdFromFeedUrn = function(feedUrn) {
-		if ( feedUrn.indexOf("urn:feed:") === 0 ) {
+		if (feedUrn.indexOf("urn:feed:") === 0) {
 			feedUrn = feedUrn.substring("urn:feed:".length);
 		}
 		return feedUrn;
 	};
 
 	model.feedUrnFromFeedId = function(feedId) {
-		if ( feedId.indexOf("urn:feed:") === 0 ) {
-			return feedId; 
+		if (feedId.indexOf("urn:feed:") === 0) {
+			return feedId;
 		}
 		return "urn:feed:" + feedId;
 	};
 
 	model.entryUrnFromEntryId = function(entryId) {
-		if ( entryId.indexOf("urn:entry:") === 0 ) {
-			return entryId; 
+		if (entryId.indexOf("urn:entry:") === 0) {
+			return entryId;
 		}
 		return "urn:entry:" + entryId;
 	};
@@ -166,7 +166,7 @@
 	/**
 	 * Deletes the specified entry.
 	 */
-	model.deleteEntry = function(entryId) {
+	model.deleteEntry = function(entryId, callback) {
 		if (authenticatedUid) {
 			var formData = new FormData();
 			formData.append("verb", "delete");
@@ -175,6 +175,9 @@
 			// servers will do the rest
 			pushFeed(authenticatedUid, authenticatedPwd, formData, function(feedData) {
 				console.log("Deleted entry: " + entryId);
+				if (callback) {
+					callback(feedData);
+				}
 			});
 		}
 	};
@@ -252,7 +255,7 @@
 	/**
 	 * Follows the specified feed.
 	 */
-	model.followFeed = function(feedId) {
+	model.followFeed = function(feedId, callback) {
 		if (authenticatedUid) {
 			if (!model.isAuthenticatedFollowing(feedId)) {
 				var formData = new FormData();
@@ -266,6 +269,9 @@
 					authenticatedFollows[feedId] = null; // adds to list
 					model.notify(feedId);
 					model.notify(authenticatedUid);
+					if (callback) {
+						callback(feedData);
+					}
 				});
 			}
 		}
@@ -274,7 +280,7 @@
 	/**
 	 * Unfollows the specified feed: deletes the original follow entry.
 	 */
-	model.unfollowFeed = function(feedId) {
+	model.unfollowFeed = function(feedId, callback) {
 		if (authenticatedUid) {
 			if (model.isAuthenticatedFollowing(feedId)) {
 				fetchFilterWithSelector({
@@ -282,14 +288,19 @@
 					verb : "follow"
 				}, "feed content[src='" + feedId + "']", function(results) {
 					if (results && results.length > 0) {
-						model.deleteEntry($(results[0]).closest("entry").children("id").text());
+						model.deleteEntry($(results[0]).closest("entry").children("id").text(), function(feedData) {
+							delete authenticatedFollows[feedId];
+							model.notify(feedId);
+							model.notify(authenticatedUid);
+							if (callback) {
+								callback(feedData);
+							}
+						});
 						console.log("Unfollowed: " + feedId);
 						if (results.length > 1) {
 							console.log("Found multple follow entries: deleted first:" + feedId);
 							console.log(results);
 						}
-						model.notify(feedId);
-						model.notify(authenticatedUid);
 					} else {
 						console.log("Could not find follow to delete: " + feedId);
 					}
@@ -367,7 +378,7 @@
 		fetchFilterWithSelector({
 			feedId : id,
 			verb : "follow",
-			count: 999
+			count : 999
 		}, "feed content", function(results) {
 			for ( var i in results) {
 				results[i] = $(results[i]).attr("src");
@@ -504,10 +515,12 @@
 	};
 
 	var recursiveAjax = function(url, filterObject, callback, callbackPartial) {
-//		console.log("recursiveAjax: fetch: " + url + " : " + JSON.stringify(filterObject));
-//		if ( !filterObject || !filterObject.count ) {
-//			console.log("recursiveAjax: fetch: " + url + " : " + JSON.stringify(filterObject));
-//		}
+		// console.log("recursiveAjax: fetch: " + url + " : " +
+		// JSON.stringify(filterObject));
+		// if ( !filterObject || !filterObject.count ) {
+		// console.log("recursiveAjax: fetch: " + url + " : " +
+		// JSON.stringify(filterObject));
+		// }
 		$.ajax({
 			url : url,
 			data : filterObject,
@@ -530,8 +543,8 @@
 					// if callbacks want us to continue
 					if (proceed) {
 						// process the link/next url
-						var serverPath = model.serverUrl+defaultBase+'/';
-						if (next.indexOf(serverPath) === 0 ) {
+						var serverPath = model.serverUrl + defaultBase + '/';
+						if (next.indexOf(serverPath) === 0) {
 							next = next.substring(serverPath.length);
 						}
 						var query;
@@ -601,7 +614,7 @@
 		} else {
 			model.pull({
 				feedId : feedId,
-				count: 0
+				count : 0
 			}, callback);
 		}
 	};

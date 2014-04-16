@@ -194,7 +194,7 @@ article>.composer textarea {
 	/* show all mentions*/
 	display: inherit;
 }
-.page-home.signed-in .private.messaging .composer{
+.page-home.signed-in .private.messaging>.composer{
 	/* don't show on home */
 	display: none;
 }
@@ -995,7 +995,9 @@ div.own .feed-title:before {
 .entry.verb-deleted .content:before {
 	content: 'Deleted';
 }
-.entry.verb-deleted .action {
+.entry.verb-deleted .action,
+.entry.verb-deleted .addresses 
+{
 	display: none;
 }
 
@@ -1074,6 +1076,8 @@ div.entry.verb-follow>div.feed {
 	left: -80px;
 	border-radius: 0px;
 	border-top: 0px;
+	width: 90%;
+	padding-right:10%;
 }
 div.entry.verb-follow>div.feed .subtitle {
 	margin-left: 80px;

@@ -86,11 +86,23 @@
 		updateFollowElementForFeedId(followElement, feedId);
 		followButton.attr("disabled", false);
 		followButton.click(function(e) {
-			followButton.attr("disabled", true);
 			if (followElement.hasClass("following")) {
-				model.unfollowFeed(feedId);
+				followButton.attr("disabled", true);
+				model.unfollowFeed(feedId, function(feedData) {
+					updateFollowElementForFeedId(followElement, feedId);
+					followButton.attr("disabled", false);
+				});
 			} else {
-				model.followFeed(feedId);
+				followButton.attr("disabled", true);
+				model.followFeed(feedId, function(feedData) {
+					updateFollowElementForFeedId(followElement, feedId);
+					followButton.attr("disabled", false);
+					homeRenderer.addFeed(feedId);
+					homeRenderer.addEntriesFromFeed(feedId, {
+						feedId : feedId,
+						verb: "follow"
+					});
+				});
 			}
 		});
 
@@ -1089,7 +1101,7 @@
 				updateRelativeTimestamp($(this));
 			});
 		}, 60000); // each minute
-		
+
 		/* Super-annoying jfx-webkit repaint workaround */
 		window.setInterval(function() {
 			$('<style></style>').appendTo($(document.body)).remove();
@@ -1189,13 +1201,13 @@
 				query = query.substring(0, query.length - 1);
 
 				// navigate with new query on current page
-				//controller.pushState(window.location.pathname + query);
-				//NOTE: now all queries are global to reduce confusion
+				// controller.pushState(window.location.pathname + query);
+				// NOTE: now all queries are global to reduce confusion
 				controller.pushState("/" + query);
 			}
 		});
 
-		new Composer($(document).find(".private.messaging form"), [ messageRenderer ] );
+		new Composer($(document).find(".private.messaging form"), [ messageRenderer ]);
 	};
 
 	controller.pushState = function(path) {
@@ -1375,7 +1387,7 @@
 				if (id === TRSST_HOME && id !== TRSST_WELCOME) {
 					homeRenderer.addFeedFollows(id);
 				}
-				
+
 				// first time only; not for entry page
 				if (!followingRenderer.homeId) {
 					window.setTimeout(function() {
@@ -1412,14 +1424,14 @@
 				homeRenderer.reset();
 				homeRenderer.addFeed(id);
 				if (id !== TRSST_HOME) {
-//					// add all encrypted entries
-//					messageRenderer.addQuery({
-//						feedId : id,
-//						verb : "encrypt"
-//					});
+					// // add all encrypted entries
+					// messageRenderer.addQuery({
+					// feedId : id,
+					// verb : "encrypt"
+					// });
 					homeRenderer.addFeed(TRSST_HOME);
 				}
-				
+
 				// by default: show the welcome account's followed feeds
 				if (id === TRSST_WELCOME) {
 					homeRenderer.addFeedFollows(id);
