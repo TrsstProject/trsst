@@ -97,10 +97,13 @@ public class HomeAdapter extends TrsstAdapter {
         feed.setUpdated(new Date(System.currentTimeMillis() - 1000 * 60 * 60
                 * 24 * 30));
 
-        // if async fetch is allowed
-        if (wrapper.getParameter("sync") == null) {
-            if (feed != null) {
-                // ingest results from relay peers asynchronously
+        if (feed != null) {
+            if (feed.getEntries().size() == 0
+                    || wrapper.getParameter("sync") != null) {
+                // no local results: check the relays now
+                pullFromRelay(feedId, request);
+            } else {
+                // we have some results: return these and check relays later
                 pullLaterFromRelay(feedId, request);
             }
         }

@@ -163,7 +163,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // otherwise fetch synchronously
         if (feed == null) {
             // attempt to fetch from relay peer
-            feed = pullFromRelay(request);
+            feed = pullFromRelay(feedId, request);
         }
 
         if (feed != null) {
@@ -219,7 +219,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
             TimerTask task = new TimerTask() {
                 public void run() {
                     log.debug("fetchLaterFromRelay: starting: " + uri);
-                    pullFromRelay(request);
+                    pullFromRelay(feedId, request);
                     COALESCING_TIMERS.remove(uri);
                 }
             };
@@ -231,7 +231,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     public static Timer TASK_QUEUE;
     private static Map<String, TimerTask> COALESCING_TIMERS = new Hashtable<String, TimerTask>();
 
-    private Feed pullFromRelay(RequestContext request) {
+    protected Feed pullFromRelay(String feedIdentifier, RequestContext request) {
         Feed result = null;
         RequestContextWrapper wrapper = new RequestContextWrapper(request);
         int limit = 5; // arbitrary
@@ -263,10 +263,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
 
         if (result == null) {
-            if (Common.isExternalId(feedId)) {
+            if (Common.isExternalId(feedIdentifier)) {
                 // attempt to fetch directly
-                log.debug("Fetching direct: " + feedId);
-                result = fetchFromExternalSource(feedId);
+                log.debug("Fetching direct: " + feedIdentifier);
+                result = fetchFromExternalSource(feedIdentifier);
             }
         }
 

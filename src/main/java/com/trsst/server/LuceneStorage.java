@@ -253,11 +253,18 @@ public class LuceneStorage implements Storage {
                             SortField.Type.LONG, true)));
             String[] result = new String[Math.min(length, hits.totalHits)];
             int i = 0;
+            String id;
+            int replace;
             Set<String> fields = new HashSet<String>();
             fields.add("entry"); // we only need the entry field
             for (ScoreDoc e : hits.scoreDocs) {
-                result[i++] = new IndexSearcher(reader).doc(e.doc).get("entry")
-                        .replace('-', ':');
+                id = new IndexSearcher(reader).doc(e.doc).get("entry");
+                replace = id.lastIndexOf('-');
+                if (replace != -1) {
+                    id = id.substring(0, replace) + ':'
+                            + id.substring(replace + 1);
+                }
+                result[i++] = id;
             }
             return result;
         } catch (IOException e) {
