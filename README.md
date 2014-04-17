@@ -15,6 +15,13 @@ It depends on who you are.
 All of these are correct. 
 
 
+Download Alpha v0.2
+------------------------------------
+
+Current binaries are downloadable here:
+https://github.com/TrsstProject/trsst/releases
+
+
 Frequently Asked Questions
 ------------------------------------
 
@@ -43,36 +50,39 @@ Usage:
 	 -c,--content <text>     Specify entry content on command line
 	 -e,--encrypt <pubkey>   Encrypt entry for specified public key
 	 -g,--tag <text>         Add a tag
-	 -i,--icon               Set as this feed's icon or specify url
-	 -l,--logo               Set as this feed's logo or specify url
+	 -i,--icon <url>         Set as this feed's icon or specify url
+	 -l,--logo <url>         Set as this feed's logo or specify url
 	 -m,--mail <email>       Set this feed's author email
 	 -n,--name <text>        Set this feed's author name
-		--subtitle <text>    Set this feed's subtitle
-		--vanity <prefix>    Generate feed id with specified prefix
 	 -p,--pass <text>        Specify passphrase on the command line
 	 -r,--mention <id>       Add a mention
 	 -s,--status <text>      Specify status update on command line
+		--strict             Require SSL certs
+		--subtitle <text>    Set this feed's subtitle
 	 -t,--title <text>       Set this feed's title
 	 -u,--url <url>          Attach the specified url to the new entry
 	 -v,--verb <verb>        Specify an activitystreams verb for this entry
-
+		--vanity <prefix>    Generate feed id with specified prefix
+		
 	pull <id>...
 	 -d,--decrypt <id>   Decrypt entries as specified recipient id
 	 -h,--host <url>     Set host server for this operation
-
+	 
 	push <url> <id>...
 	 -d,--decrypt <id>   Decrypt entries as specified recipient id
 	 -h,--host <url>     Set host server for this operation
-
-	port [<portnumber>]
-		--api     Expose REST API
-		--clear   Turn off SSL
-		--gui     Launch embedded GUI
+	 
+	serve
+		--api          Expose client API
+		--clear        Turn off SSL
+		--gui          Launch embedded GUI
+		--port <arg>   Specify port
+		--tor          Use TOR (experimental)
 	
 
 Example: start a server.
 
-	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar port 8181
+	$ java -jar target/trsst-client-0.2-SNAPSHOT-exe.jar serve --port 8181
 	
 	Services now available at: https://192.168.1.5:8181/feed
 
