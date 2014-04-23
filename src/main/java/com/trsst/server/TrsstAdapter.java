@@ -1649,7 +1649,10 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     public Map<String, String> getAlternateAccepts(RequestContext request) {
         if (accepts == null) {
             accepts = new HashMap<String, String>();
-            accepts.put("video/*", null); /* doesn't accept multipart related */
+            //NOTE: currently accepting only "media" types; no zip, pdf, etc.
+            accepts.put("video/mp4", Constants.LN_ALTERNATE_MULTIPART_RELATED);
+            accepts.put("audio/mp3", Constants.LN_ALTERNATE_MULTIPART_RELATED);
+            accepts.put("audio/mp4", Constants.LN_ALTERNATE_MULTIPART_RELATED);
             accepts.put("image/png", Constants.LN_ALTERNATE_MULTIPART_RELATED);
             accepts.put("image/jpeg", Constants.LN_ALTERNATE_MULTIPART_RELATED);
             accepts.put("image/gif", Constants.LN_ALTERNATE_MULTIPART_RELATED);
