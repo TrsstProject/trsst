@@ -101,7 +101,7 @@ div.private.messaging>.composer {
 	/* don't display messager at all for now */
 	display: none;	
 }
-div.private.messaging .message-renderer:before {
+div.private.messaging .message-renderer>div:before {
 	content: 'No mentions yet.';
 	position: absolute;
 	left: 0px;
@@ -1842,10 +1842,18 @@ aside div.following-renderer:before
 	content: 'You are following';
 }
 
-aside .feeds-renderer>div {
-	height: 375px;
+aside .feeds-renderer>div,
+aside .message-renderer>div 
+{
+	min-height: 125px;
+	max-height: 375px;
 	overflow-x: hidden;
 	overflow-y: scroll;
+}
+aside .message-renderer>div {
+	max-height: 600px;
+}
+aside .feeds-renderer>div {
 	margin-right: -18px;
 }
 
