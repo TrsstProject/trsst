@@ -911,7 +911,7 @@
 	};
 
 	var updateRelativeTimestamp = function(entryElement) {
-		var dateString = entryElement.find(".updated .raw span").text();
+		var dateString = entryElement.find(".updated .raw span").first().text();
 		try {
 			var granularity = "seconds";
 			var diff = Math.floor((new Date().getTime() - Date.parse(dateString)) / 1000);
@@ -928,11 +928,14 @@
 			if (diff > 0) {
 				granularity = "hours";
 			}
+			if ( isNaN(value) ) {
+				console.log("NAN!");
+			}
 			entryElement.find(".updated .relative .minutes span").text(value);
 			entryElement.find(".updated .relative .minutes").attr("value", value);
 
 			value = diff % 24;
-			diff = Math.floor(diff / 60);
+			diff = Math.floor(diff / 24);
 			if (diff > 0) {
 				granularity = "days";
 			}
@@ -940,7 +943,7 @@
 			entryElement.find(".updated .relative .hours").attr("value", value);
 
 			value = diff % 30;
-			diff = Math.floor(diff / 24);
+			diff = Math.floor(diff / 30);
 			if (diff > 0) {
 				granularity = "months";
 			}
@@ -948,7 +951,7 @@
 			entryElement.find(".updated .relative .days").attr("value", value);
 
 			value = diff % 12;
-			diff = Math.floor(diff / 30);
+			diff = Math.floor(diff / 12);
 			if (diff > 0) {
 				granularity = "years";
 			}

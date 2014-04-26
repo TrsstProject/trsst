@@ -116,7 +116,7 @@ aside .follows-renderer>div:empty:before {
 	position: absolute;
 	left: 0px;
 	right: 0px;
-	top: 120px;
+	top: 100px;
 	font-size: 140%;
 	color: #ccc;
 	text-align: center;
@@ -852,7 +852,7 @@ div.own .feed-title:before {
 	max-width: 25%
 }
 .addresses .address.parent span:after {
-	content: 'Comments';
+	content: 'Conversation';
 }
 .entry.verb-follow .addresses {
 	display:none;
@@ -1174,7 +1174,8 @@ audio, video {
 /* display absolute if more than a day */
 .updated.seconds .absolute,
 .updated.minutes .absolute,
-.updated.hours .absolute
+.updated.hours .absolute,
+.updated.days .absolute
 {
 	display: none;
 }
@@ -1185,7 +1186,8 @@ audio, video {
 }
 .updated.seconds .relative,
 .updated.minutes .relative,
-.updated.hours .relative
+.updated.hours .relative,
+.updated.days .relative
 {
 	display: inherit;
 }
@@ -1208,7 +1210,9 @@ audio, video {
 }
 .updated.seconds .seconds,
 .updated.minutes .minutes,
-.updated.hours .hours {
+.updated.hours .hours,
+.updated.days .days
+{
 	display: inherit;
 }
 
