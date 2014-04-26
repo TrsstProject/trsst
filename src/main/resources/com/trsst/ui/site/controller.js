@@ -1090,7 +1090,7 @@
 	var followsRenderer = new FeedRenderer(createElementForFeedData, $("#followsRenderer>div"));
 	var followingRenderer = new FeedRenderer(createElementForFeedData, $("#followingRenderer>div"));
 	var profileRenderer = new FeedRenderer(createElementForFeedData, $("#profileRenderer"));
-	var messageRenderer = new EntryRenderer(createElementForEntryData, $("#messageRenderer"));
+	var messageRenderer = new EntryRenderer(createElementForEntryData, $("#messageRenderer>div"));
 	var publicComposer = new Composer($("article>.composer").get(), [ feedRenderer, homeRenderer ]);
 
 	var onInit = function() {
@@ -1424,14 +1424,9 @@
 				homeRenderer.reset();
 				homeRenderer.addFeed(id);
 				if (id !== TRSST_HOME) {
-					// // add all encrypted entries
-					// messageRenderer.addQuery({
-					// feedId : id,
-					// verb : "encrypt"
-					// });
 					homeRenderer.addFeed(TRSST_HOME);
+					homeRenderer.addFeedFollows(id);
 				}
-				homeRenderer.addFeedFollows(id);
 			}
 
 			// global conversation
