@@ -152,7 +152,7 @@ public class AppServlet extends HttpServlet {
                             if (item.isFormField()) {
                                 // process regular form field
                                 String name = item.getFieldName();
-                                String value = item.getString().trim();
+                                String value = item.getString("UTF-8").trim();
                                 // System.out.println("AppServlet: " + name
                                 // + " : " + value);
                                 if (value.length() > 0) {
@@ -205,7 +205,7 @@ public class AppServlet extends HttpServlet {
                 if (inStream != null) {
                     args.add("--attach");
                 }
-                // System.out.println(args);
+System.out.println(args);
 
                 // make sure we don't create another local server
                 args.add("--host");

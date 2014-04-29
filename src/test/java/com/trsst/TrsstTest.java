@@ -215,7 +215,7 @@ public class TrsstTest extends TestCase {
                     signingKeys,
                     encryptionKeys,
                     new EntryOptions()
-                            .setStatus("Second Post!")
+                            .setStatus("你好，世界。")
                             .setVerb("post")
                             .setBody("This is the body")
                             .setMentions(new String[] { feedId, feedId })
@@ -226,7 +226,7 @@ public class TrsstTest extends TestCase {
             assertNotNull("Generating second entry", feed);
             assertEquals("Feed contains one entry", 1, feed.getEntries().size());
             entry = feed.getEntries().get(0);
-            assertEquals("Entry retains title", "Second Post!",
+            assertEquals("Entry retains title with unicode", "你好，世界。",
                     entry.getTitle());
             assertEquals("Entry contains verb", "post",
                     entry.getSimpleExtension(new QName(
