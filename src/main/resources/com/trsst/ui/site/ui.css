@@ -70,6 +70,18 @@ textarea, input[type=text], input[type=password] {
 .page-feed .follows-renderer {
 	display: inherit;
 }
+.page-home .follows-renderer {
+	display: inherit;
+}
+.page-home .following-renderer {
+	display: none;
+}
+.page-welcome .follows-renderer {
+	display: none;
+}
+.page-welcome .following-renderer {
+	display: inherit;
+}
 .page-entry .entry-renderer {
 	display: inherit;
 }
@@ -587,6 +599,7 @@ article .renderer:empty:before {
 	vertical-align: top;
 	font-weight: bold;
 	margin-right: 4px;
+	cursor: pointer;
 }
 .entry .feed-title.empty-text {
 	display: none;

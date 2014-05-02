@@ -1267,6 +1267,7 @@
 				$("body").addClass("pending");
 				entryRenderer.reset();
 				feedRenderer.reset();
+				$("body").removeClass("page-welcome");
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-query");
 				$("body").removeClass("page-feed");
@@ -1302,6 +1303,7 @@
 
 				// we're on a feed page
 				publicComposer.clearAddresses();
+				$("body").removeClass("page-welcome");
 				$("body").removeClass("page-home");
 				$("body").removeClass("page-query");
 				$("body").removeClass("page-entry");
@@ -1406,6 +1408,7 @@
 			// otherwise: we're on the "home" page
 			publicComposer.clearAddresses();
 			$("body").addClass("page-home");
+			$("body").removeClass("page-welcome");
 			$("body").removeClass("page-query");
 			$("body").removeClass("page-entry");
 			$("body").removeClass("page-external");
@@ -1427,8 +1430,18 @@
 				homeRenderer.reset();
 				homeRenderer.addFeed(id);
 				if (id !== TRSST_HOME) {
+					$("body").addClass("page-self");
 					homeRenderer.addFeed(TRSST_HOME);
 					homeRenderer.addFeedFollows(id);
+					followsRenderer.reset();
+					followsRenderer.addFeedFollows(id);
+				} 
+				if ( id === TRSST_HOME ) {
+					$("body").addClass("page-welcome");
+					if ( window.location.toString().indexOf("home.trsst.com") != -1 ) {
+						// only show demo feeds on home.trsst.com
+						homeRenderer.addFeedFollows(TRSST_HOME);
+					} 
 				}
 			}
 
