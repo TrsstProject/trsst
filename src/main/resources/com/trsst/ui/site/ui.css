@@ -189,10 +189,14 @@ article>.composer
 	background: #fff;
 	border-radius:8px;
 	margin-bottom: 16px;
+	display: none;
 }
 article>.composer textarea {
 	height: 48px;
 	margin-bottom: 8px;
+}
+.signed-in article>.composer {
+	display: inherit;
 }
 
 .private.messaging {
@@ -1121,11 +1125,18 @@ div.entry.verb-follow>div.feed .subtitle {
 
 /* @group Inline Reply */
 
-x.entry.verb-reply  {
-margin-top: 0px;
-padding-top: 0px;
+/*NOTE: excludes body.page-entry because it *only* shows replies */
+
+.page-entry .feed-renderer .entry:not(.verb-reply) {
+	/* the parent is already displayed on page-entry */
+	display: none;
 }
-x.entry.verb-reply>div.entry {
+
+body:not(.page-entry) .entry.verb-reply  {
+	margin-top: 0px;
+	padding-top: 0px;
+}
+body:not(.page-entry) .entry.verb-reply>div.entry {
 	position: relative;
 	left: -80px;
 	width: 100%;
@@ -1133,26 +1144,26 @@ x.entry.verb-reply>div.entry {
 	x-border-bottom: none;
 	x-padding-bottom: 0px;
 }
-x.entry.verb-reply>section  {
+body:not(.page-entry) .entry.verb-reply>section  {
 	padding-top: 12px;
 	padding-left: 64px;
 	font-size: 85%;
 	position: relative;
 }
-x.entry.verb-reply>section .title {
+body:not(.page-entry) .entry.verb-reply>section .title {
 	line-height: 14px;
 }
-x.entry.verb-reply>section .icon {
+body:not(.page-entry) .entry.verb-reply>section .icon {
 	left: 0px;
 }
-x.entry.verb-reply>section .updated {
+body:not(.page-entry) .entry.verb-reply>section .updated {
 	right: -12px;
 }
-.entry.verb-reply>section .feed-title:after {
+body:not(.page-entry) .entry.verb-reply>section .feed-title:after {
 	content: ' commented';
 	font-weight: normal;
 }
-.entry.verb-reply>section .feed-id {
+body:not(.page-entry) .entry.verb-reply>section .feed-id {
 	display: none;
 }
 
@@ -1859,6 +1870,9 @@ aside div.following-renderer:before
 	content: 'You are following';
 }
 
+aside .message-renderer {
+	overflow-x: hidden;
+}
 aside .feeds-renderer>div,
 aside .message-renderer>div 
 {
@@ -1866,12 +1880,13 @@ aside .message-renderer>div
 	max-height: 375px;
 	overflow-x: hidden;
 	overflow-y: scroll;
+	margin-right: -18px;
 }
 aside .message-renderer>div {
 	max-height: 600px;
+	padding-right: 18px;
 }
 aside .feeds-renderer>div {
-	margin-right: -18px;
 }
 
 aside div.feeds-renderer .feed {

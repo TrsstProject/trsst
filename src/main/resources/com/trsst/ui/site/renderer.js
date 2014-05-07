@@ -61,8 +61,8 @@
 
 	/**
 	 * Immediately inserts the entries in the specified feed to the appropriate
-	 * location in the list.  Optional query will be called to back fill the
-	 * list triggered by scrolling if needed.
+	 * location in the list. Optional query will be called to back fill the list
+	 * triggered by scrolling if needed.
 	 */
 	AbstractRenderer.prototype.addEntriesFromFeed = function(feedXml, query) {
 		// ignore delayed fetch responses
@@ -84,7 +84,7 @@
 				if (element) {
 					result.push(element);
 					// remember how we got here
-					if (query != null) {
+					if (query !== null) {
 						element[0].query = query;
 					}
 					// if this is the last one
@@ -172,6 +172,8 @@
 	 */
 	AbstractRenderer.prototype.addDataToEntryContainer = function(feedXml, entryData) {
 		var self = this;
+		var originalFeedXml = feedXml;
+		var originalEntryData = entryData;
 		entryData = $(entryData);
 		var element = self.entryFactory(feedXml, entryData);
 		// if entry should be visible (public or decrypted)
@@ -181,12 +183,10 @@
 			if (!self.urnToEntryElement[currentUrn]) {
 				// the list to iterate
 				var children = this.allEntryElements;
-				var currentFeedId = model.feedIdFromEntryUrn(currentUrn);
-				var currentEntryId = model.entryIdFromEntryUrn(currentUrn);
-				self.urnToEntryElement[currentUrn] = element;
 				// console.log("addDataToEntryContainer: " + current);
 
 				// if entry is a reply: find first parent
+				var startIndex = 0;
 				var verb = entryData.find("verb").text();
 				var parentUrn;
 				var parentElement;
@@ -194,7 +194,7 @@
 					var term;
 					entryData.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
 						term = $(this).attr("term");
-						if (term.indexOf("urn:feed:") === 0) {
+						if (term.indexOf("urn:entry:") === 0) {
 							// first parent is top-most parent of thread
 							parentUrn = term;
 							return false; // break loop
@@ -202,33 +202,62 @@
 					});
 					if (parentUrn) {
 						parentElement = self.urnToEntryElement[parentUrn];
-						var index = children.indexOf(parentElement);
-						if (index !== -1) {
-							// subset to just elements after this one
-							children = children.slice(index + 1);
-							// now the logic below will automagically
-							// insert this entry in the correct spot
-							// beneath the parent entry in the list.
+						if (parentElement) {
+							// if we already fetched the parent element
+							var index = children.indexOf(parentElement);
+							if (index !== -1) {
+								// subset to just elements after this one
+								startIndex = index + 1;
+								// now the logic below will automagically
+								// insert this entry in the correct spot
+								// beneath the parent entry in the list.
+							}
+						} else {
+							// fetch the parent element, insert it,
+							// and THEN insert this element
+							model.pull({
+								feedId : model.feedIdFromEntryUrn(parentUrn) + '/' + model.entryIdFromEntryUrn(parentUrn),
+								count : 1
+							}, function(feedData) {
+								if (feedData && feedData.length > 0) {
+									var entryData = $(feedData).children("entry").first();
+									// insert the parent into this container
+									self.addDataToEntryContainer(feedData, entryData);
+								} else {
+									// not found: add a dummy reference to
+									// ensure not called again
+									self.urnToEntryElement[parentUrn] = originalFeedXml;
+									console.log("Could not fetch conversation root entry: " + parentUrn);
+								}
+								// now retry with child
+								self.addDataToEntryContainer(originalFeedXml, originalEntryData);
+							});
+							return; // EXIT and wait for fetch to complete
 						}
 					}
 				}
 
 				var didPlaceBefore;
+				var currentFeedId = model.feedIdFromEntryUrn(currentUrn);
+				var currentEntryId = model.entryIdFromEntryUrn(currentUrn);
+				self.urnToEntryElement[currentUrn] = element;
 				$.each(children, function(index) {
-					var currentElement = $(this);
-					var existing = currentElement.attr("entry");
-					var existingFeedId = model.feedIdFromEntryUrn(existing);
-					var existingEntryId = model.entryIdFromEntryUrn(existing);
+					if (index >= startIndex) {
+						var currentElement = $(this);
+						var existing = currentElement.attr("entry");
+						var existingFeedId = model.feedIdFromEntryUrn(existing);
+						var existingEntryId = model.entryIdFromEntryUrn(existing);
 
-					// ignore replies unless we are a reply
-					if (!parentElement || !currentElement.hasClass("verb-reply")) {
-						// hex timestamps compare lexicographically
-						if ((self.descendingOrder && (currentEntryId > existingEntryId)) || (!self.descendingOrder && (currentEntryId < existingEntryId))) {
-							// insert before same or earlier time
-							didPlaceBefore = this;
-							children.splice(index, 0, element);
-							console.log("Inserting element: " + element.attr("entry"));
-							return false; // break loop
+						// ignore replies unless we are a reply
+						if (!parentElement || !currentElement.hasClass("verb-reply")) {
+							// hex timestamps compare lexicographically
+							if ((self.descendingOrder && (currentEntryId > existingEntryId)) || (!self.descendingOrder && (currentEntryId < existingEntryId))) {
+								// insert before same or earlier time
+								didPlaceBefore = this;
+								children.splice(index, 0, element);
+								console.log("Inserting element: " + element.attr("entry"));
+								return false; // break loop
+							}
 						}
 					}
 				});
@@ -239,6 +268,7 @@
 				}
 			}
 		}
+		self.renderLater();
 		return element;
 	};
 

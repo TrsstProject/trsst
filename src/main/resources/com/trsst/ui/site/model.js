@@ -113,7 +113,10 @@
 	};
 
 	model.feedIdFromEntryUrn = function(entryUrn) {
-		return entryUrn.substring("urn:entry:".length, entryUrn.lastIndexOf(":"));
+		if (entryUrn.indexOf("urn:entry:") === 0) {
+			return entryUrn.substring("urn:entry:".length, entryUrn.lastIndexOf(":"));
+		}
+		return entryUrn;
 	};
 
 	model.feedIdFromFeedUrn = function(feedUrn) {

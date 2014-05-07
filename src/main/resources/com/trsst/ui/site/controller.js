@@ -515,36 +515,33 @@
 					// console.log(this);
 				}
 				// TODO: rethink conversation threading
-				// } else if (verb === "reply") {
-				// // get last entry mention:
-				// // this is the nearest parent in a tree of comments
-				// var ref;
-				// var term;
-				// entryXml.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function()
-				// {
-				// term = $(this).attr("term");
-				// if ( term && term.indexOf("urn:entry") === 0 ) {
-				// ref = term;
-				// }
-				// });
-				// if (ref) {
-				// model.pull({
-				// feedId : model.feedIdFromEntryUrn(ref) + '/' +
-				// model.entryIdFromEntryUrn(ref),
-				// count : 1
-				// }, function(feedData) {
-				// if (feedData && feedData.length > 0) {
-				// // replying entry appears under mention entry
-				// var entryData = $(feedData).children("entry").first();
-				// createElementForEntryData(feedData,
-				// entryData).prependTo($(viewElement).closest(".entry"));
-				// } else {
-				// console.log("Could not fetch referenced entry: " + ref);
-				// }
-				// });
-				// } else {
-				// console.log("Unexpected mention type for reply: " + ref);
-				// }
+//			} else if (verb === "reply") {
+//				// get last entry mention:
+//				// this is the nearest parent in a tree of comments
+//				var ref;
+//				var term;
+//				entryXml.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
+//					term = $(this).attr("term");
+//					if (term && term.indexOf("urn:entry") === 0) {
+//						ref = term;
+//					}
+//				});
+//				if (ref) {
+//					model.pull({
+//						feedId : model.feedIdFromEntryUrn(ref) + '/' + model.entryIdFromEntryUrn(ref),
+//						count : 1
+//					}, function(feedData) {
+//						if (feedData && feedData.length > 0) {
+//							// replying entry appears under mention entry
+//							var entryData = $(feedData).children("entry").first();
+//							createElementForEntryData(feedData, entryData).prependTo($(viewElement).closest(".entry"));
+//						} else {
+//							console.log("Could not fetch referenced entry: " + ref);
+//						}
+//					});
+//				} else {
+//					console.log("Unexpected mention type for reply: " + ref);
+//				}
 			} else if (type) {
 				console.log("Unrecognized content type:" + type);
 				// console.log(this);
@@ -928,7 +925,7 @@
 			if (diff > 0) {
 				granularity = "hours";
 			}
-			if ( isNaN(value) ) {
+			if (isNaN(value)) {
 				console.log("NAN!");
 			}
 			entryElement.find(".updated .relative .minutes span").text(value);
@@ -1435,13 +1432,13 @@
 					homeRenderer.addFeedFollows(id);
 					followsRenderer.reset();
 					followsRenderer.addFeedFollows(id);
-				} 
-				if ( id === TRSST_HOME ) {
+				}
+				if (id === TRSST_HOME) {
 					$("body").addClass("page-welcome");
-					if ( window.location.toString().indexOf("home.trsst.com") != -1 ) {
+					if (window.location.toString().indexOf("home.trsst.com") != -1) {
 						// only show demo feeds on home.trsst.com
 						homeRenderer.addFeedFollows(TRSST_HOME);
-					} 
+					}
 				}
 			}
 
