@@ -18,6 +18,7 @@ package com.trsst.ui;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -205,7 +206,7 @@ public class AppServlet extends HttpServlet {
                 if (inStream != null) {
                     args.add("--attach");
                 }
-System.out.println(args);
+                System.out.println(args);
 
                 // make sure we don't create another local server
                 args.add("--host");
@@ -213,7 +214,7 @@ System.out.println(args);
                         + ":" + request.getServerPort() + "/feed");
 
                 PrintStream outStream = new PrintStream(
-                        response.getOutputStream());
+                        response.getOutputStream(), false, "UTF-8");
                 int result = new Command().doBegin(args.toArray(new String[0]),
                         outStream, inStream);
                 if (result != 0) {
