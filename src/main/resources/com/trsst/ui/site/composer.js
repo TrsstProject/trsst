@@ -124,13 +124,13 @@
 					formData.append("mention", nodupes[i]);
 				}
 				
-				// copy any tags (excluding ourself)
+				// copy any tags 
 				entry.find(".addresses .tag").each(function() {
 					var text = $(this).find("span").text();
 					if (text.indexOf('#') === 0) {
 						text = text.substring(1);
 					}
-					formData.append("mention", text);
+					formData.append("tag", text);
 				});
 				
 				
