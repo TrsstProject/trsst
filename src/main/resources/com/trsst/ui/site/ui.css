@@ -1003,10 +1003,19 @@ div.own .feed-title:before {
 /* @group Verb Markers */
 
 .entry.verb-delete, 
-.entry.content-encrypted {
-	display: none;
+.entry.content-encrypted,
+body:not(.page-entry) .entry.verb-deleted {
+	/* was: display: none; */
+	/* we need these to display but as zero height
+	   so that they partcipate in layout. */
+	overflow: hidden;
+	min-height: 0px;
+	max-height: 0px;
+	padding: 0px;
+	border-bottom: none;
 }
 .entry.verb-deleted, .entry.deleted {
+	/* deleted posts still show on entry pages */
 	opacity: 0.5;
 }
 .entry.verb-deleted .content:before {
@@ -1884,9 +1893,9 @@ aside .message-renderer>div
 }
 aside .message-renderer>div {
 	max-height: 600px;
-	padding-right: 18px;
 }
-aside .feeds-renderer>div {
+aside .message-renderer>div .entry .updated {
+	padding-right: 16px;
 }
 
 aside div.feeds-renderer .feed {
