@@ -80,23 +80,16 @@
 			var total = entries.length;
 			var counter = 0;
 			entries.each(function(index) {
-				var element = self.addDataToEntryContainer(feedXml, this);
+				var element = self.addDataToEntryContainer(feedXml, this, query);
 				if (element) {
 					result.push(element);
-					// remember how we got here
-					if (query !== null) {
-						element[0].query = query;
-					}
-					// if this is the last one
-					if (index === total - 1) {
-						self.scrollTriggers.push(element);
-						window.setTimeout(function() {
-							self.onScroll();
-						}, 500); // delay until screen finishes populating
-						return false; // break;
-					}
 				}
 			});
+			// in case this batch all fits on the screen
+			window.setTimeout(function() {
+				// trigger scrolltriggers if any
+				self.onScroll();
+			}, 500); // delay until screen finishes populating
 			self.renderLater();
 		}
 		return result;
@@ -168,14 +161,16 @@
 
 	/**
 	 * Adds entry to container, maintaining the existing date sort, but not
-	 * expecting any duplicates. Returns the inserted entry element.
+	 * expecting any duplicates. Returns the inserted entry element. Optional
+	 * query used to set a scroll trigger on the last element with a matching
+	 * query.
 	 */
-	AbstractRenderer.prototype.addDataToEntryContainer = function(feedXml, entryData) {
+	AbstractRenderer.prototype.addDataToEntryContainer = function(feedXml, entryXml, query) {
 		var self = this;
 		var originalFeedXml = feedXml;
-		var originalEntryData = entryData;
-		entryData = $(entryData);
-		var element = self.entryFactory(feedXml, entryData);
+		var originalEntryXml = entryXml;
+		entryXml = $(entryXml);
+		var element = self.entryFactory(feedXml, entryXml);
 		// if entry should be visible (public or decrypted)
 		if (element) {
 			var currentUrn = element.attr("entry");
@@ -187,12 +182,12 @@
 
 				// if entry is a reply: find first parent
 				var startIndex = 0;
-				var verb = entryData.find("verb").text();
+				var verb = entryXml.find("verb").text();
 				var parentUrn;
 				var parentElement;
 				if ("reply" === verb) {
 					var term;
-					entryData.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
+					entryXml.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
 						term = $(this).attr("term");
 						if (term.indexOf("urn:entry:") === 0) {
 							// first parent is top-most parent of thread
@@ -220,9 +215,10 @@
 								count : 1
 							}, function(feedData) {
 								if (feedData && feedData.length > 0) {
-									var entryData = $(feedData).children("entry").first();
+									var entryXml = $(feedData).children("entry").first();
 									// insert the parent into this container
-									self.addDataToEntryContainer(feedData, entryData);
+									// with no query or scroll trigger
+									self.addDataToEntryContainer(feedData, entryXml);
 								} else {
 									// not found: add a dummy reference to
 									// ensure not called again
@@ -230,10 +226,33 @@
 									console.log("Could not fetch conversation root entry: " + parentUrn);
 								}
 								// now retry with child
-								self.addDataToEntryContainer(originalFeedXml, originalEntryData);
+								self.addDataToEntryContainer(originalFeedXml, originalEntryXml, query);
 							});
-							return; // EXIT and wait for fetch to complete
+							return element; // EXIT and wait for fetch to
+							// complete
 						}
+					}
+				}
+
+				// find existing scroll trigger with this query
+				var existingTrigger = null;
+				var existingTriggerIndex;
+				if (query) {
+					// set this element's query
+					element[0].query = query;
+					// look for a matching scroll trigger
+					for ( var i in self.scrollTriggers) {
+						// note: identity comparison
+						if (self.scrollTriggers[i].query === query) {
+							existingTrigger = self.scrollTriggers[i];
+							existingTriggerIndex = i;
+							break;
+						}
+					}
+					// if no existing trigger
+					if (existingTrigger === null) {
+						// make this element the scroll trigger
+						self.scrollTriggers.push(element);
 					}
 				}
 
@@ -250,13 +269,23 @@
 
 						// ignore replies unless we are a reply
 						if (!parentElement || !currentElement.hasClass("verb-reply")) {
-							// hex timestamps compare lexicographically
+							// hex timestamps compare lexicographically:
+							// if we are newer than (or same time as) the
+							// current entry
 							if ((self.descendingOrder && (currentEntryId > existingEntryId)) || (!self.descendingOrder && (currentEntryId < existingEntryId))) {
-								// insert before same or earlier time
+								// insert before the current entry
 								didPlaceBefore = this;
 								children.splice(index, 0, element);
 								console.log("Inserting element: " + element.attr("entry"));
 								return false; // break loop
+							}
+							// otherwise: we're older than the current entry;
+							// if we have a scroll trigger and it's the current
+							// entry
+							if (existingTrigger === this) {
+								// then make us the new scroll trigger for this
+								// query
+								self.scrollTriggers[existingTriggerIndex] = element;
 							}
 						}
 					}
@@ -334,7 +363,7 @@
 					self.entryContainer.prepend(element);
 					// in case this is the only entry:
 					// invoke it as a scroll trigger
-					self.fetchPrevious(element);
+					// !!!!! self.fetchPrevious(element);
 				}
 			} else {
 				// if the current element is not visible
@@ -382,51 +411,50 @@
 		var entryId = model.entryIdFromEntryUrn(entryUrn);
 		// get query from element if any
 		var query = elem[0].query;
-		if (!query) {
-			query = {};
-		}
-		query = shallowCopy(query);
+		if (query) {
+			query = shallowCopy(query);
 
-		// fetch only before this entry
-		query.before = entryId;
-		// don't overwhelm dom
-		query.count = 5;
+			// fetch only before this entry
+			query.before = entryId;
+			// don't overwhelm dom
+			query.count = 5;
 
-		var self = this;
-		incrementPendingCount();
+			var self = this;
+			incrementPendingCount();
 
-		/*
-		 * NOTE: because not all entries are displayable we may need to keep
-		 * fetching until there is something to display.
-		 */
-		var displayableResults;
-		model.pull(query, function(feedXml) {
-			/* fetch complete */
-			decrementPendingCount();
-			if (!feedXml) {
-				console.log("fetchPrevious: complete: not found: " + JSON.stringify(query));
-			} else {
-				console.log("fetchPrevious: complete: found: " + JSON.stringify(query));
-				displayableResults = self.addEntriesFromFeed(feedXml, query);
-				// no more to fetch: exit
-			}
-		}, function(feedXml) {
-			/* fetch partial */
-			if (!feedXml) {
-				console.log("fetchPrevious: partial: not found: " + JSON.stringify(query));
-			} else {
-				console.log("fetchPrevious: partial: found: " + JSON.stringify(query));
-				displayableResults = self.addEntriesFromFeed(feedXml, query);
-				if (displayableResults.length === 0) {
-					// not enough to display: keep fetching
-					return true;
+			/*
+			 * NOTE: because not all entries are displayable we may need to keep
+			 * fetching until there is something to display.
+			 */
+			var displayableResults;
+			model.pull(query, function(feedXml) {
+				/* fetch complete */
+				decrementPendingCount();
+				if (!feedXml) {
+					console.log("fetchPrevious: complete: not found: " + JSON.stringify(query));
 				} else {
-					// we're done: exit
-					decrementPendingCount();
-					return false;
+					console.log("fetchPrevious: complete: found: " + JSON.stringify(query));
+					displayableResults = self.addEntriesFromFeed(feedXml, query);
+					// no more to fetch: exit
 				}
-			}
-		});
+			}, function(feedXml) {
+				/* fetch partial */
+				if (!feedXml) {
+					console.log("fetchPrevious: partial: not found: " + JSON.stringify(query));
+				} else {
+					console.log("fetchPrevious: partial: found: " + JSON.stringify(query));
+					displayableResults = self.addEntriesFromFeed(feedXml, query);
+					if (displayableResults.length === 0) {
+						// not enough to display: keep fetching
+						return true;
+					} else {
+						// we're done: exit
+						decrementPendingCount();
+						return false;
+					}
+				}
+			});
+		}
 	};
 
 	/**
@@ -463,11 +491,6 @@
 		var docViewTop = $(window).scrollTop();
 		var docViewBottom = docViewTop + $(window).height();
 		var elemTop = $(elem).offset().top;
-		// var elemBottom = elemTop + $(elem).height();
-		// return ((elemBottom >= docViewTop) && (elemTop <= docViewBottom) &&
-		// (elemBottom <= docViewBottom) && (elemTop >= docViewTop));
-		// console.log("isScrolledIntoView: " + elemTop + " : " + docViewBottom
-		// + " :: " + (elemTop <= docViewBottom));
 		return (elemTop <= docViewBottom);
 	};
 

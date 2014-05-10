@@ -417,7 +417,7 @@ article .renderer:empty:before {
 .feed {
 	position: relative;
 	padding: 36px;
-	padding-top: 4px;
+	padding-top: 24px;
 	min-height: 48px;
 	text-align: center;
 	border-radius: 8px;
@@ -1129,6 +1129,10 @@ div.entry.verb-follow>div.feed .subtitle {
 	left: inherit;
 }
 .entry .feed .logo {
+	display: none;
+}
+.feed .logo {
+	/* hide all logos for now for IE8 */
 	display: none;
 }
 
