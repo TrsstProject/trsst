@@ -514,34 +514,6 @@
 					console.log("Unrecognized content type:" + type);
 					// console.log(this);
 				}
-				// TODO: rethink conversation threading
-//			} else if (verb === "reply") {
-//				// get last entry mention:
-//				// this is the nearest parent in a tree of comments
-//				var ref;
-//				var term;
-//				entryXml.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
-//					term = $(this).attr("term");
-//					if (term && term.indexOf("urn:entry") === 0) {
-//						ref = term;
-//					}
-//				});
-//				if (ref) {
-//					model.pull({
-//						feedId : model.feedIdFromEntryUrn(ref) + '/' + model.entryIdFromEntryUrn(ref),
-//						count : 1
-//					}, function(feedData) {
-//						if (feedData && feedData.length > 0) {
-//							// replying entry appears under mention entry
-//							var entryData = $(feedData).children("entry").first();
-//							createElementForEntryData(feedData, entryData).prependTo($(viewElement).closest(".entry"));
-//						} else {
-//							console.log("Could not fetch referenced entry: " + ref);
-//						}
-//					});
-//				} else {
-//					console.log("Unexpected mention type for reply: " + ref);
-//				}
 			} else if (type) {
 				console.log("Unrecognized content type:" + type);
 				// console.log(this);
@@ -551,11 +523,15 @@
 
 	var onEntryClick = function(event) {
 		var entryElement = $(event.target).closest('.entry');
+		console.log("onEntryClick: ");
+		console.log(event.target);
+		console.log($(event.target).closest('.action'));
 
 		// if target was an action
 		if ($(event.target).closest('.action').length !== 0) {
 			var entryId;
-			if ($(event.target).parents('.repost').length !== 0) {
+			console.log($(event.target).closest('.repost'));
+			if ($(event.target).closest('.repost').length !== 0) {
 				entryId = entryElement.attr("entry");
 				if (!entryElement.hasClass("reposted")) {
 					entryElement.addClass("reposted");
@@ -563,7 +539,8 @@
 				}
 				return;
 			}
-			if ($(event.target).parents(".delete").length !== 0) {
+			console.log($(event.target).closest('.delete'));
+			if ($(event.target).closest(".delete").length !== 0) {
 				entryId = entryElement.attr("entry");
 				if (!entryElement.hasClass("deleted")) {
 					entryElement.addClass("deleted");
@@ -571,7 +548,8 @@
 				}
 				return;
 			}
-			if ($(event.target).parents(".like").length !== 0) {
+			console.log($(event.target).closest('.like'));
+			if ($(event.target).closest(".like").length !== 0) {
 				entryId = entryElement.attr("entry");
 				if (entryElement.hasClass("liked")) {
 					entryElement.removeClass("liked");
@@ -582,7 +560,8 @@
 				}
 				return;
 			}
-			if ($(event.target).parents(".comment").length !== 0) {
+			console.log($(event.target).closest('.comment'));
+			if ($(event.target).closest(".comment").length !== 0) {
 				if (entryElement.hasClass("commented")) {
 					entryElement.removeClass("commented");
 					// (don't set focus)
@@ -595,6 +574,8 @@
 			// otherwise, fall through: toggle expand
 			event.target = $(this);
 		}
+		console.log("onEntryClick: fallthrough");
+		console.log($(this));
 
 		// if target was an iframe's overlay
 		if ($(event.target).hasClass('overlay')) {
@@ -1521,5 +1502,5 @@ $(document).ready(function() {
 	// document['getElementsByTagName']('body')[0]).appendChild(E);
 	// E = new Image;
 	// E['setAttribute']('src', 'https://getfirebug.com/' + '#startOpened');
-	// }
+	//	}
 });
