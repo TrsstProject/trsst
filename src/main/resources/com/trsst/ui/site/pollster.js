@@ -265,7 +265,7 @@
 		if (!timer) {
 			timer = window.setInterval(function() {
 				onTick();
-			}, 250);
+			}, 1000);
 		}
 	};
 
