@@ -831,6 +831,12 @@ public class Client {
             uri = uri + feedId;
             feed.setBaseUri(uri);
         }
+        
+        // set link self 
+        IRI base = feed.getBaseUri();
+        if ( base != null ) {
+            feed.addLink(base.toString(), Link.REL_SELF);
+        }
 
         // sign the feed
         signedNode = signer
