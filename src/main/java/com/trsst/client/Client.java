@@ -430,9 +430,15 @@ public class Client {
             feed.setSubtitle(feedOptions.subtitle);
         }
         if (feedOptions.icon != null) {
+            while ( feed.getIconElement() != null ) {
+                feed.getIconElement().discard();
+            }
             feed.setIcon(feedOptions.icon);
         }
         if (feedOptions.logo != null) {
+            while ( feed.getLogoElement() != null ) {
+                feed.getLogoElement().discard();
+            }
             feed.setLogo(feedOptions.logo);
         }
 
@@ -458,6 +464,25 @@ public class Client {
             }
         }
 
+        // set base
+        if (feedOptions.base != null) {
+            String uri = feedOptions.base;
+            if (!uri.endsWith("/")) {
+                uri = uri + '/';
+            }
+            uri = uri + feedId;
+            feed.setBaseUri(uri);
+        }
+
+        // set link self
+        IRI base = feed.getBaseUri();
+        if (base != null) {
+            while ( feed.getLink(Link.REL_SELF) != null ) {
+                feed.getLink(Link.REL_SELF).discard();
+            }
+            feed.addLink(base.toString(), Link.REL_SELF);
+        }
+
         // holds any attachments (can be used for logo and icons)
         String[] contentIds = new String[options.getContentCount()];
 
@@ -470,11 +495,13 @@ public class Client {
             entry = Abdera.getInstance().newEntry();
             entry.setUpdated(feed.getUpdated());
             entry.setId(Common.toEntryUrn(feedId, feed.getUpdated().getTime()));
+            entry.addLink(feedId + '/' + Common.toEntryIdString(entry.getId()));
             if (options.publish != null) {
                 entry.setPublished(options.publish);
             } else {
                 entry.setPublished(entry.getUpdated());
             }
+
 
             if (options.status != null) {
                 entry.setTitle(options.status);
@@ -820,22 +847,6 @@ public class Client {
             if (feedOptions.asLogo) {
                 feed.setLogo(url);
             }
-        }
-
-        // set base
-        if (feedOptions.base != null) {
-            String uri = feedOptions.base;
-            if (!uri.endsWith("/")) {
-                uri = uri + '/';
-            }
-            uri = uri + feedId;
-            feed.setBaseUri(uri);
-        }
-        
-        // set link self 
-        IRI base = feed.getBaseUri();
-        if ( base != null ) {
-            feed.addLink(base.toString(), Link.REL_SELF);
         }
 
         // sign the feed
