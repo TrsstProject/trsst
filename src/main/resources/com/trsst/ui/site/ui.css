@@ -2126,6 +2126,7 @@ body.page-entry article {
 }
 
 /* @group iPhone/Android/Mobile */
+
 @media only screen and (max-width: 480px) {
 
 body {
@@ -2192,9 +2193,47 @@ body.page-entry .entry-renderer .entry {
 	display: none;
 }
 
-
 }
+/* @end */
+
+/* @group Welcome Messaging */
+
+.page-home.signed-in .feed-renderer * {
+	text-align: right;
+}
+.page-home.signed-in .feed-renderer .feed {
+	padding-bottom: 24px;
+}
+
+.page-home.signed-in .feed-renderer .icon {
+	float: left;
+	margin-right: 8px;
+}
+.page-home.signed-in .feed-renderer .feed-id a span {
+	display: none;
+}
+.page-home.signed-in .feed-renderer .feed-id a:before {
+	content: 'Visit your feed';
+}
+.page-home.signed-in .feed-renderer .title {
+	line-height: 20px;
+}
+.page-home.signed-in .feed-renderer .title:before {
+	content: 'Welcome ';
+	font-weight: normal;
+	color: #aaa;
+	font-size: 18px;
+	display: none; /* until we come up with better messaging */
+}
+.page-home.signed-in .feed-renderer .subtitle {
+	display: none;
+}
+
+
 
 /* @end */
 
+
+/* @group template */
+/* @end */
 
