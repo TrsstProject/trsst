@@ -243,7 +243,7 @@
 					// look for a matching scroll trigger
 					for ( var i in self.scrollTriggers) {
 						// note: identity comparison
-						if (self.scrollTriggers[i].query === query) {
+						if (self.scrollTriggers[i][0].query === query) {
 							existingTrigger = self.scrollTriggers[i];
 							existingTriggerIndex = i;
 							break;
