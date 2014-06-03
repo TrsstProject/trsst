@@ -43,8 +43,8 @@
 	var topicToTask = {};
 
 	/**
-	 * Keeps a copy of latest result for a given query.
-	 * TODO: need to clear out the cache after a while
+	 * Keeps a copy of latest result for a given query. TODO: need to clear out
+	 * the cache after a while
 	 */
 	var resultCache = {};
 
@@ -71,7 +71,7 @@
 				// notify subscriber now of latest results
 				subscriber.notify(task.latestFeed, query);
 			} else {
-				// trigger refetch asap 
+				// trigger refetch asap
 				task.noFetchBefore = 0;
 			}
 			// will get updated on already queued task
@@ -113,7 +113,8 @@
 
 	pollster.incrementPendingCount = function() {
 		concurrentFetchCount++;
-		if (concurrentFetchCount > 2) {
+		// if (concurrentFetchCount > 2) {
+		if (concurrentFetchCount > 0) { // too much?
 			$("body").addClass("pending");
 		}
 	};
@@ -133,10 +134,10 @@
 		var topic = JSON.stringify(task.query);
 		var subscribers = topicToSubscribers[topic];
 		if (!subscribers || subscribers.length === 0) {
-//			console.log("Deleting task: " + topic);
-//			console.log(task);
-//			delete topicToSubscribers[topic];
-//			delete topicToTask[topic];
+			// console.log("Deleting task: " + topic);
+			// console.log(task);
+			// delete topicToSubscribers[topic];
+			// delete topicToTask[topic];
 			return false; // task skipped
 		}
 		// console.log("doTask: " + task.toString());
@@ -157,14 +158,15 @@
 		var self = this;
 		pollster.incrementPendingCount();
 		console.log("concurrentFetchCount: inc:" + pollster.getPendingCount());
-		var stringifiedQuery = JSON.stringify(query); 
+		var stringifiedQuery = JSON.stringify(query);
 		console.log("Sent:     " + pollster.getPendingCount() + " : " + stringifiedQuery);
 		var currentTask = task;
 		model.pull(query, function(feedData) {
 			if (!feedData) {
 				console.log("Not found: " + pollster.getPendingCount() + " : " + JSON.stringify(query));
 			} else {
-				//console.log("Received: " + pollster.getPendingCount() + " : " + JSON.stringify(query));
+				// console.log("Received: " + pollster.getPendingCount() + " : "
+				// + JSON.stringify(query));
 
 				// call each subscriber's notify function
 				for ( var i in subscribers) {
@@ -211,14 +213,16 @@
 
 				if (currentTask.lastFetched === 0) {
 					// first time fetch:
-					// fetch again after 15 seconds to allow for relays to respond
+					// fetch again after 15 seconds to allow for relays to
+					// respond
 					currentTask.noFetchBefore = now + 15 * 1000;
 					console.log("rescheduled: " + currentTask.query.feedId + " : asap");
 				} else {
 					// fetch on a sliding delay
 					diff = Math.max(6, Math.min(diff, Math.floor(Math.pow(diff / 60000, 1 / 3) * 20000)));
 					currentTask.noFetchBefore = now + diff;
-					// schedule fetch for cube root of the number of elapsed minutes
+					// schedule fetch for cube root of the number of elapsed
+					// minutes
 					console.log("rescheduled: " + currentTask.query.feedId + " : " + Math.floor((now - updated) / 1000) + "s : " + Math.floor(diff / 1000 / 60) + "m " + Math.floor((diff / 1000) % 60) + "s");
 				}
 				currentTask.lastUpdate = updated;
