@@ -671,8 +671,6 @@ public class Command {
         Server service;
         try {
             service = new Server(portOption, "feed", !clearOption);
-            System.err.println("Services now available at: "
-                    + service.getServiceURL());
             if (apiOption || guiOption) {
                 service.getServletContextHandler().addServlet(
                         new ServletHolder(new AppServlet(!apiOption)), "/*");
@@ -681,10 +679,11 @@ public class Command {
                 int i = url.toString().indexOf(path);
                 if (i != -1) {
                     path = url.toString().substring(0, i);
-                    System.err.println("Client services now available at: "
-                            + path);
+                    System.err.println("Client services now available at: " + path);
                 }
             }
+            System.err.println("Services now available at: "
+                    + service.getServiceURL());
         } catch (Exception e) {
             log.error("Could not start server: " + e);
             return 71; // "system error"
