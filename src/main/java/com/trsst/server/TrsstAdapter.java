@@ -755,7 +755,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
      * @throws Exception
      *             any other problem
      */
-    protected static void ingestFeed(Storage storage, Feed feed)
+    protected void ingestFeed(Storage storage, Feed feed)
             throws XMLSignatureException, IllegalArgumentException, Exception {
 
         // clone a copy so we can manipulate
@@ -806,28 +806,64 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // validate, persist, and remove each entry
         List<Entry> entries = new LinkedList<Entry>();
         entries.addAll(feed.getEntries()); // make a copy
+        String existingEntryXml;
         for (Entry entry : feed.getEntries()) {
-            if (!signature.verify(entry, options)) {
-                // failed validation
-                Element activity = entry
-                        .getExtension(new QName(
-                                "http://activitystrea.ms/spec/1.0/", "verb",
-                                "activity"));
-                // if not a 'deleted' entry
-                if (activity == null || !"deleted".equals(activity.getText())) {
-                    // TODO: should validate that the 'delete' entry that
-                    // this entry mentions is mentioning this entry
-                    log.warn("Could not verify signature for entry with id: "
-                            + feed.getId());
-                    // fail ingest
-                    throw new XMLSignatureException(
-                            "Could not verify signature for entry with id: "
-                                    + entry.getId() + " : " + feed.getId());
-                } else {
-                    log.warn("Skipping signature verification for deleted entry: "
-                            + feed.getId());
+            String feedId = Common.toFeedIdString(feed.getId());
+            long entryId = Common.toEntryId(entry.getId());
+            try {
+                try {
+                    existingEntryXml = persistence.readEntry(feedId, entryId);
+                } catch (FileNotFoundException fnfe) {
+                    existingEntryXml = null;
+                }
+                if (existingEntryXml != null) {
+                    Entry parsed = (Entry) Abdera.getInstance().getParser()
+                            .parse(new StringReader(existingEntryXml))
+                            .getRoot();
+                    if (entry.getUpdated().after(parsed.getUpdated())) {
+                        // discard what we have in cache
+                        existingEntryXml = null;
+                    }
+                }
+            } catch (Exception e) {
+                existingEntryXml = null;
+                log.warn(
+                        "Unexpected error parsing existing entry before validation: "
+                                + entry.getId(), e);
+            }
+            if (existingEntryXml != null) {
+                log.trace("Skipping validation for existing entry: "
+                        + entry.getId());
+            } else {
+                if (!signature.verify(entry, options)) {
+                    // failed validation
+                    Element activity = entry.getExtension(new QName(
+                            "http://activitystrea.ms/spec/1.0/", "verb",
+                            "activity"));
+                    // if not a 'deleted' entry
+                    if (activity == null
+                            || !"deleted".equals(activity.getText())) {
+                        // TODO: should validate that the 'delete' entry that
+                        // this entry mentions is mentioning this entry
+                        log.warn("Could not verify signature for entry with id: "
+                                + feed.getId());
+                        // fail ingest
+                        throw new XMLSignatureException(
+                                "Could not verify signature for entry with id: "
+                                        + entry.getId() + " : " + feed.getId());
+                    } else {
+                        log.warn("Skipping signature verification for deleted entry: "
+                                + feed.getId());
+                    }
+                }
+                try {
+                    // yield a bit while validating entries
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    log.error("Should never happen: ", e);
                 }
             }
+
             // remove from feed parent
             entry.discard();
             try {
@@ -869,8 +905,30 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         }
 
         // persist feed
-        storage.updateFeed(Common.toFeedIdString(feed.getId()),
-                feed.getUpdated(), feed.toString());
+        String existingFeedXml;
+        try {
+            String feedId = Common.toFeedIdString(feed.getId());
+            try {
+                existingFeedXml = persistence.readFeed(feedId);
+            } catch (FileNotFoundException fnfe) {
+                existingFeedXml = null;
+            }
+            if (existingFeedXml != null) {
+                Feed parsed = (Feed) Abdera.getInstance().getParser()
+                        .parse(new StringReader(existingFeedXml)).getRoot();
+                if (feed.getUpdated().after(parsed.getUpdated())) {
+                    // discard what we have in cache
+                    existingFeedXml = null;
+                }
+            }
+        } catch (Exception e) {
+            existingFeedXml = null;
+            log.warn("Unexpected error parsing existing feed: " + feedId, e);
+        }
+        if (existingFeedXml == null) {
+            persistence.updateFeed(feedId, feed.getUpdated(), feed.toString());
+        }
+
         // only now persist each entry
         for (Entry entry : entries) {
             Date date = entry.getPublished();
@@ -1011,14 +1069,40 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         // persist feed
         persistence.updateFeed(feedId, feed.getUpdated(), feed.toString());
         // only now persist each entry
+        String existingEntryXml;
         for (Entry entry : entries) {
             Date date = entry.getPublished();
             if (date == null) {
                 // fall back to updated if publish not set
                 date = entry.getUpdated();
             }
-            persistence.updateEntry(feedId, Common.toEntryId(entry.getId()),
-                    date, entry.toString());
+            long entryId = Common.toEntryId(entry.getId());
+            try {
+                try {
+                    existingEntryXml = persistence.readEntry(feedId, entryId);
+                } catch (FileNotFoundException fnfe) {
+                    existingEntryXml = null;
+                }
+                if (existingEntryXml != null) {
+                    Entry parsed = (Entry) Abdera.getInstance().getParser()
+                            .parse(new StringReader(existingEntryXml))
+                            .getRoot();
+                    if (date.after(parsed.getUpdated())) {
+                        // discard what we have in cache
+                        existingEntryXml = null;
+                    }
+                }
+            } catch (Exception e) {
+                existingEntryXml = null;
+                log.warn(
+                        "Unexpected error parsing existing entry: "
+                                + entry.getId(), e);
+
+            }
+            if (existingEntryXml == null) {
+                persistence
+                        .updateEntry(feedId, entryId, date, entry.toString());
+            }
         }
     }
 
@@ -1649,7 +1733,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
     public Map<String, String> getAlternateAccepts(RequestContext request) {
         if (accepts == null) {
             accepts = new HashMap<String, String>();
-            //NOTE: currently accepting only "media" types; no zip, pdf, etc.
+            // NOTE: currently accepting only "media" types; no zip, pdf, etc.
             accepts.put("video/mp4", Constants.LN_ALTERNATE_MULTIPART_RELATED);
             accepts.put("audio/mp3", Constants.LN_ALTERNATE_MULTIPART_RELATED);
             accepts.put("audio/mp4", Constants.LN_ALTERNATE_MULTIPART_RELATED);

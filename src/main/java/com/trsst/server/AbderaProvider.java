@@ -220,6 +220,7 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
                 Storage clientStorage = new FileStorage(Common.getClientRoot());
                 Storage cacheStorage = new FileStorage(Common.getServerRoot());
                 sharedStorage = new LuceneStorage(cacheStorage, clientStorage);
+                sharedStorage = new CachingStorage(sharedStorage);
             } catch (IOException e) {
                 log.error("Could not initialize storage", e);
             }
