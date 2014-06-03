@@ -1407,14 +1407,14 @@
 
 				homeRenderer.reset();
 				homeRenderer.addFeed(id);
+				followsRenderer.reset();
+				followsRenderer.addFeedFollows(id);
 				if (id !== TRSST_HOME) {
 					$("body").addClass("page-self");
 					homeRenderer.addFeed(TRSST_HOME);
 					homeRenderer.addFeedFollows(id);
-					followsRenderer.reset();
-					followsRenderer.addFeedFollows(id);
 				}
-				if (id === TRSST_HOME) {
+				if (id === TRSST_WELCOME) {
 					$("body").addClass("page-welcome");
 					if (window.location.toString().indexOf("home.trsst.com") != -1) {
 						// only show demo feeds on home.trsst.com
