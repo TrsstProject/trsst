@@ -138,8 +138,8 @@ public class Command {
 
         // experimental tor support
         boolean wantsTor = false;
-        for ( String s : argv ) {
-            if ( "--tor".equals(s) ) {
+        for (String s : argv) {
+            if ("--tor".equals(s)) {
                 wantsTor = true;
                 break;
             }
@@ -449,7 +449,7 @@ public class Command {
             } else {
                 System.err.println("Requiring signed SSL");
             }
-            //System.out.println("Commands: " + arguments );
+            // System.out.println("Commands: " + arguments );
             String mode = arguments.removeFirst().toString();
 
             // for port requests
@@ -671,12 +671,20 @@ public class Command {
         Server service;
         try {
             service = new Server(portOption, "feed", !clearOption);
+            System.err.println("Services now available at: "
+                    + service.getServiceURL());
             if (apiOption || guiOption) {
                 service.getServletContextHandler().addServlet(
                         new ServletHolder(new AppServlet(!apiOption)), "/*");
+                URL url = service.getServiceURL();
+                String path = url.getPath();
+                int i = url.toString().indexOf(path);
+                if (i != -1) {
+                    path = url.toString().substring(0, i);
+                    System.err.println("Client services now available at: "
+                            + path);
+                }
             }
-            System.err.println("Services now available at: "
-                    + service.getServiceURL());
         } catch (Exception e) {
             log.error("Could not start server: " + e);
             return 71; // "system error"
