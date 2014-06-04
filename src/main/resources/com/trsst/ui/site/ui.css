@@ -1607,9 +1607,13 @@ nav .menu-item.logout .title:after {
 	margin-bottom: 8px;
 }
 
-.popup-container>button {
+.popup-container button {
 	padding: 8px 18px;
 	font-size: 90%;
+}
+
+.popup-container.authenticating button {
+	opacity: 0.5;
 }
 
 .popup-container button.confirm {
@@ -1670,6 +1674,9 @@ nav .menu-item.logout .title:after {
 	display: block;
 	content: 'Enter your passphrase:';
 	margin-bottom: 4px;
+}
+.authenticating .password.password-verify:before {
+	content: 'Loading...';
 }
 .invalid-password .password.password-verify:before {
 	content: 'Wrong passphrase: try again!';

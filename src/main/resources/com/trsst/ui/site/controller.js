@@ -865,6 +865,14 @@
 					base = base.substring(0, index - 1);
 				}
 			}
+			var email = feedData.find("author email").text();
+			if (email) {
+				var atsign = email.indexOf('@');
+				if (atsign !== -1) {
+					alias = alias.substring(0, email);
+				}
+				form.find(".email input").val(email);
+			}
 			form.find(".title input").val(feedData.children("title").text());
 			form.find(".subtitle textarea").val(feedData.children("subtitle").text());
 			form.find(".base input").val(base);
