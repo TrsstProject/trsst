@@ -115,8 +115,8 @@
 				url = $(event.target).closest('.feed').attr("feed");
 				if (url.indexOf("urn:feed:") === 0) {
 					url = url.substring("urn:feed:".length);
-					// escape parameterized urns
-					if (url.indexOf("?") !== -1) {
+					// escape parameterized urns but NOT urns starting with '?'
+					if (url.indexOf("?") > 0) {
 						url = encodeURIComponent(url);
 					}
 				}
@@ -729,6 +729,8 @@
 					// cancelled: clear current account
 					setCurrentAccountId(null);
 				}, function(form) {
+					form.removeClass("invalid").removeClass("invalid-password");
+					form.addClass("authenticating");
 					// entered password: now wait for validation or denial
 					model.signIn(feedId, form.find('#password-verify').val(), function(feedData) {
 						if (feedData) {
@@ -741,6 +743,7 @@
 							// invalid: set error flags and keep open for retry
 							form.addClass("invalid").addClass("invalid-password");
 						}
+						form.removeClass("authenticating");
 					});
 					return true; // stay open until authenticated
 				});
@@ -831,6 +834,7 @@
 				} else {
 					$(popup).addClass("error");
 				}
+				$(popup).removeClass("authenticating");
 			});
 		});
 	};
@@ -1502,5 +1506,5 @@ $(document).ready(function() {
 	// document['getElementsByTagName']('body')[0]).appendChild(E);
 	// E = new Image;
 	// E['setAttribute']('src', 'https://getfirebug.com/' + '#startOpened');
-	//	}
+	// }
 });
