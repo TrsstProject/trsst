@@ -249,6 +249,9 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
 
     public CollectionAdapter getCollectionAdapter(RequestContext request) {
         String feedId = request.getTarget().getParameter("collection");
+        if (feedId != null && feedId.trim().length() == 0) {
+            feedId = null;
+        }
         if (feedId == null) {
             // default to subdomain name if any
             String host = request.getHeader("Host");
@@ -262,13 +265,15 @@ public class AbderaProvider extends AbstractWorkspaceProvider implements
                         i = host.lastIndexOf('.');
                         if (i != -1) {
                             feedId = host.substring(0, i);
-                            try {
-                                Integer.parseInt(feedId);
-                                // it's a numeric address, not a name.
-                                feedId = null;
-                            } catch (NumberFormatException nfe) {
-                                // it's a hostname; continue.
-                            }
+                        } else {
+                            feedId = host;
+                        }
+                        try {
+                            Integer.parseInt(feedId);
+                            // it's a numeric address, not a name.
+                            feedId = null;
+                        } catch (NumberFormatException nfe) {
+                            // it's a hostname; continue.
                         }
                     }
                 }
