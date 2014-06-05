@@ -865,13 +865,12 @@
 					base = base.substring(0, index - 1);
 				}
 			}
-			var email = feedData.find("author email").text();
-			if (email) {
-				var atsign = email.indexOf('@');
-				if (atsign !== -1) {
-					alias = alias.substring(0, email);
+			var uri = feedData.find("author uri").text();
+			if (uri) {
+				if (uri.indexOf("acct:") === 0) {
+					uri = uri.substring(5);
 				}
-				form.find(".email input").val(email);
+				form.find(".uri input").val(uri);
 			}
 			form.find(".title input").val(feedData.children("title").text());
 			form.find(".subtitle textarea").val(feedData.children("subtitle").text());

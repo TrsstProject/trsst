@@ -10,6 +10,7 @@ public class FeedOptions {
     String base;
     String name;
     String email;
+    String uri;
     String title;
     String subtitle;
     String icon;
@@ -31,6 +32,7 @@ public class FeedOptions {
     public void reset() {
         name = null;
         email = null;
+        uri = null;
         title = null;
         subtitle = null;
         icon = null;
@@ -69,6 +71,22 @@ public class FeedOptions {
      */
     public FeedOptions setAuthorName(String name) {
         this.name = name;
+        return this;
+    }
+
+    /**
+     * @return the uri
+     */
+    public String getAuthorUri() {
+        return uri;
+    }
+
+    /**
+     * @param email
+     *            Updates the author email associated with the feed.
+     */
+    public FeedOptions setAuthorUri(String uri) {
+        this.uri = uri;
         return this;
     }
 

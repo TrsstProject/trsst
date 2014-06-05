@@ -355,6 +355,13 @@ public class Command {
         o.setLongOpt("name");
         postOptions.addOption(o);
 
+        o = new Option(null, "Set this feed's author uri");
+        o.setRequired(false);
+        o.setArgs(1);
+        o.setArgName("uri");
+        o.setLongOpt("uri");
+        postOptions.addOption(o);
+
         o = new Option("e", "Encrypt entry for specified public key");
         o.setRequired(false);
         o.setArgs(1);
@@ -366,7 +373,7 @@ public class Command {
         o.setRequired(false);
         o.setArgs(1);
         o.setArgName("email");
-        o.setLongOpt("mail");
+        o.setLongOpt("email");
         postOptions.addOption(o);
 
         o = new Option("i", "Set as this feed's icon or specify url");
@@ -679,7 +686,8 @@ public class Command {
                 int i = url.toString().indexOf(path);
                 if (i != -1) {
                     path = url.toString().substring(0, i);
-                    System.err.println("Client services now available at: " + path);
+                    System.err.println("Client services now available at: "
+                            + path);
                 }
             }
             System.err.println("Services now available at: "
@@ -724,6 +732,7 @@ public class Command {
         String body = commands.getOptionValue("c");
         String name = commands.getOptionValue("n");
         String email = commands.getOptionValue("m");
+        String uri = commands.getOptionValue("uri");
         String title = commands.getOptionValue("t");
         String subtitle = commands.getOptionValue("subtitle");
         String icon = commands.getOptionValue("i");
@@ -970,6 +979,7 @@ public class Command {
             FeedOptions feedOptions = new FeedOptions();
             feedOptions.setAuthorEmail(email);
             feedOptions.setAuthorName(name);
+            feedOptions.setAuthorUri(uri);
             feedOptions.setTitle(title);
             feedOptions.setSubtitle(subtitle);
             feedOptions.setBase(base);

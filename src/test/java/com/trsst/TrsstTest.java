@@ -51,8 +51,6 @@ public class TrsstTest extends TestCase {
      */
     public void testApp() {
         try {
-            if ( true ) { return; }
-            
             // System.setProperty("org.slf4j.simpleLogger.defaultLogLevel",
             // "debug");
 
@@ -308,7 +306,7 @@ public class TrsstTest extends TestCase {
             feed = client.pull(Common.fromFeedUrn(feed.getId()));
             assertTrue("Feed has all entries", (5 == feed.getEntries().size()));
 
-            // make sure server is paginating 
+            // make sure server is paginating
             for (int i = 0; i < 5; i++) {
                 feed = client.post(
                         signingKeys,

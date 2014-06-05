@@ -430,13 +430,13 @@ public class Client {
             feed.setSubtitle(feedOptions.subtitle);
         }
         if (feedOptions.icon != null) {
-            while ( feed.getIconElement() != null ) {
+            while (feed.getIconElement() != null) {
                 feed.getIconElement().discard();
             }
             feed.setIcon(feedOptions.icon);
         }
         if (feedOptions.logo != null) {
-            while ( feed.getLogoElement() != null ) {
+            while (feed.getLogoElement() != null) {
                 feed.getLogoElement().discard();
             }
             feed.setLogo(feedOptions.logo);
@@ -455,12 +455,21 @@ public class Client {
         }
 
         // update author
-        if (feedOptions.name != null || feedOptions.email != null) {
+        if (feedOptions.name != null || feedOptions.email != null
+                || feedOptions.uri != null) {
             if (feedOptions.name != null) {
                 author.setName(feedOptions.name);
             }
             if (feedOptions.email != null) {
                 author.setEmail(feedOptions.email);
+            }
+            if (feedOptions.uri != null) {
+                if (feedOptions.uri.indexOf(':') == -1) {
+                    // default to "acct:" urn
+                    author.setUri("acct:" + feedOptions.uri);
+                } else {
+                    author.setUri(feedOptions.uri);
+                }
             }
         }
 
@@ -477,7 +486,7 @@ public class Client {
         // set link self
         IRI base = feed.getBaseUri();
         if (base != null) {
-            while ( feed.getLink(Link.REL_SELF) != null ) {
+            while (feed.getLink(Link.REL_SELF) != null) {
                 feed.getLink(Link.REL_SELF).discard();
             }
             feed.addLink(base.toString(), Link.REL_SELF);
@@ -501,7 +510,6 @@ public class Client {
             } else {
                 entry.setPublished(entry.getUpdated());
             }
-
 
             if (options.status != null) {
                 entry.setTitle(options.status);
