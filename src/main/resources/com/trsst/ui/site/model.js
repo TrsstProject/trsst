@@ -32,6 +32,7 @@
 	var accounts;
 	var authenticatedUid;
 	var authenticatedFollows;
+	var authenticatedAliases;
 
 	/*
 	 * Yep, this is the user's password in cleartext. No point in hiding it; if
@@ -404,7 +405,19 @@
 				if (id.indexOf("urn:feed:" + prefix) === 0) {
 					result = readFeed(id);
 					if (result !== null) {
+						// match on feed id
 						results.push(result);
+					} else {
+						console.log("findFollowedFeedsMatching: id match: feed not yet fetched: " + id);
+						// TODO: fetch async? should not be very common
+					}
+				} else {
+					result = readFeed(id);
+					if (result !== null) {
+						if ($(result).find("author uri").text().indexOf("acct:" + prefix) === 0) {
+							// match on alias
+							results.push(result);
+						}
 					} else {
 						console.log("findFollowedFeedsMatching: feed not yet fetched: " + id);
 						// TODO: fetch async? should not be very common

@@ -47,7 +47,11 @@
 			feedElement.find(".subtitle").addClass("empty-text"); // hint for
 			// css
 		}
-		feedElement.find(".feed-id span").text(feedData.children("id").text().substring("urn:feed:".length));
+		var id = feedData.find("author>uri").text().substring("acct:".length);
+		if (!id) {
+			id = feedData.children("id").text().substring("urn:feed:".length);
+		}
+		feedElement.find(".feed-id span").text(id);
 		feedElement.find(".author-name span").text(feedData.children("author>name").text());
 		feedElement.find(".author-email span").text(feedData.children("author>email").text());
 		feedElement.find(".author-uri span").text(feedData.children("author>uri").text());
@@ -387,7 +391,11 @@
 			// hint for css layout
 			entryElement.find(".feed-title").addClass("empty-text");
 		}
-		entryElement.find(".feed-id span").text(feedData.children("id").text().substring("urn:feed:".length));
+		var id = feedData.find("author>uri").text().substring("acct:".length);
+		if (!id) {
+			id = feedData.children("id").text().substring("urn:feed:".length);
+		}
+		entryElement.find(".feed-id span").text(id);
 
 	};
 

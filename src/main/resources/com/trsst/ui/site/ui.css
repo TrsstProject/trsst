@@ -627,7 +627,7 @@ div.own .feed-title:before {
 	white-space: nowrap;
 	text-overflow: ellipsis;
 }
-.entry .feed-id span:before {
+.feed-id span:before {
 	content: '@';
 }
 .entry.external .feed-id span:before {
@@ -2220,7 +2220,7 @@ body.page-entry .entry-renderer .entry {
 	display: none;
 }
 .page-home.signed-in .feed-renderer .feed-id a:before {
-	content: 'Visit your feed';
+	content: 'View Your Feed';
 }
 .page-home.signed-in .feed-renderer .title {
 	line-height: 20px;
