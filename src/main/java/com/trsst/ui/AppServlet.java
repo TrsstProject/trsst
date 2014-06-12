@@ -206,7 +206,7 @@ public class AppServlet extends HttpServlet {
                 if (inStream != null) {
                     args.add("--attach");
                 }
-                System.out.println(args);
+                //System.out.println(args);
 
                 // make sure we don't create another local server
                 args.add("--host");
