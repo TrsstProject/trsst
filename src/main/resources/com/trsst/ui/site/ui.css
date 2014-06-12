@@ -602,7 +602,7 @@ article .renderer:empty:before {
 	display: inline-block;
 	vertical-align: top;
 	font-weight: bold;
-	margin-right: 4px;
+	margin-right: 2px;
 	cursor: pointer;
 }
 .entry .feed-title.empty-text {
@@ -626,6 +626,7 @@ div.own .feed-title:before {
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
+	padding-top: 1px;
 }
 .feed-id span:before {
 	content: '@';
