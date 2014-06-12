@@ -340,7 +340,8 @@ public class LuceneStorage implements Storage {
             search = "feed:\"" + feedId + "\"" + search;
         }
         if (search.trim().length() == 0) {
-            log.error("Unexpected search length: " + search);
+            log.trace("No search parameters: " + search);
+            search = "*"; // return everything
         }
         StandardQueryParser parser = new StandardQueryParser();
         parser.setDefaultOperator(StandardQueryConfigHandler.Operator.AND);
