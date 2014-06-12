@@ -148,8 +148,14 @@
 						// if we matched exactly one
 						if (feeds.length === 1) {
 							// create a mention
-							var id = $(feeds[0]).children("id").text();
+							var alias = $(feeds[0]).find("author>uri").text();
+							var	id = $(feeds[0]).children("id").text();
+
 							if (id) {
+								if (alias) {
+									var insertionPoint = "urn:".length;
+									id = id.substring(0, insertionPoint) + alias + ":" + id.substring(insertionPoint);
+								}
 								formData.append("mention", id);
 							} else {
 								console.log("Could not match mention: " + match);
@@ -159,6 +165,7 @@
 						} else if (match.length > 25 && match.length < 35) {
 							// assume a mention of that size is an account id
 							formData.append("mention", "urn:feed:" + match);
+							//TODO: assume an alias on our home domain
 						}
 					} else {
 						// otherwise hash->tag

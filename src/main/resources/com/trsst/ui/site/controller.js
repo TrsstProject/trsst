@@ -47,8 +47,10 @@
 			feedElement.find(".subtitle").addClass("empty-text"); // hint for
 			// css
 		}
-		var id = feedData.find("author>uri").text().substring("acct:".length);
-		if (!id) {
+		var id = feedData.find("author>uri").text();
+		if (id) {
+			id = model.getShortAliasFromAliasUri(id);
+		} else {
 			id = feedData.children("id").text().substring("urn:feed:".length);
 		}
 		feedElement.find(".feed-id span").text(id);
@@ -339,7 +341,16 @@
 		entryData.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
 			address = $(this).attr("term");
 			if (address) {
-				if (address.indexOf("urn:feed:") === 0) {
+				if (address.indexOf("urn:acct:") === 0) {
+					// create link to alias
+					var alias = model.getShortAliasFromAliasUri(address);
+					var feedId = model.getFeedIdFromUri(address);
+					e = $("<a class='address mention'><span></span></a>");
+					e.attr("href", '/' + feedId);
+					e.attr("title", alias);
+					e.children("span").text('@' + alias);
+					$(entryElement).find(".addresses").append(e);
+				} else if (address.indexOf("urn:feed:") === 0) {
 					// create link to mention
 					address = address.substring("urn:feed:".length);
 					if (address.indexOf("http") === -1) {
@@ -391,8 +402,10 @@
 			// hint for css layout
 			entryElement.find(".feed-title").addClass("empty-text");
 		}
-		var id = feedData.find("author>uri").text().substring("acct:".length);
-		if (!id) {
+		var id = feedData.find("author>uri").text();
+		if (id) {
+			id = model.getShortAliasFromAliasUri(id);
+		} else {
 			id = feedData.children("id").text().substring("urn:feed:".length);
 		}
 		entryElement.find(".feed-id span").text(id);
@@ -432,9 +445,9 @@
 				match = matches[i].substring(1); // remove @
 				entryData.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
 					id = $(this).attr("term");
-					if (id && id.indexOf("urn:feed:" + match) === 0) {
-						id = id.substring("urn:feed:".length);
-						text = text.replace(new RegExp(matches[i], 'g'), '<a href="/' + id + '">' + matches[i] + '</a>');
+					if (id && (id.indexOf("urn:feed:" + match) === 0 || id.indexOf("urn:acct:" + match) === 0)) {
+						id = model.getFeedIdFromUri(id);
+						text = text.replace(new RegExp(matches[i], 'g'), '<a href="/' + id + '">@' + match + '</a>');
 					}
 				});
 			}
@@ -873,11 +886,9 @@
 					base = base.substring(0, index - 1);
 				}
 			}
-			var uri = feedData.find("author uri").text();
+			var uri = feedData.find("author>uri").text();
 			if (uri) {
-				if (uri.indexOf("acct:") === 0) {
-					uri = uri.substring(5);
-				}
+				uri = model.getShortAliasFromAliasUri(uri);
 				form.find(".uri input").val(uri);
 			}
 			form.find(".title input").val(feedData.children("title").text());
