@@ -81,6 +81,8 @@ import com.trsst.client.AnonymSSLSocketFactory;
  */
 public class Common {
     public static final String ROOT_ALIAS = "home";
+    public static final String ACCOUNT_URN_PREFIX = "urn:acct:";
+    public static final String ACCOUNT_URN_FEED_PREFIX = ":feed:";
     public static final String FEED_URN_PREFIX = "urn:feed:";
     public static final String ENTRY_URN_PREFIX = "urn:entry:";
     public static final String URN_SEPARATOR = ":";
