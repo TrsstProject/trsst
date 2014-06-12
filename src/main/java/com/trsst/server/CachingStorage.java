@@ -52,7 +52,7 @@ public class CachingStorage implements Storage {
     public CachingStorage(Storage delegate) throws IOException {
         persistentStorage = delegate;
         cache = new ConcurrentLinkedHashMap.Builder<String, Object>()
-                .maximumWeightedCapacity(1000).build();
+                .maximumWeightedCapacity(256).build();
 
     }
 
