@@ -392,6 +392,50 @@
 	};
 
 	/**
+	 * Returns the shorthand alias for a full alias uri, for example:
+	 * 'acct:mpowers.trsst.com' becomes 'mpowers'.
+	 */
+	model.getShortAliasFromAliasUri = function(aliasUri) {
+		if (aliasUri.indexOf("urn:acct:") === 0) {
+			aliasUri = aliasUri.substring(9);
+		}
+		if (aliasUri.indexOf("acct:") === 0) {
+			aliasUri = aliasUri.substring(5);
+		}
+		var i;
+		// remove feed extension if any
+		i = aliasUri.indexOf(":feed:");
+		if (i !== -1) {
+			aliasUri = aliasUri.substring(0, i);
+		}
+		// remove last domain extension if any
+		i = aliasUri.lastIndexOf(".");
+		if (i !== -1) {
+			aliasUri = aliasUri.substring(0, i);
+		}
+		// do it again
+		i = aliasUri.lastIndexOf(".");
+		if (i !== -1) {
+			aliasUri = aliasUri.substring(0, i);
+		}
+		return aliasUri;
+	};
+
+	/**
+	 * Returns the associated feed, if any, from a full alias uri, for example:
+	 * 'urn:acct:mpowers.trsst.com:feed:GhzsrQb7PmbvbdeG13Xr7VJiC59kSk4JW'
+	 * becomes 'GhzsrQb7PmbvbdeG13Xr7VJiC59kSk4JW'.
+	 */
+	model.getFeedIdFromUri = function(aliasUri) {
+		// remove feed extension if any
+		var i = aliasUri.indexOf(":feed:");
+		if (i !== -1) {
+			aliasUri = aliasUri.substring(i + 6);
+		}
+		return aliasUri;
+	};
+
+	/**
 	 * Returns an array of feed xml for each feed followed by the currently
 	 * authenticated user whose id or alias match the specified string prefix.
 	 * Returns only those feeds we have already fetched into cache, which is
