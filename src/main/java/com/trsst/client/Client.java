@@ -92,6 +92,10 @@ public class Client {
      */
     public Feed pull(String urn, PrivateKey[] decryptionKeys) {
         Feed feed = pull(urn);
+        if ( feed == null ) {
+            return null;
+        }
+        
         Content content;
         MimeType contentType;
         for (Entry entry : feed.getEntries()) {
@@ -466,7 +470,8 @@ public class Client {
             if (feedOptions.uri != null) {
                 if (feedOptions.uri.indexOf(':') == -1) {
                     // default to "acct:" urn
-                    author.setUri("acct:" + feedOptions.uri);
+                    author.setUri("acct:" + feedOptions.uri + ".trsst.com");
+                    // FIXME: domain should be specified by user
                 } else {
                     author.setUri(feedOptions.uri);
                 }
