@@ -324,6 +324,19 @@ public class LuceneStorage implements Storage {
         if (mentions != null) {
             for (String mention : mentions) {
                 mention = mention.trim();
+                if (mention.startsWith(Common.ACCOUNT_URN_PREFIX)) {
+                    int index = mention.indexOf(Common.ACCOUNT_URN_FEED_PREFIX);
+                    if (index != -1) {
+                        // feed id instead
+                        String id = mention.substring(index
+                                + Common.ACCOUNT_URN_FEED_PREFIX.length());
+                        search = search + " tag:\"" + id + "\"";
+                        // truncate feed id and continue
+                        mention = mention.substring(0, index);
+                    }
+                    mention = mention.substring(Common.ACCOUNT_URN_PREFIX
+                            .length());
+                }
                 if (mention.startsWith(Common.FEED_URN_PREFIX)) {
                     mention = mention
                             .substring(Common.FEED_URN_PREFIX.length());

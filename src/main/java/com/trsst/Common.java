@@ -81,6 +81,7 @@ import com.trsst.client.AnonymSSLSocketFactory;
  */
 public class Common {
     public static final String ROOT_ALIAS = "home";
+    public static final String ACCOUNT_PREFIX = "acct:";
     public static final String ACCOUNT_URN_PREFIX = "urn:acct:";
     public static final String ACCOUNT_URN_FEED_PREFIX = ":feed:";
     public static final String FEED_URN_PREFIX = "urn:feed:";
@@ -194,6 +195,52 @@ public class Common {
             feedId = feedId.substring(0, feedId.lastIndexOf(':'));
         }
         return feedId;
+    }
+
+    /**
+     * Returns the shorthand alias for a full alias uri, for example:
+     * 'acct:mpowers.trsst.com' becomes 'mpowers'.
+     */
+    public static final String getShortAliasFromAliasUri(Object urn) {
+        String aliasUri = urn.toString();
+        if (aliasUri.indexOf(ACCOUNT_URN_PREFIX) == 0) {
+            aliasUri = aliasUri.substring(ACCOUNT_URN_PREFIX.length());
+        }
+        if (aliasUri.indexOf(ACCOUNT_PREFIX) == 0) {
+            aliasUri = aliasUri.substring(ACCOUNT_PREFIX.length());
+        }
+        int i;
+        // remove feed extension if any
+        i = aliasUri.indexOf(ACCOUNT_URN_FEED_PREFIX);
+        if (i != -1) {
+            aliasUri = aliasUri.substring(0, i);
+        }
+        // remove last domain extension if any
+        i = aliasUri.lastIndexOf(".");
+        if (i != -1) {
+            aliasUri = aliasUri.substring(0, i);
+        }
+        // do it again
+        i = aliasUri.lastIndexOf(".");
+        if (i != -1) {
+            aliasUri = aliasUri.substring(0, i);
+        }
+        return aliasUri;
+    }
+
+    /**
+     * Returns the associated feed, if any, from a full alias uri, for example:
+     * 'urn:acct:mpowers.trsst.com:feed:GhzsrQb7PmbvbdeG13Xr7VJiC59kSk4JW'
+     * becomes 'GhzsrQb7PmbvbdeG13Xr7VJiC59kSk4JW'.
+     */
+    public static final String getFeedIdFromAliasUri(Object urn) {
+        // remove feed extension if any
+        String aliasUri = urn.toString();
+        int i = aliasUri.indexOf(ACCOUNT_URN_FEED_PREFIX);
+        if (i != -1) {
+            aliasUri = aliasUri.substring(i + 6);
+        }
+        return aliasUri;
     }
 
     public static final String toEntryIdString(Object entryUrn) {
