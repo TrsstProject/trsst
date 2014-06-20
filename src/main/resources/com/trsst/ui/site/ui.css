@@ -141,9 +141,6 @@ aside .follows-renderer>div:empty:before {
 .page-query div.private.messaging {
 	display: none;
 }
-.page-query .profile-renderer div.feed-id:before {
-	content: '@';
-}
 
 
 /* @end */
