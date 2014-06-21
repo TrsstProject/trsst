@@ -61,6 +61,10 @@ textarea, input[type=text], input[type=password] {
 .page-home .following-renderer {
 	display: inherit;
 }
+.page-feed .profile-renderer .feed-key {
+	display: inherit;
+	margin-bottom: 0px;
+}
 .page-feed .profile-renderer {
 	display: inherit;
 }
@@ -466,7 +470,9 @@ article .renderer:empty:before {
 	margin-bottom: 0px;
 }
 
-.feed .feed-id {
+.feed .feed-id,
+.feed .feed-key
+{
 	font-size: 85%;
 	color: #aaa;
 	margin-bottom: 12px;
@@ -474,7 +480,9 @@ article .renderer:empty:before {
 	white-space: nowrap;
 	text-overflow: ellipsis;
 }
-
+.feed .feed-key {
+	display: none;
+}
 
 .feed .subtitle {
 	font-size: 90%;
@@ -614,7 +622,9 @@ div.own .feed-title:before {
 }
 */
 	
-.entry .feed-id {
+.entry .feed-id,
+.entry .feed-key 
+{
 	display: inline-block;
 	color: #aaa;
 	font-size: 95%;
@@ -624,6 +634,9 @@ div.own .feed-title:before {
 	white-space: nowrap;
 	text-overflow: ellipsis;
 	padding-top: 1px;
+}
+.entry .feed-key {
+	display: none;
 }
 .feed-id span:before {
 	content: '@';
