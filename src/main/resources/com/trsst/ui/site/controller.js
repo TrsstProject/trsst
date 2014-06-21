@@ -274,18 +274,19 @@
 			if (minutes.length < 2) {
 				minutes = "0" + minutes;
 			}
-			entryElement.find(".updated .absolute .second span").text(seconds);
-			entryElement.find(".updated .absolute .second").attr("value", seconds);
-			entryElement.find(".updated .absolute .minute span").text(minutes);
-			entryElement.find(".updated .absolute .minute").attr("value", minutes);
-			entryElement.find(".updated .absolute .hour span").text(date.getHours());
-			entryElement.find(".updated .absolute .hour").attr("value", date.getHours());
-			entryElement.find(".updated .absolute .day span").text(date.getDate());
-			entryElement.find(".updated .absolute .day").attr("value", date.getDate());
-			entryElement.find(".updated .absolute .month span").text(date.getMonth() + 1); // 0-based
-			entryElement.find(".updated .absolute .month").attr("value", date.getMonth() + 1); // 0-based
-			entryElement.find(".updated .absolute .year span").text(date.getFullYear());
-			entryElement.find(".updated .absolute .year").attr("value", date.getFullYear());
+			var absolute = entryElement.find(".updated .absolute");
+			absolute.find(".second span").text(seconds);
+			absolute.find(".second").attr("value", seconds);
+			absolute.find(".minute span").text(minutes);
+			absolute.find(".minute").attr("value", minutes);
+			absolute.find(".hour span").text(date.getHours());
+			absolute.find(".hour").attr("value", date.getHours());
+			absolute.find(".day span").text(date.getDate());
+			absolute.find(".day").attr("value", date.getDate());
+			absolute.find(".month span").text(date.getMonth() + 1); // 0-based
+			absolute.find(".month").attr("value", date.getMonth() + 1); // 0-based
+			absolute.find(".year span").text(date.getFullYear());
+			absolute.find(".year").attr("value", date.getFullYear());
 		} catch (e) {
 			console.log("Invalid date format: " + dateString);
 			entryElement.find(".updated .absolute").remove();
