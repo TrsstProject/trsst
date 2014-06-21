@@ -584,45 +584,51 @@
 		$.ajax({
 			url : url,
 			data : filterObject,
-			success : function(feedData) {
-				feedData = $(feedData).find("feed").first();
-				// handle pagination
-				var next = feedData.children("link[rel='next']").first().attr("href");
-				// if there's a next page
-				if (next) {
-					var proceed;
-					if (callbackPartial) {
-						// if client accepts partial updates
-						// mark this result as such
-						proceed = callbackPartial(feedData);
+			success : function(data) {
+				var feedData = $(data).find("feed").first();
+				if (feedData.length > 0) {
+					// handle pagination
+					var next = feedData.children("link[rel='next']").first().attr("href");
+					// if there's a next page
+					if (next) {
+						var proceed;
+						if (callbackPartial) {
+							// if client accepts partial updates
+							// mark this result as such
+							proceed = callbackPartial(feedData);
+						} else {
+							// otherwise just call the main
+							// callback multiple times
+							proceed = callback(feedData);
+						}
+						// if callbacks want us to continue
+						if (proceed) {
+							// process the link/next url
+							var serverPath = model.serverUrl + defaultBase + '/';
+							if (next.indexOf(serverPath) === 0) {
+								next = next.substring(serverPath.length);
+							}
+							var query;
+							var delimiter = next.indexOf('?');
+							if (delimiter !== -1) {
+								query = next.substring(delimiter + 1);
+								next = next.substring(0, delimiter);
+							}
+							// call for the next page
+							recursiveAjax(defaultBase + '/' + next, query, callback, callbackPartial);
+						}
 					} else {
-						// otherwise just call the main
-						// callback multiple times
-						proceed = callback(feedData);
+						// we're done
+						callback(feedData);
 					}
-					// if callbacks want us to continue
-					if (proceed) {
-						// process the link/next url
-						var serverPath = model.serverUrl + defaultBase + '/';
-						if (next.indexOf(serverPath) === 0) {
-							next = next.substring(serverPath.length);
-						}
-						var query;
-						var delimiter = next.indexOf('?');
-						if (delimiter !== -1) {
-							query = next.substring(delimiter + 1);
-							next = next.substring(0, delimiter);
-						}
-						// call for the next page
-						recursiveAjax(defaultBase + '/' + next, query, callback, callbackPartial);
-					}
-				} else {
-					// we're done
-					callback(feedData);
-				}
 
-				// store a copy of this feed
-				writeFeed(feedData);
+					// store a copy of this feed
+					writeFeed(feedData);
+					
+				} else {
+					console.log("Could not find feed element: ");
+					console.log(data);
+				}
 			},
 			error : function(e) {
 				// error: we're done
