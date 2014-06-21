@@ -47,13 +47,14 @@
 			feedElement.find(".subtitle").addClass("empty-text"); // hint for
 			// css
 		}
-		var id = feedData.find("author>uri").text();
+		var id = feedData.children("id").text().substring("urn:feed:".length);
+		feedElement.find(".feed-key span").text(id);
+		feedElement.find(".feed-id span").text(id);
+		id = feedData.find("author>uri").text();
 		if (id) {
 			id = model.getShortAliasFromAliasUri(id);
-		} else {
-			id = feedData.children("id").text().substring("urn:feed:".length);
+			feedElement.find(".feed-id span").text(id);
 		}
-		feedElement.find(".feed-id span").text(id);
 		feedElement.find(".author-name span").text(feedData.children("author>name").text());
 		feedElement.find(".author-email span").text(feedData.children("author>email").text());
 		feedElement.find(".author-uri span").text(feedData.children("author>uri").text());
@@ -403,14 +404,15 @@
 			// hint for css layout
 			entryElement.find(".feed-title").addClass("empty-text");
 		}
-		var id = feedData.find("author>uri").text();
+		var id = feedData.children("id").text().substring("urn:feed:".length);
+		entryElement.find(".feed-key span").text(id);
+		entryElement.find(".feed-id span").text(id);
+		
+		id = feedData.find("author>uri").text();
 		if (id) {
 			id = model.getShortAliasFromAliasUri(id);
-		} else {
-			id = feedData.children("id").text().substring("urn:feed:".length);
-		}
-		entryElement.find(".feed-id span").text(id);
-
+			entryElement.find(".feed-id span").text(id);
+		} 
 	};
 
 	var mentionsExp = /([\@]\w+)/g;
