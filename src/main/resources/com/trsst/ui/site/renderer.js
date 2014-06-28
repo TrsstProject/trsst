@@ -145,17 +145,18 @@
 		var updated = feedXml.children("updated").text();
 		// console.log("addDataToFeedContainer: " + id);
 		this.feedContainer.find("[feed='" + id + "']").remove();
-		var element = this.feedFactory(feedXml);
-		element[0].updated = updated;
+		var card = this.feedFactory(feedXml);
+		var element = $(card).children(".object").children();
+		card.updated = updated;
 		this.feedContainer.children().each(function() {
-			if (this.updated && this.updated < element[0].updated) {
-				element.insertBefore(this);
+			if (this.updated && this.updated < updated) {
+				card.insertBefore(this);
 				return false;
 			}
 		});
-		if (!element[0].parentNode) {
+		if (!card.parentNode) {
 			// if no match, append to end
-			this.feedContainer.append(element);
+			this.feedContainer.append(card);
 		}
 	};
 
@@ -170,10 +171,12 @@
 		var originalFeedXml = feedXml;
 		var originalEntryXml = entryXml;
 		entryXml = $(entryXml);
-		var element = self.entryFactory(feedXml, entryXml);
+		var card = self.entryFactory(feedXml, entryXml);
+		var element = $(card).children(".object").children();
 		// if entry should be visible (public or decrypted)
-		if (element) {
+		if (card) {
 			var currentUrn = element.attr("entry");
+			card.entryUrn = currentUrn;
 			// if entry is not already displayed
 			if (!self.urnToEntryElement[currentUrn]) {
 				// the list to iterate
@@ -228,7 +231,7 @@
 								// now retry with child
 								self.addDataToEntryContainer(originalFeedXml, originalEntryXml, query);
 							});
-							return element; // EXIT and wait for fetch to
+							return card; // EXIT and wait for fetch to
 							// complete
 						}
 					}
@@ -239,7 +242,7 @@
 				var existingTriggerIndex;
 				if (query) {
 					// set this element's query
-					element[0].query = query;
+					card[0].query = query;
 					// look for a matching scroll trigger
 					for ( var i in self.scrollTriggers) {
 						// note: identity comparison
@@ -252,17 +255,17 @@
 					// if no existing trigger
 					if (existingTrigger === null) {
 						// make this element the scroll trigger
-						self.scrollTriggers.push(element);
+						self.scrollTriggers.push(card);
 					}
 				}
 
 				var didPlaceBefore;
 				var currentFeedId = model.feedIdFromEntryUrn(currentUrn);
 				var currentEntryId = model.entryIdFromEntryUrn(currentUrn);
-				self.urnToEntryElement[currentUrn] = element;
+				self.urnToEntryElement[currentUrn] = card;
 				$.each(children, function(index) {
 					if (index >= startIndex) {
-						var currentElement = $(this);
+						var currentElement = $(this).find(".object").children();
 						var existing = currentElement.attr("entry");
 						var existingFeedId = model.feedIdFromEntryUrn(existing);
 						var existingEntryId = model.entryIdFromEntryUrn(existing);
@@ -275,7 +278,7 @@
 							if ((self.descendingOrder && (currentEntryId > existingEntryId)) || (!self.descendingOrder && (currentEntryId < existingEntryId))) {
 								// insert before the current entry
 								didPlaceBefore = this;
-								children.splice(index, 0, element);
+								children.splice(index, 0, card);
 								console.log("Inserting element: " + element.attr("entry"));
 								return false; // break loop
 							}
@@ -285,20 +288,20 @@
 							if (existingTrigger === this) {
 								// then make us the new scroll trigger for this
 								// query
-								self.scrollTriggers[existingTriggerIndex] = element;
+								self.scrollTriggers[existingTriggerIndex] = card;
 							}
 						}
 					}
 				});
 				if (!didPlaceBefore) {
 					// else: older than all existing entries: append
-					children.push(element);
+					children.push(card);
 					console.log("Appending element: " + element.attr("entry"));
 				}
 			}
 		}
 		self.renderLater();
-		return element;
+		return card;
 	};
 
 	/**
@@ -407,7 +410,7 @@
 
 	AbstractRenderer.prototype.fetchPrevious = function(elem) {
 		elem = $(elem);
-		var entryUrn = elem.attr("entry");
+		var entryUrn = elem.find(".object").children().attr("entry");
 		var entryId = model.entryIdFromEntryUrn(entryUrn);
 		// get query from element if any
 		var query = elem[0].query;

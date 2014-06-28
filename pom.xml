@@ -195,6 +195,9 @@
 			<scope>system</scope>
 			<systemPath>${project.basedir}/src/main/resources/eawt.jar</systemPath>
 		</dependency>
+		<!-- <dependency> <groupId>netlib</groupId> <artifactId>netlib</artifactId> 
+			<version>0.0.3</version> <scope>system</scope> <systemPath>${project.basedir}/src/main/resources/netlib-0.0.3-SNAPSHOT.jar</systemPath> 
+			</dependency> -->
 		<dependency>
 			<groupId>org.silvertunnel-ng</groupId>
 			<artifactId>netlib</artifactId>

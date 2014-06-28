@@ -17,24 +17,34 @@
 
 	var controller = window.controller = {};
 	var entryTemplate = document.getElementById('entryTemplate');
+	entryTemplate.removeAttribute('id');
 	$(entryTemplate).remove();
 	var feedTemplate = document.getElementById('feedTemplate');
+	feedTemplate.removeAttribute('id');
 	$(feedTemplate).remove();
+	var cardTemplate = document.getElementById('cardTemplate');
+	cardTemplate.removeAttribute('id');
+	$(cardTemplate).remove();
 	var feedEditTemplate = document.getElementById('feedEditTemplate');
+	feedEditTemplate.removeAttribute('id');
 	$(feedEditTemplate).remove();
 	var passwordVerifyTemplate = document.getElementById('passwordVerifyTemplate');
+	passwordVerifyTemplate.removeAttribute('id');
 	$(passwordVerifyTemplate).remove();
 	var passwordCreateTemplate = document.getElementById('passwordCreateTemplate');
+	passwordCreateTemplate.removeAttribute('id');
 	$(passwordCreateTemplate).remove();
 
 	var createElementForFeedData = function(feedData) {
 
 		// clone feed template
 		var feedElement = $(feedTemplate).clone();
+		var cardElement = $(cardTemplate).clone();
 		var feedId = feedData.children("id").text();
 		if (feedId.indexOf("urn:feed:http") > -1) {
 			feedElement.addClass("external");
 		}
+		cardElement.children(".object").append(feedElement);
 
 		feedElement.attr("feed", feedId);
 		feedElement.removeAttr("id");
@@ -136,7 +146,7 @@
 			}
 		});
 
-		return feedElement;
+		return cardElement;
 	};
 
 	var updateFollowElementForFeedId = function(followElement, feedId) {
@@ -193,6 +203,7 @@
 		}
 
 		// clone entry template
+		var cardElement = $(cardTemplate).clone();
 		var entryElement = $(entryTemplate).clone();
 		var entryId = entryData.find("id").text();
 		var feedId = model.feedIdFromEntryUrn(entryId);
@@ -201,6 +212,7 @@
 		}
 		entryElement.attr("entry", entryId);
 		entryElement.removeAttr("id");
+		cardElement.children(".object").append(entryElement);
 
 		// mark if ours
 		var currentAccountId = model.getAuthenticatedAccountId();
@@ -214,9 +226,14 @@
 		}
 
 		// mark with verb
-		var verb = entryData.find("verb").text();
+		var verb = entryData.children("activity\\:verb").text();
+//		if (!verb) {
+//			// note: moz/jq namespace workaround
+//			verb = entryData.children("[nodeName='activity:verb']").text();
+//		}
 		if (verb) {
 			entryElement.addClass("verb-" + verb);
+			cardElement.addClass("verb-" + verb);
 			if (verb === "deleted") {
 				// return null; //NOTE: entry skipped
 				// FIXME: returning null is preventing incremental loading
@@ -384,7 +401,7 @@
 		// catch all clicks on the entryElement
 		entryElement.click(onEntryClick);
 
-		return entryElement;
+		return cardElement;
 	};
 
 	var populateEntryElementWithFeedData = function(entryElement, feedData) {
@@ -407,12 +424,12 @@
 		var id = feedData.children("id").text().substring("urn:feed:".length);
 		entryElement.find(".feed-key span").text(id);
 		entryElement.find(".feed-id span").text(id);
-		
+
 		id = feedData.find("author>uri").text();
 		if (id) {
 			id = model.getShortAliasFromAliasUri(id);
 			entryElement.find(".feed-id span").text(id);
-		} 
+		}
 	};
 
 	var mentionsExp = /([\@]\w+)/g;
@@ -500,7 +517,7 @@
 						}, function(feedData) {
 							if (feedData && feedData.length > 0) {
 								// following entry appears above followed feed
-								createElementForFeedData(feedData).appendTo($(viewElement).closest(".entry"));
+								createElementForFeedData(feedData).find(".object .feed").appendTo($(viewElement).closest(".card").children(".suffix"));
 							} else {
 								console.log("Could not fetch followed feed: " + src);
 							}
@@ -515,7 +532,7 @@
 							if (feedData && feedData.length > 0) {
 								// reposting entry appears above reposted entry
 								var entryData = $(feedData).children("entry").first();
-								createElementForEntryData(feedData, entryData).appendTo($(viewElement).closest(".entry"));
+								createElementForEntryData(feedData, entryData).find(".object .entry").appendTo($(viewElement).closest(".card").children(".suffix"));
 							} else {
 								console.log("Could not fetch reposted entry: " + src);
 							}

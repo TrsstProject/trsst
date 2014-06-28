@@ -543,11 +543,11 @@ article .renderer:empty:before {
 	background-color: #fff;
 }
 
-.entry:first-child {
+.card:first-child .entry {
 	border-top: 1px solid #ddd;
 }
-
-.entry:last-child {
+.card.verb-follow .suffix {
+	/* workaround */
 	border-bottom: 1px solid #ddd;
 }
 
@@ -683,9 +683,9 @@ div.own .feed-title:before {
 
 .composer button, .composer input, .composer select {
 	display: inline;
-	-webkit-appearance:none;
-	-moz-appearance:none;
-	appearance:none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
 	height: 22px;
 	border-radius: 5px;
 	border: 1px solid #aaa;
@@ -883,7 +883,7 @@ div.own .feed-title:before {
 	content: 'Conversation';
 }
 .entry.verb-follow .addresses {
-	display:none;
+	display: none;
 }
 .composer .addresses {
 	margin-top: 0px;
@@ -1013,6 +1013,8 @@ div.own .feed-title:before {
 
 /* @group Verb Markers */
 
+.card.verb-delete,
+.card.verb-deleted,
 .entry.verb-delete, 
 .entry.content-encrypted,
 body:not(.page-entry) .entry.verb-deleted {
@@ -1043,7 +1045,7 @@ body:not(.page-entry) .entry.verb-deleted {
 }
 
 .entry.content-signed {
-	//todo show some kind of marker
+	/* todo show some kind of marker */
 }
 
 /* @end */
@@ -1056,7 +1058,7 @@ body:not(.page-entry) .entry.verb-deleted {
 	padding-bottom: 0px;
 	margin-bottom: 0px;
 	min-height: 0px;
-
+	padding-left: 96px;
 }
 .entry.verb-repost
 {
@@ -1065,10 +1067,9 @@ body:not(.page-entry) .entry.verb-deleted {
 .entry.verb-repost>section,
 .entry.verb-follow>section
 {
-	height: 28px;
 }
-.entry.verb-repost>section .feed-title, 
-.entry.verb-follow>section .feed-title 
+.suffix section .feed-title, 
+.suffix section .feed-title 
 {
 	font-size: 90%;
 }
@@ -1086,46 +1087,44 @@ body:not(.page-entry) .entry.verb-deleted {
 	display: none;
 }
 
-.entry.verb-repost>.entry, 
-.entry.verb-follow>.feed 
-{
-	position: relative;
-	left: -80px;
-	width: 100%;
-	margin-bottom: 0px;
-	border-top: 1px solid #ddd;
-}
-.entry.verb-repost>section .feed-title:after
+.entry.verb-repost section .feed-title:after
 {
 	content: 'reposted';
 	font-weight: normal;
 }
-.entry.verb-follow>section .feed-title:after 
+.entry.verb-follow section .feed-title:after 
 {
 	content: 'followed';
 	font-weight: normal;
 }
 
-div.entry.verb-follow>div.feed {
+.suffix .entry, 
+.suffix .feed 
+{
+}
+.suffix div.feed {
 	text-align: left;
-	padding: 0px;
-	top: -8px;
-	left: -80px;
+	padding: 16px 16px 0px 16px;
 	border-radius: 0px;
 	border-top: 0px;
 	width: 90%;
-	padding-right:10%;
+	padding-right: 0%;
+	min-height: 100px;
 }
-div.entry.verb-follow>div.feed .subtitle {
+.suffix div.feed .subtitle {
 	margin-left: 80px;
 }
 
-.entry .feed .title {
-	margin: 0px;
-	margin-left: 80px;
-	font-size: 110%;
+.suffix .feed .icon {
+	position: absolute;
 }
-.entry .feed .feed-id {
+.suffix .feed .title {
+	margin: 4px;
+	margin-left: 80px;
+	font-size: 120%;
+	color: black
+}
+.suffix .feed .feed-id {
 	width: 100%;
 	font-size: 85%;
 	margin: 0px;
@@ -1133,13 +1132,13 @@ div.entry.verb-follow>div.feed .subtitle {
 	margin-bottom: 4px;
 }
 
-.entry .feed .follow {
+.suffix .feed .follow {
 	right: -86px;
 	top: 4px;
 	text-align: right;
 	left: inherit;
 }
-.entry .feed .logo {
+.suffix .feed .logo {
 	display: none;
 }
 .feed .logo {
@@ -1378,7 +1377,11 @@ nav {
 	x-webkit-transition: background-color .15s ease-in-out 0s;
 	cursor: pointer;
 	border-radius: 0px;
-	
+}
+
+.menu-item .feed {
+	padding: 0px;
+	margin: 0px;	
 }
 
 .menu-item section {
