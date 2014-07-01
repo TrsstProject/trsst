@@ -422,7 +422,8 @@
 	};
 
 	/**
-	 * Returns the associated feed, if any, from a full alias uri, for example:
+	 * Returns the associated feed, if any, from a full alias mention uri, for
+	 * example:
 	 * 'urn:acct:mpowers.trsst.com:feed:GhzsrQb7PmbvbdeG13Xr7VJiC59kSk4JW'
 	 * becomes 'GhzsrQb7PmbvbdeG13Xr7VJiC59kSk4JW'.
 	 */
@@ -433,6 +434,22 @@
 			aliasUri = aliasUri.substring(i + 6);
 		}
 		return aliasUri;
+	};
+
+	/**
+	 * Returns a full alias mention uri from an alias uri and feed uri.
+	 * 'GhzsrQb7PmbvbdeG13Xr7VJiC59kSk4JW' becomes
+	 * 'urn:acct:mpowers.trsst.com:feed:GhzsrQb7PmbvbdeG13Xr7VJiC59kSk4JW'
+	 */
+	model.getMentionForAliasAndFeedUrn = function(alias, id) {
+		var insertionPoint = "urn:".length;
+		if (id.indexOf("urn:feed:") !== 0) {
+			id = "urn:feed:" + id;
+		}
+		if (alias.indexOf("acct:") !== 0) {
+			alias = "acct:" + alias;
+		}
+		return id.substring(0, insertionPoint) + alias + ":" + id.substring(insertionPoint);
 	};
 
 	/**
@@ -624,7 +641,7 @@
 
 					// store a copy of this feed
 					writeFeed(feedData);
-					
+
 				} else {
 					console.log("Could not find feed element: ");
 					console.log(data);
@@ -671,18 +688,21 @@
 
 	/**
 	 * Returns the most recent copy of a feed from cache, fetching from server
-	 * if not found.
+	 * if not found and callback is specified.
 	 */
 	model.getFeed = function(feedId, callback) {
 		var feed = readFeed(feedId);
-		if (feed) {
-			callback(feed);
-		} else {
-			model.pull({
-				feedId : feedId,
-				count : 0
-			}, callback);
+		if (callback) {
+			if (feed) {
+				callback(feed);
+			} else {
+				model.pull({
+					feedId : feedId,
+					count : 0
+				}, callback);
+			}
 		}
+		return feed;
 	};
 
 	/**

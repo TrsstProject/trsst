@@ -17,8 +17,8 @@
 
 	/**
 	 * Composer manages an entry composer form, submitting its contents to the
-	 * model when needed. Variants can just replace or extend this object.
-	 * If a renderer is specified, new entries will be inserted into it.
+	 * model when needed. Variants can just replace or extend this object. If a
+	 * renderer is specified, new entries will be inserted into it.
 	 */
 	Composer = window.Composer = function(form, renderers) {
 		this.form = $(form);
@@ -85,14 +85,14 @@
 			// copy mentions from enclosed reply
 			var i;
 			if (entry.length === 1) {
-				
+
 				// copy any primary discussion parent posts first
 				var entryUrn = entry.attr("entry");
 				formData.append("verb", "reply");
 				entry.find(".addresses .parent").each(function() {
 					var text = $(this).attr("title");
-						text = model.entryUrnFromEntryId(text);
-						formData.append("mention", text);
+					text = model.entryUrnFromEntryId(text);
+					formData.append("mention", text);
 				});
 
 				// mention the current parent post last
@@ -100,9 +100,19 @@
 
 				// mention the author if it's not us
 				var nodupes = [];
-				var author = model.feedUrnFromFeedId(model.feedIdFromEntryUrn(entryUrn));
-				if ( author !== model.getAuthenticatedAccountId() ) {
-					nodupes.push(author);
+				var authorId = model.feedIdFromEntryUrn(entryUrn);
+				var authorUrn = model.feedUrnFromFeedId(authorId);
+				if (authorUrn !== model.getAuthenticatedAccountId()) {
+					// check to see if we have an alias for this user
+					var feed = model.getFeed(authorUrn);
+					if (feed) {
+						var aliasUrn = $(feed).find("author uri").text();
+						if (aliasUrn) {
+							// use the alias instead
+							authorUrn = model.getMentionForAliasAndFeedUrn(aliasUrn, authorId);
+						}
+					}
+					nodupes.push(authorUrn);
 				}
 
 				// copy any mentions (excluding ourself)
@@ -118,13 +128,13 @@
 						}
 					}
 				});
-				
+
 				// create the mentions
 				for (i in nodupes) {
 					formData.append("mention", nodupes[i]);
 				}
-				
-				// copy any tags 
+
+				// copy any tags
 				entry.find(".addresses .tag").each(function() {
 					var text = $(this).find("span").text();
 					if (text.indexOf('#') === 0) {
@@ -132,8 +142,7 @@
 					}
 					formData.append("tag", text);
 				});
-				
-				
+
 			}
 
 			// find tags and mentions in the text
@@ -149,12 +158,11 @@
 						if (feeds.length === 1) {
 							// create a mention
 							var alias = $(feeds[0]).find("author>uri").text();
-							var	id = $(feeds[0]).children("id").text();
+							var id = $(feeds[0]).children("id").text();
 
 							if (id) {
 								if (alias) {
-									var insertionPoint = "urn:".length;
-									id = id.substring(0, insertionPoint) + alias + ":" + id.substring(insertionPoint);
+									id = model.getMentionForAliasAndFeedUrn(alias, id);
 								}
 								formData.append("mention", id);
 							} else {
@@ -165,7 +173,7 @@
 						} else if (match.length > 25 && match.length < 35) {
 							// assume a mention of that size is an account id
 							formData.append("mention", "urn:feed:" + match);
-							//TODO: assume an alias on our home domain
+							// TODO: assume an alias on our home domain
 						}
 					} else {
 						// otherwise hash->tag
@@ -195,9 +203,9 @@
 					self.form.find(".attach").removeAttr("file");
 					self.form.removeClass("error");
 					controller.forceRender(feedData);
-					if ( self.renderers ) {
+					if (self.renderers) {
 						// update the ui immediately for better ux
-						for ( var renderer in self.renderers ) {
+						for ( var renderer in self.renderers) {
 							self.renderers[renderer].addEntriesFromFeed(feedData);
 						}
 					}
