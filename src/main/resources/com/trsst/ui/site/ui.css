@@ -546,7 +546,8 @@ article .renderer:empty:before {
 .card:first-child .entry {
 	border-top: 1px solid #ddd;
 }
-.card.verb-follow .suffix {
+.card.verb-follow .suffix 
+{
 	/* workaround */
 	border-bottom: 1px solid #ddd;
 }
@@ -963,7 +964,7 @@ div.own .feed-title:before {
 .action.delete {
 	display: none;
 }
-.entry.own .action.delete {
+.own .action.delete {
 	display: inherit;
 }
 .action.delete span:after {
@@ -1058,11 +1059,6 @@ body:not(.page-entry) .entry.verb-deleted {
 	padding-bottom: 0px;
 	margin-bottom: 0px;
 	min-height: 0px;
-	padding-left: 96px;
-}
-.entry.verb-repost
-{
-	border-bottom: 0px;
 }
 .entry.verb-repost>section,
 .entry.verb-follow>section
@@ -1076,8 +1072,8 @@ body:not(.page-entry) .entry.verb-deleted {
 .entry.verb-repost>section .title,
 .entry.verb-repost>section .icon,
 .entry.verb-repost>section .feed-id, 
-.entry.verb-repost>.action,
-.entry.verb-repost>.composer,
+.entry.verb-repost .action,
+.entry.verb-repost .composer,
 .entry.verb-follow>section .title,
 .entry.verb-follow>section .icon,
 .entry.verb-follow>section .feed-id,
@@ -1122,7 +1118,7 @@ body:not(.page-entry) .entry.verb-deleted {
 	margin: 4px;
 	margin-left: 80px;
 	font-size: 120%;
-	color: black
+	color: black;
 }
 .suffix .feed .feed-id {
 	width: 100%;
