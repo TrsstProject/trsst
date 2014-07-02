@@ -279,7 +279,7 @@ aside>.private.messaging>.composer {
 }
 
 aside>.private.messaging .feed {
-	background: inherit;
+	background: #fff;
 }
 
 
@@ -1129,8 +1129,7 @@ body:not(.page-entry) .entry.verb-deleted {
 }
 
 .suffix .feed .follow {
-	right: -86px;
-	top: 4px;
+	top: 16px;
 	text-align: right;
 	left: inherit;
 }
