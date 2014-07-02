@@ -407,6 +407,14 @@ article .renderer:empty:before {
 	border-radius: 6px;
 }
 
+#profileRenderer .feed-id span {
+	display: none;
+}
+#profileRenderer .feed-id span[alias] {
+	/* show in profile only if alias is specified */
+	display: inherit;
+}
+
 .feed a {
 	cursor: pointer;
 }
@@ -475,7 +483,6 @@ article .renderer:empty:before {
 {
 	font-size: 85%;
 	color: #aaa;
-	margin-bottom: 12px;
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
@@ -485,6 +492,7 @@ article .renderer:empty:before {
 }
 
 .feed .subtitle {
+	margin-top: 12px;
 	font-size: 90%;
 }
 

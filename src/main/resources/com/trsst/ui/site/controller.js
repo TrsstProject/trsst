@@ -62,8 +62,9 @@
 		feedElement.find(".feed-id span").text(id);
 		id = feedData.find("author>uri").text();
 		if (id) {
-			id = model.getShortAliasFromAliasUri(id);
-			feedElement.find(".feed-id span").text(id);
+			var aliasUri = id;
+			id = model.getShortAliasFromAliasUri(aliasUri);
+			feedElement.find(".feed-id span").text(id).attr("alias", aliasUri);
 		}
 		feedElement.find(".author-name span").text(feedData.children("author>name").text());
 		feedElement.find(".author-email span").text(feedData.children("author>email").text());
