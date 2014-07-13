@@ -1955,6 +1955,7 @@ aside div.feeds-renderer .feed .subtitle {
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
+	margin-top: 0px;
 }
 .signed-in aside div.feeds-renderer .feed .subtitle {
 	/* show follow button instead */
