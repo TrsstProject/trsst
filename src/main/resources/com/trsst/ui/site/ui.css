@@ -414,6 +414,10 @@ article .renderer:empty:before {
 	/* show in profile only if alias is specified */
 	display: inherit;
 }
+.page-home #profileRenderer .feed-id span[alias] {
+	/* don't show on home page */
+	display: none;
+}
 
 .feed a {
 	cursor: pointer;
