@@ -147,7 +147,7 @@
 			}
 		});
 
-		return cardElement;
+		return cardElement[0];
 	};
 
 	var updateFollowElementForFeedId = function(followElement, feedId) {
@@ -402,7 +402,7 @@
 		// catch all clicks on the entryElement
 		entryElement.click(onEntryClick);
 
-		return cardElement;
+		return cardElement[0];
 	};
 
 	var populateEntryElementWithFeedData = function(entryElement, feedData) {
@@ -518,7 +518,7 @@
 						}, function(feedData) {
 							if (feedData && feedData.length > 0) {
 								// following entry appears above followed feed
-								createElementForFeedData(feedData).find(".object .feed").appendTo($(viewElement).closest(".card").children(".suffix"));
+								$(createElementForFeedData(feedData)).find(".object .feed").appendTo($(viewElement).closest(".card").children(".suffix"));
 							} else {
 								console.log("Could not fetch followed feed: " + src);
 							}

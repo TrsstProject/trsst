@@ -78,7 +78,6 @@
 		if (self.entryContainer && self.entryFactory) {
 			var entries = feedXml.find("entry");
 			var total = entries.length;
-			var counter = 0;
 			entries.each(function(index) {
 				var element = self.addDataToEntryContainer(feedXml, this, query);
 				if (element) {
@@ -148,15 +147,17 @@
 		var card = this.feedFactory(feedXml);
 		var element = $(card).children(".object").children();
 		card.updated = updated;
-		this.feedContainer.children().each(function() {
+		$(card).attr("updated", updated);
+		var self = this;
+		self.feedContainer.children().each(function() {
 			if (this.updated && this.updated < updated) {
-				card.insertBefore(this);
+				self.feedContainer[0].insertBefore(card, this);
 				return false;
 			}
 		});
 		if (!card.parentNode) {
 			// if no match, append to end
-			this.feedContainer.append(card);
+			self.feedContainer.append(card);
 		}
 	};
 
@@ -242,11 +243,11 @@
 				var existingTriggerIndex;
 				if (query) {
 					// set this element's query
-					card[0].query = query;
+					card.query = query;
 					// look for a matching scroll trigger
 					for ( var i in self.scrollTriggers) {
 						// note: identity comparison
-						if (self.scrollTriggers[i][0].query === query) {
+						if (self.scrollTriggers[i].query === query) {
 							existingTrigger = self.scrollTriggers[i];
 							existingTriggerIndex = i;
 							break;
@@ -358,7 +359,7 @@
 		var element;
 		var previousElement;
 		$.each(self.allEntryElements, function(index, value) {
-			element = value[0];
+			element = value;
 			if (!previousElement) {
 				// if the first element is offscreen
 				if (!element.parentNode) {
@@ -409,11 +410,11 @@
 	};
 
 	AbstractRenderer.prototype.fetchPrevious = function(elem) {
+		var query = elem.query;
 		elem = $(elem);
 		var entryUrn = elem.find(".object").children().attr("entry");
 		var entryId = model.entryIdFromEntryUrn(entryUrn);
 		// get query from element if any
-		var query = elem[0].query;
 		if (query) {
 			query = shallowCopy(query);
 
@@ -480,7 +481,7 @@
 			var element;
 			for (var i = self.scrollTriggers.length - 1; i >= 0; i--) {
 				element = self.scrollTriggers[i];
-				if (element[0].parentNode && isScrolledIntoView(element)) {
+				if (element.parentNode && isScrolledIntoView(element)) {
 					self.scrollTriggers.splice(i, 1); // remove
 					self.fetchPrevious(element);
 				}
