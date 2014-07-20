@@ -555,7 +555,7 @@ article .renderer:empty:before {
 	background-color: #fff;
 }
 
-.card:first-child .entry {
+.card:first-child .object .entry {
 	border-top: 1px solid #ddd;
 }
 .card.verb-follow .suffix 
@@ -842,7 +842,7 @@ div.own .feed-title:before {
 
 .entry .updated {
 	position: absolute;
-	top: 12px;
+	top: 16px;
 	font-size: 12px;
 	color: #aaa;
 	right: 0px;

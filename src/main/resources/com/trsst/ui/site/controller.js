@@ -533,7 +533,7 @@
 							if (feedData && feedData.length > 0) {
 								// reposting entry appears above reposted entry
 								var entryData = $(feedData).children("entry").first();
-								createElementForEntryData(feedData, entryData).find(".object .entry").appendTo($(viewElement).closest(".card").children(".suffix"));
+								$(createElementForEntryData(feedData, entryData)).find(".object .entry").appendTo($(viewElement).closest(".card").children(".suffix"));
 							} else {
 								console.log("Could not fetch reposted entry: " + src);
 							}

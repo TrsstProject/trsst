@@ -572,6 +572,12 @@
 			if (i === 0) {
 				path = path.substring("urn:feed:".length);
 			}
+			i = path.indexOf("urn:entry:");
+			if (i === 0) {
+				path = path.substring("urn:entry:".length);
+				i = path.lastIndexOf(":");
+				path = path.substring(0, i) + "/" + path.substring(i + 1);
+			}
 			if (filterObject.entryId) {
 				path = path + '/' + model.entryIdFromEntryUrn(filterObject.entryId);
 				delete filterObject.entryId;

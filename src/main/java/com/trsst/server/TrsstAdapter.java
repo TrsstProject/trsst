@@ -456,6 +456,7 @@ public class TrsstAdapter extends AbstractMultipartAdapter {
         try {
             AbderaClient client = new AbderaClient(Abdera.getInstance(),
                     Common.getBuildString());
+            feedId = Common.decodeURL(feedId);
             new URL(feedId); // validates as a url
             ClientResponse response = client.get(feedId);
             if (response.getType() == ResponseType.SUCCESS) {
