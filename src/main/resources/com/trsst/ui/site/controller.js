@@ -604,12 +604,31 @@
 			}
 			console.log($(event.target).closest('.comment'));
 			if ($(event.target).closest(".comment").length !== 0) {
+				if (entryElement.hasClass("sharing")) {
+					entryElement.removeClass("sharing");
+					// mutual exclusion
+				}
 				if (entryElement.hasClass("commented")) {
 					entryElement.removeClass("commented");
 					// (don't set focus)
 				} else {
 					entryElement.addClass("commented");
-					entryElement.find("textarea").focus();
+					entryElement.find("textarea").focus().attr("placeholder", "Reply to this post");
+				}
+				return;
+			}
+			console.log($(event.target).closest('.share'));
+			if ($(event.target).closest(".share").length !== 0) {
+				if (entryElement.hasClass("commented")) {
+					entryElement.removeClass("commented");
+					// mutual exclusion
+				}
+				if (entryElement.hasClass("sharing")) {
+					entryElement.removeClass("sharing");
+					// (don't set focus)
+				} else {
+					entryElement.addClass("sharing");
+					entryElement.find("textarea").focus().attr("placeholder", "Share this post");
 				}
 				return;
 			}

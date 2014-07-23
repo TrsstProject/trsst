@@ -86,9 +86,16 @@
 			var i;
 			if (entry.length === 1) {
 
-				// copy any primary discussion parent posts first
+				// determine if we're sharing
+				// but default to replying
 				var entryUrn = entry.attr("entry");
-				formData.append("verb", "reply");
+				if (entry.hasClass("sharing")) {
+					formData.append("verb", "share");
+				} else {
+					formData.append("verb", "reply");
+				}
+				
+				// copy any primary discussion parent posts first
 				entry.find(".addresses .parent").each(function() {
 					var text = $(this).attr("title");
 					text = model.entryUrnFromEntryId(text);

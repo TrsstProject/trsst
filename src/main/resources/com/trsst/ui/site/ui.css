@@ -807,6 +807,7 @@ div.own .feed-title:before {
 }
 
 .entry.commented,
+.entry.sharing,
 .entry.expanded {
 	
 }
@@ -828,9 +829,10 @@ div.own .feed-title:before {
 	width: 100%;
 }
 .entry.expanded .composer,
+.entry.sharing .composer,
 .entry.commented .composer
 {
-	margin-top: 0px;
+	margin-top: 4px;
 	max-height: 400px;
 	pointer-events: inherit;
 	opacity: 1;
@@ -1016,8 +1018,20 @@ div.own .feed-title:before {
 	content: 'Less';
 }
 
+.action.share span:after {
+	content: 'Share';
+}
+.sharing .action.share span:after {
+	font-weight: bold;
+	text-decoration: underline;
+}
+
 .action.comment span:after {
-	content: 'Comment';
+	content: 'Reply';
+}
+.commented .action.comment span:after {
+	font-weight: bold;
+	text-decoration: underline;
 }
 
 /* @end */

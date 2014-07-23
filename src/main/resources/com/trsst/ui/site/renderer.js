@@ -365,9 +365,6 @@
 				if (!element.parentNode) {
 					// make visible as the first element
 					self.entryContainer.prepend(element);
-					// in case this is the only entry:
-					// invoke it as a scroll trigger
-					// !!!!! self.fetchPrevious(element);
 				}
 			} else {
 				// if the current element is not visible
