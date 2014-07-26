@@ -555,13 +555,8 @@ article .renderer:empty:before {
 	background-color: #fff;
 }
 
-.renderer>.card:first-child .object .entry {
+.renderer>.card:first-child {
 	border-top: 1px solid #ddd;
-}
-.card.verb-follow .suffix 
-{
-	/* workaround */
-	border-bottom: 1px solid #ddd;
 }
 
 .entry section>.title {
@@ -873,9 +868,15 @@ div.own .feed-title:before {
 	margin-top: 8px;
 }
 
-.entry.verb-repost .addresses {
+.entry.verb-repost .addresses,
+.entry.verb-share .addresses
+{
 	/* don't show for 'reposted' header */
 	display: none;
+}
+.entry.verb-share {
+	/* extra padding for lack of addresses */
+	min-height: 70px !important;
 }
 
 .addresses a {
@@ -1080,6 +1081,7 @@ body:not(.page-entry) .entry.verb-deleted {
 /* @group Reposted entry within an entry */
 
 .entry.verb-repost,
+.entry.verb-share,
 .entry.verb-follow 
 {
 	padding-bottom: 0px;
@@ -1087,6 +1089,7 @@ body:not(.page-entry) .entry.verb-deleted {
 	min-height: 0px;
 }
 .entry.verb-repost>section,
+.entry.verb-share>section,
 .entry.verb-follow>section
 {
 }
@@ -1100,6 +1103,9 @@ body:not(.page-entry) .entry.verb-deleted {
 .entry.verb-repost>section .feed-id, 
 .entry.verb-repost .action,
 .entry.verb-repost .composer,
+.entry.verb-share>section .feed-id, 
+.entry.verb-share .action,
+.entry.verb-share .composer,
 .entry.verb-follow>section .title,
 .entry.verb-follow>section .icon,
 .entry.verb-follow>section .feed-id,
@@ -1112,6 +1118,11 @@ body:not(.page-entry) .entry.verb-deleted {
 .entry.verb-repost section .feed-title:after
 {
 	content: 'reposted';
+	font-weight: normal;
+}
+.entry.verb-share section .feed-title:after
+{
+	content: 'shared';
 	font-weight: normal;
 }
 .entry.verb-follow section .feed-title:after 
