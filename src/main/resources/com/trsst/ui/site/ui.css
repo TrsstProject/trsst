@@ -555,7 +555,7 @@ article .renderer:empty:before {
 	background-color: #fff;
 }
 
-.card:first-child .object .entry {
+.renderer>.card:first-child .object .entry {
 	border-top: 1px solid #ddd;
 }
 .card.verb-follow .suffix 

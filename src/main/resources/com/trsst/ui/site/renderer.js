@@ -179,7 +179,7 @@
 			var currentUrn = element.attr("entry");
 			card.entryUrn = currentUrn;
 			// if entry is not already displayed
-			if (!self.urnToEntryElement[currentUrn]) {
+			if (self.urnToEntryElement[currentUrn] === undefined) {
 				// the list to iterate
 				var children = this.allEntryElements;
 				// console.log("addDataToEntryContainer: " + current);
@@ -189,8 +189,8 @@
 				var verb = entryXml.find("verb").text();
 				var parentUrn;
 				var parentElement;
+				var term;
 				if ("reply" === verb) {
-					var term;
 					entryXml.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
 						term = $(this).attr("term");
 						if (term.indexOf("urn:entry:") === 0) {
@@ -201,19 +201,20 @@
 					});
 					if (parentUrn) {
 						parentElement = self.urnToEntryElement[parentUrn];
-						if (parentElement) {
-							// if we already fetched the parent element
-							var index = children.indexOf(parentElement);
-							if (index !== -1) {
-								// subset to just elements after this one
-								startIndex = index + 1;
-								// now the logic below will automagically
-								// insert this entry in the correct spot
-								// beneath the parent entry in the list.
-							}
+						if (parentElement instanceof Array) {
+							parentElement.push(card);
+							self.urnToEntryElement[currentUrn] = card;
+							return card;
+						} else if (parentElement) {
+							$(parentElement).find(".suffix").first().append(card);
+							self.urnToEntryElement[currentUrn] = card;
+							return card;
 						} else {
-							// fetch the parent element, insert it,
-							// and THEN insert this element
+							// add a array to ensure just one fetch
+							// and queue up any other pending child cards
+							parentElement = [ card ];
+							self.urnToEntryElement[parentUrn] = parentElement;
+							// now fetch the parent element
 							model.pull({
 								feedId : model.feedIdFromEntryUrn(parentUrn) + '/' + model.entryIdFromEntryUrn(parentUrn),
 								count : 1
@@ -222,22 +223,57 @@
 									var entryXml = $(feedData).children("entry").first();
 									// insert the parent into this container
 									// with no query or scroll trigger
-									self.addDataToEntryContainer(feedData, entryXml);
+									delete self.urnToEntryElement[parentUrn];
+									var result = self.addDataToEntryContainer(feedData, entryXml);
+									// now add each queued child
+									result = $(result).find(".suffix");
+									for ( var i in parentElement) {
+										result.append(parentElement[i]);
+									}
 								} else {
-									// not found: add a dummy reference to
+									// not found: leave the dummy reference to
 									// ensure not called again
-									self.urnToEntryElement[parentUrn] = originalFeedXml;
 									console.log("Could not fetch conversation root entry: " + parentUrn);
+									// FIXME: should add this entry anyway?
 								}
-								// now retry with child
-								self.addDataToEntryContainer(originalFeedXml, originalEntryXml, query);
 							});
 							return card; // EXIT and wait for fetch to
 							// complete
 						}
 					}
 				}
-
+				/*
+				 * if ("share" === verb) {
+				 * entryXml.find("category[scheme='urn:mention'],category[scheme='urn:com.trsst.mention']").each(function() {
+				 * term = $(this).attr("term"); if (term.indexOf("urn:entry:")
+				 * === 0) { // first parent is top-most parent of thread
+				 * parentUrn = term; return false; // break loop } }); // NOTE:
+				 * the rest of the mentions form the chain of sharing // if you
+				 * want to display that to the user: // e.g. "shared from foo"
+				 * 
+				 * if (parentUrn) { parentElement =
+				 * self.urnToEntryElement[parentUrn]; if (parentElement) { // if
+				 * we already fetched the parent element var index =
+				 * children.indexOf(parentElement); if (index !== -1) { //
+				 * subset to just elements after this one startIndex = index +
+				 * 1; // now the logic below will automagically // insert this
+				 * entry in the correct spot // beneath the parent entry in the
+				 * list. } } else { // fetch the parent element, insert it, //
+				 * and THEN insert this element model.pull({ feedId :
+				 * model.feedIdFromEntryUrn(parentUrn) + '/' +
+				 * model.entryIdFromEntryUrn(parentUrn), count : 1 },
+				 * function(feedData) { if (feedData && feedData.length > 0) {
+				 * var entryXml = $(feedData).children("entry").first(); //
+				 * insert the parent into this container // with no query or
+				 * scroll trigger self.addDataToEntryContainer(feedData,
+				 * entryXml); } else { // not found: add a dummy reference to //
+				 * ensure not called again self.urnToEntryElement[parentUrn] =
+				 * originalFeedXml; console.log("Could not fetch conversation
+				 * root entry: " + parentUrn); } // now retry with child
+				 * self.addDataToEntryContainer(originalFeedXml,
+				 * originalEntryXml, query); }); return card; // EXIT and wait
+				 * for fetch to // complete } } }
+				 */
 				// find existing scroll trigger with this query
 				var existingTrigger = null;
 				var existingTriggerIndex;

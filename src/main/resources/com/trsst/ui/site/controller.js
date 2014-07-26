@@ -228,10 +228,10 @@
 
 		// mark with verb
 		var verb = entryData.children("activity\\:verb").text();
-//		if (!verb) {
-//			// note: moz/jq namespace workaround
-//			verb = entryData.children("[nodeName='activity:verb']").text();
-//		}
+		// if (!verb) {
+		// // note: moz/jq namespace workaround
+		// verb = entryData.children("[nodeName='activity:verb']").text();
+		// }
 		if (verb) {
 			entryElement.addClass("verb-" + verb);
 			cardElement.addClass("verb-" + verb);
@@ -320,10 +320,12 @@
 			var duplicateDetector = {};
 
 			var content = entryData.find("content");
-			if (content.attr("type") !== undefined) {
-				entryElement.addClass("contented").addClass("collapsed");
+			if (content.length > 0) {
+				if (content.attr("type") !== undefined) {
+					entryElement.addClass("contented").addClass("collapsed");
+				}
+				addContentPreviewToElement(entryData, content, viewElement, duplicateDetector);
 			}
-			addContentPreviewToElement(entryData, content, viewElement, duplicateDetector);
 
 			// add any 'enclosure' links
 			entryData.find("link[rel='enclosure']").each(function() {
@@ -489,6 +491,12 @@
 			duplicateDetector[src] = src;
 			var type = contentElement.attr("type");
 			var verb = entryXml.find("verb").text();
+			if (verb === "share") {
+				console.log("share break here!");
+			}
+			if (verb === "reply") {
+				console.log("reply break here!");
+			}
 			var e;
 			if (type !== undefined) {
 				if (type === "text") {
@@ -572,7 +580,7 @@
 		// if target was an action
 		if ($(event.target).closest('.action').length !== 0) {
 			var entryId;
-			console.log($(event.target).closest('.repost'));
+			// console.log($(event.target).closest('.repost'));
 			if ($(event.target).closest('.repost').length !== 0) {
 				entryId = entryElement.attr("entry");
 				if (!entryElement.hasClass("reposted")) {
@@ -581,7 +589,7 @@
 				}
 				return;
 			}
-			console.log($(event.target).closest('.delete'));
+			// console.log($(event.target).closest('.delete'));
 			if ($(event.target).closest(".delete").length !== 0) {
 				entryId = entryElement.attr("entry");
 				if (!entryElement.hasClass("deleted")) {
@@ -590,7 +598,7 @@
 				}
 				return;
 			}
-			console.log($(event.target).closest('.like'));
+			// console.log($(event.target).closest('.like'));
 			if ($(event.target).closest(".like").length !== 0) {
 				entryId = entryElement.attr("entry");
 				if (entryElement.hasClass("liked")) {
@@ -602,7 +610,7 @@
 				}
 				return;
 			}
-			console.log($(event.target).closest('.comment'));
+			// console.log($(event.target).closest('.comment'));
 			if ($(event.target).closest(".comment").length !== 0) {
 				if (entryElement.hasClass("sharing")) {
 					entryElement.removeClass("sharing");
@@ -617,7 +625,7 @@
 				}
 				return;
 			}
-			console.log($(event.target).closest('.share'));
+			// console.log($(event.target).closest('.share'));
 			if ($(event.target).closest(".share").length !== 0) {
 				if (entryElement.hasClass("commented")) {
 					entryElement.removeClass("commented");
@@ -1496,7 +1504,7 @@
 			if (id === TRSST_WELCOME) {
 				$("body").addClass("page-welcome");
 			}
-			
+
 			// global conversation
 			messageRenderer.reset();
 			if (id !== TRSST_WELCOME) {
