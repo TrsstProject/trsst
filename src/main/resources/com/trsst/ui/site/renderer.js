@@ -143,7 +143,7 @@
 		var id = feedXml.children("id").text();
 		var updated = feedXml.children("updated").text();
 		// console.log("addDataToFeedContainer: " + id);
-		this.feedContainer.find("[feed='" + id + "']").remove();
+		this.feedContainer.find("[feed='" + id + "']").parents(".card").remove();
 		var card = this.feedFactory(feedXml);
 		var element = $(card).children(".object").children();
 		card.updated = updated;
