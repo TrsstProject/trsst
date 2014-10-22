@@ -22,6 +22,13 @@ Current binaries are downloadable here:
 https://github.com/TrsstProject/trsst/releases
 
 
+License
+------------------------------------
+
+All Trsst Project source code is licensed under the Apache License, Version 2.0.
+http://www.apache.org/licenses/LICENSE-2.0
+
+
 Frequently Asked Questions
 ------------------------------------
 
